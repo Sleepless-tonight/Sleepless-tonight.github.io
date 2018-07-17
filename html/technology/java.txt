@@ -4,3 +4,5 @@
 时间：2018年7月16日17:47:18
 连接：http://www.nostyling.cn/html/technology/java.txt
 
+1、equals与==的区别
+    ==与equals的主要区别是：
