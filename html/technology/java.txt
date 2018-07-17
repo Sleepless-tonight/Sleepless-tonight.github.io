@@ -1,6 +1,6 @@
 标题：Java
 
+标签：Java、基础
 时间：2018年7月16日17:47:18
-连接：http://www.nostyling.cn/html/mood/2018/2018716174555.txt
+连接：http://www.nostyling.cn/html/technology/java.txt
 
-对于人生的一个建议就是：尽量别听那些比你差的人的关于人生的任何建议，没有时间和精力去分辨哪里是否藏着坑。。。。。。
