@@ -1,4 +1,4 @@
-//package com.nostyling.create.configuration;
+//package com.nostyling.create.core.configuration;
 //
 //import org.apache.catalina.filters.RemoteIpFilter;
 //import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -10,7 +10,7 @@
 //import java.io.IOException;
 //
 ///**
-// * @ outhor: by com.nostyling.create.configuration
+// * @ outhor: by com.nostyling.create.core.configuration
 // * @ Created by shili on 2018/6/28 2:55.
 // * @ 类的描述：
 // */
@@ -33,7 +33,7 @@
 //        return registration;
 //    }
 //
-//    public class MyFilter implements Filter {
+//    public class MyFilter implements filter {
 //        @Override
 //        public void destroy() {
 //            // TODO Auto-generated method stub
