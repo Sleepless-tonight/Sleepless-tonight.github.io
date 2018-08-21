@@ -1,0 +1,24 @@
+package com.nostyling.create.modular.dao;
+import com.nostyling.create.modular.entity.User;
+import org.apache.ibatis.annotations.Param;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * <p>
+ * 管理员表 Mapper 接口
+ * </p>
+ *
+ * @author yestae
+ * @since 2017-07-11
+ */
+public interface UserMapper {
+    /**
+     * 根据条件查询用户列表
+     */
+	List<User> selectUsers(@Param("map") Map <String, Object> map);
+
+
+}
