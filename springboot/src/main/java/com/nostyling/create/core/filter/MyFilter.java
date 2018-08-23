@@ -13,7 +13,7 @@ import java.io.IOException;
  * @ outhor: by com.nostyling.create.core.filter
  * @ Created by shili on 2018/8/14 15:13.
  * @ 类的描述：自定义过滤器
- *      可通过@Order指定执行顺序，值越小，越先执行
+ *      添加 @Order 注解的实现类最先执行，并且@Order()里面的值越小启动越早。
  */
 @WebFilter(filterName = "MyFilter",urlPatterns = "/*",
         initParams={
