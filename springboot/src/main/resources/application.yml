@@ -52,6 +52,17 @@ spring:
     host: 192.168.2.100
     port: 6379
     password: aB(D2f9
+    pool:
+    # 连接池最大连接数（使用负值表示没有限制）
+      max-active: 8
+    # 连接池最大阻塞等待时间（使用负值表示没有限制）
+      max-wait: -1
+    # 连接池中的最大空闲连接
+      max-idle: 8
+    # 连接池中的最小空闲连接
+      min-idle: 0
+    # 连接超时时间（毫秒）
+      timeout: 10
   mvc:
     static-path-pattern: /static/**
     view:

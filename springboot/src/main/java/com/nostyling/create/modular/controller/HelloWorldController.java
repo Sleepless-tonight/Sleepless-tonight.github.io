@@ -21,6 +21,6 @@ public class HelloWorldController {
 
     @RequestMapping("/hello2")
     public String hello2() {
-        return "index.jsp";
+        return "/index";
     }
 }
