@@ -1,4 +1,5 @@
 package com.nostyling.create.modular.dao;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.nostyling.create.modular.entity.User;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.stereotype.Component;
@@ -14,7 +15,7 @@ import java.util.Map;
  * @author yestae
  * @since 2017-07-11
  */
-public interface UserMapper {
+public interface UserMapper extends BaseMapper<User> {
     /**
      * 根据条件查询用户列表
      */
