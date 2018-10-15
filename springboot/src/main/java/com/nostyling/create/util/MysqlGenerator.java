@@ -1,4 +1,4 @@
-package com.nostyling.create.modular.controller;
+package com.nostyling.create.util;
 
 import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.annotation.FieldFill;
@@ -11,6 +11,7 @@ import com.baomidou.mybatisplus.generator.config.po.TableInfo;
 import com.baomidou.mybatisplus.generator.config.rules.DbColumnType;
 import com.baomidou.mybatisplus.generator.config.rules.NamingStrategy;
 import com.baomidou.mybatisplus.generator.engine.FreemarkerTemplateEngine;
+import com.nostyling.create.util.GeneratorTest;
 
 import java.util.*;
 
@@ -69,7 +70,7 @@ public class MysqlGenerator extends GeneratorTest {
                         .setDriverName("com.mysql.jdbc.Driver")
                         .setUsername("admin")
                         .setPassword("d12h.Po(_f")
-                        .setUrl("jdbc:mysql://192.168.2.100:3306/test?characterEncoding=utf8")
+                        .setUrl("jdbc:mysql://192.168.2.100:3306/test?useUnicode=true&characterEncoding=UTF-8&allowMultiQueries=true&useSSL=false&allowPublicKeyRetrieval=true")
         ).setStrategy(
                 // 策略配置
                 new StrategyConfig()

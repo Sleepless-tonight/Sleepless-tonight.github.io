@@ -16,7 +16,7 @@ import java.util.List;
 /**
  * @ outhor: by com.nostyling.create.modular.controller
  * @ Created by shili on 2018/9/5 18:09.
- * @ 类的描述：
+ * @ 类的描述：自定义配置文件 配置文件自定义属性
  */
 
 @RestController

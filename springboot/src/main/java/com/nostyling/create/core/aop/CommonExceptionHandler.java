@@ -16,6 +16,8 @@ import java.lang.reflect.UndeclaredThrowableException;
  * @ outhor: by com.nostyling.create.core.aop
  * @ Created by shili on 2018/9/14 11:10.
  * @ 类的描述：全局的的异常拦截器（拦截所有的控制器）（带有@RequestMapping注解的方法上都会拦截）
+ * @ ControllerAdvice 控制器增强，使@ExceptionHandler、@InitBinder、@ModelAttribute注解的方法应用到所有的 @RequestMapping注解的方法。
+ * @ ExceptionHandler： 异常处理器，此注解的作用是当出现其定义的异常（指定异常）时进行处理的方法
  */
 @ControllerAdvice
 @Order(-1)

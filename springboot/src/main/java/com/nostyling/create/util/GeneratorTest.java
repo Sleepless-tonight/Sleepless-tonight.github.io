@@ -1,11 +1,11 @@
-package com.nostyling.create.modular.controller;
+package com.nostyling.create.util;
 
 import java.util.Scanner;
 
 /**
  * @ outhor: by com.nostyling.create.modular.controller
  * @ Created by shili on 2018/9/17 18:20.
- * @ 类的描述：
+ * @ 类的描述：代码生成
  */
 public class GeneratorTest {
 

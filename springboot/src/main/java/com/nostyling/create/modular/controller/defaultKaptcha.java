@@ -16,13 +16,14 @@ import java.io.ByteArrayOutputStream;
 /**
  * @ outhor: by com.nostyling.create.modular.controller
  * @ Created by shili on 2018/9/14 12:22.
- * @ 类的描述：
+ * @ 类的描述：验证码
  */
 @Controller
 public class defaultKaptcha {
     @Autowired
     DefaultKaptcha defaultKaptcha;
 
+    //生成验证图片
     @RequestMapping("/defaultKaptcha")
     public void defaultKaptcha(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) throws Exception{
         byte[] captchaChallengeAsJpeg = null;
@@ -63,7 +64,7 @@ public class defaultKaptcha {
             andView.addObject("info", "错误的验证码");
             andView.setViewName("/kaptcha");
         } else {
-            andView.addObject("info", "登录成功");
+            andView.addObject("info", "正确的验证码");
             andView.setViewName("/kaptcha");
 
         }
