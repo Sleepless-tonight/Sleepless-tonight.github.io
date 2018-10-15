@@ -10,7 +10,7 @@ import java.util.Properties;
 /**
  * @ outhor: by com.nostyling.create.core.configuration
  * @ Created by shili on 2018/9/14 12:03.
- * @ 类的描述：
+ * @ 类的描述：验证码设计类
  */
 @Component
 public class KaptchaConfig {

@@ -3,6 +3,10 @@ package com.nostyling.create.modular.controller;
 import com.nostyling.create.DemoApplication;
 import com.nostyling.create.modular.service.IUserService;
 import com.nostyling.create.util.RedisUtil;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,20 +24,28 @@ import java.util.HashMap;
  */
 @Controller
 @RequestMapping("/user")
+@Api(tags="用户API")
 public class UserController {
 
     private static Logger logger = LoggerFactory.getLogger(UserController.class);
 
     @Autowired
     private IUserService userService;
-    /*
+
+    /**
      * Redis 操作服务
-     * */
+     */
     @Autowired
     private RedisUtil redisUtil;
 
     @RequestMapping("/getUser")
     @ResponseBody
+    @ApiOperation(value="全用户列表")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "page", value = "当前页数1开始",  dataType = "int",paramType = "query"),
+            @ApiImplicitParam(name = "pageSize", value = "每页的大小",  dataType = "int",paramType = "query"),
+            @ApiImplicitParam(name = "userId", value = "当前登录的用户id", dataType = "int",paramType = "query")
+    })
     public Object getUser() {
 
         redisUtil.set("Redis", "******  Redis is success!  *****",(long)5 * 60);
@@ -43,32 +55,15 @@ public class UserController {
         return userService.selectUsers(entity);
     }
 
-    //@Autowired
-    //private StringRedisTemplate template;
-    //
-    //@RequestMapping("/getUser")
-    //@ResponseBody
-    //public Object getUser() {
-    //
-    //    template.opsForValue().append("zs", "**********zs********");
-    //    System.out.println(template.opsForValue().get("zs"));
-    //
-    //    HashMap <String, Object> entity = new HashMap <String, Object>();
-    //    return userService.selectUsers(entity);
-    //}
-
-    //@RequestMapping("/hello2")
-    //public String hello2() {
-    //    return "/static/index2.html";
-    //}
-
     @RequestMapping("/hello")
     public String hello3() {
-        return "/index";
+        return "/WEB-INF/view/index.jsp";
     }
 
+    //验证码验证页面
     @RequestMapping("/kaptcha")
+    @ApiOperation(value="验证码页面")
     public String kaptcha() {
-        return "/kaptcha";
+        return "/WEB-INF/view/kaptcha.jsp";
     }
 }

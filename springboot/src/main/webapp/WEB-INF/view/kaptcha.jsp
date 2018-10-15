@@ -12,7 +12,9 @@
     <title>hello</title>
 </head>
 <body>
-<h1 th:text="${info}" />
+<%--<h1 th:text="${info}" />--%>
+<%=request.getAttribute("info")%>
+
 <div>
     <!-- <img alt="这是图片" src="/img/001.png"/> -->
     <img alt="验证码" onclick = "this.src='/defaultKaptcha?d='+new Date()*1" src="/defaultKaptcha" />
