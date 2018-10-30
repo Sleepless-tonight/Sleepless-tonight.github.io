@@ -12,7 +12,7 @@ import static org.quartz.TriggerBuilder.newTrigger;
 /**
  * @ outhor: by com.nostyling.create.core.schedule
  * @ Created by shili on 2018/10/8 14:16.
- * @ 类的描述：
+ * @ 类的描述：调度任务
  */
 public class MyScheduler {
     public static void main(String[] args) {

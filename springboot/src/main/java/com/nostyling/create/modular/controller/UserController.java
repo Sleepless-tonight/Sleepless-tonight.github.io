@@ -15,6 +15,10 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.util.HashMap;
 
 /**
@@ -38,14 +42,15 @@ public class UserController {
     @Autowired
     private RedisUtil redisUtil;
 
-    @RequestMapping("/getUser")
-    @ResponseBody
+
     @ApiOperation(value="全用户列表")
     @ApiImplicitParams({
             @ApiImplicitParam(name = "page", value = "当前页数1开始",  dataType = "int",paramType = "query"),
             @ApiImplicitParam(name = "pageSize", value = "每页的大小",  dataType = "int",paramType = "query"),
             @ApiImplicitParam(name = "userId", value = "当前登录的用户id", dataType = "int",paramType = "query")
     })
+    @RequestMapping("/getUser")
+    @ResponseBody
     public Object getUser() {
 
         redisUtil.set("Redis", "******  Redis is success!  *****",(long)5 * 60);
@@ -53,6 +58,34 @@ public class UserController {
 
         HashMap <String, Object> entity = new HashMap <String, Object>();
         return userService.selectUsers(entity);
+    }
+
+    @RequestMapping("/Center")
+    @ResponseBody
+    public Object Center(HttpServletRequest request, HttpServletResponse response) {
+        BufferedReader br = null;
+        StringBuilder sb = new StringBuilder("");
+        try {
+            br = request.getReader();
+            String str;
+            while ((str = br.readLine()) != null) {
+                sb.append(str);
+            }
+            br.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (null != br) {
+                try {
+                    br.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        System.out.println(sb);
+        return sb.toString();
+
     }
 
     @RequestMapping("/hello")
