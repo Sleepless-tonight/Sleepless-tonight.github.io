@@ -5,6 +5,26 @@ spring:
 
   profiles:
     active: my
+  #jackson
+  jackson:
+    #日期格式化
+    date-format: yyyy-MM-dd HH:mm:ss
+    #date-format: yyyy-MM-dd
+    #格式化输出
+    serialization.indent_output: true
+    #忽略无法转换的对象
+    serialization.fail_on_empty_beans: false
+    #设置空如何序列化
+    defaultPropertyInclusion: NON_EMPTY
+    #允许对象忽略json中不存在的属性
+    deserialization.fail_on_unknown_properties: false
+    #允许出现特殊字符和转义符
+    parser.allow_unquoted_control_chars: true
+    #允许出现单引号
+    parser.allow_single_quotes: true
+
+
+
   kafka:
     bootstrap-servers: 192.168.2.100:9092,192.168.2.101:9092,192.168.2.102:9092
     consumer:
@@ -52,11 +72,11 @@ spring:
 #    cache: false
 #    enabled: false
   datasource:
+    username: admin
+    password: d12h.Po(_f
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://192.168.2.100:3306/test?useUnicode=true&characterEncoding=UTF-8&allowMultiQueries=true&useSSL=false&allowPublicKeyRetrieval=true
     hikari:
-      driver-class-name: com.mysql.jdbc.Driver
-      jdbc-url: jdbc:mysql://192.168.2.100:3306/test?useUnicode=true&characterEncoding=UTF-8&allowMultiQueries=true&useSSL=false&allowPublicKeyRetrieval=true
-      username: admin
-      password: d12h.Po(_f
       minimum-idle: 5
       maximum-pool-size: 15
       auto-commit: true

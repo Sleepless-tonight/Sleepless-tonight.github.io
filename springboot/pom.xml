@@ -56,6 +56,11 @@
       <!--jsp支持 结束-->
       <!-- servlet 依赖. 结束-->
 
+      <dependency>
+          <groupId>com.squareup.okhttp3</groupId>
+          <artifactId>okhttp</artifactId>
+          <version>3.3.0</version>
+      </dependency>
 
     <!--<dependency>-->
       <!--<groupId>org.springframework.boot</groupId>-->
@@ -67,6 +72,15 @@
           <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-starter-data-redis</artifactId>
       </dependency>
+
+      <!--添加 Spring Session Redis 依赖-->
+      <dependency>
+          <groupId>org.springframework.session</groupId>
+          <artifactId>spring-session-data-redis</artifactId>
+          <version>2.0.4.RELEASE</version>
+      </dependency>
+
+
 
       <!--shiro依赖-->
       <dependency>
@@ -170,11 +184,11 @@
       </dependency>
 
       <!-- fastjson阿里巴巴jSON处理器 -->
-      <dependency>
-          <groupId>com.alibaba</groupId>
-          <artifactId>fastjson</artifactId>
-          <version>1.2.49</version>
-      </dependency>
+      <!--<dependency>-->
+          <!--<groupId>com.alibaba</groupId>-->
+          <!--<artifactId>fastjson</artifactId>-->
+          <!--<version>1.2.49</version>-->
+      <!--</dependency>-->
 
       <!-- html 解析 -->
       <dependency>
@@ -223,10 +237,11 @@
 
       <!--HikariCP 是一个高性能，“零开销”，高品质的 JDBC 连接池-->
       <!--默认所以注销-->
-      <!--<dependency>-->
-          <!--<groupId>com.zaxxer</groupId>-->
-          <!--<artifactId>HikariCP</artifactId>-->
-      <!--</dependency>-->
+      <dependency>
+          <groupId>com.zaxxer</groupId>
+          <artifactId>HikariCP</artifactId>
+          <version>3.2.0</version>
+      </dependency>
 
       <!--  lang3 -->
       <dependency>
