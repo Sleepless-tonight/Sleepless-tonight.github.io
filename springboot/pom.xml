@@ -44,10 +44,10 @@
           <artifactId>jstl</artifactId>
       </dependency>
       <!-- spring boot 内置tomcat -->
-      <dependency>
-          <groupId>org.springframework.boot</groupId>
-          <artifactId>spring-boot-starter-tomcat</artifactId>
-      </dependency>
+      <!--<dependency>-->
+          <!--<groupId>org.springframework.boot</groupId>-->
+          <!--<artifactId>spring-boot-starter-tomcat</artifactId>-->
+      <!--</dependency>-->
       <dependency>
           <groupId>org.apache.tomcat.embed</groupId>
           <artifactId>tomcat-embed-jasper</artifactId>
@@ -269,6 +269,16 @@
       <dependency>
           <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-starter-web</artifactId>
+          <exclusions>
+              <exclusion>
+                  <groupId>org.springframework.boot</groupId>
+                  <artifactId>spring-boot-starter-tomcat</artifactId>
+              </exclusion>
+          </exclusions>
+      </dependency>
+      <dependency>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-undertow</artifactId>
       </dependency>
 
     <!--核心模块，包括自动配置支持、日志和YAML；-->
