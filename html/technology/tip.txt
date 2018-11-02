@@ -1,0 +1,8 @@
+标题：Java最终的目标
+
+标签：Java最终的目标
+时间：2018年11月1日14:37:44
+连接：http://www.nostyling.cn/html/mood/2018/tip.txt
+
+Java最终的目标是减轻程序员的负担。
+OOP允许我们根据问题来描述问题
