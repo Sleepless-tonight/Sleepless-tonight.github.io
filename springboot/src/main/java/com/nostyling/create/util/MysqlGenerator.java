@@ -44,7 +44,7 @@ public class MysqlGenerator extends GeneratorTest {
                         .setBaseResultMap(true)// XML ResultMap
                         .setBaseColumnList(true)// XML columList
                         //.setKotlin(true) 是否生成 kotlin 代码
-                        .setAuthor("Yanghu")
+                        .setAuthor("shiliang")
                 // 自定义文件命名，注意 %s 会自动填充表实体属性！
                 // .setEntityName("%sEntity");
                 // .setMapperName("%sDao")
@@ -68,9 +68,9 @@ public class MysqlGenerator extends GeneratorTest {
                             }
                         })
                         .setDriverName("com.mysql.jdbc.Driver")
-                        .setUsername("admin")
-                        .setPassword("d12h.Po(_f")
-                        .setUrl("jdbc:mysql://192.168.2.100:3306/test?useUnicode=true&characterEncoding=UTF-8&allowMultiQueries=true&useSSL=false&allowPublicKeyRetrieval=true")
+                        .setUsername("dts")
+                        .setPassword("c1t5")
+                        .setUrl("jdbc:mysql://192.168.100.220:3306/dts?useUnicode=true&characterEncoding=UTF-8&allowMultiQueries=true&useSSL=false&allowPublicKeyRetrieval=true")
         ).setStrategy(
                 // 策略配置
                 new StrategyConfig()
@@ -78,13 +78,14 @@ public class MysqlGenerator extends GeneratorTest {
                         // .setDbColumnUnderline(true)//全局下划线命名
                         .setTablePrefix(new String[]{"bmd_", "mp_"})// 此处可以修改为您的表前缀
                         .setNaming(NamingStrategy.underline_to_camel)// 表名生成策略
-                        // .setInclude(new String[] { "user" }) // 需要生成的表
+                         .setInclude(new String[] { "oms_ware" }) // 需要生成的表
                         // .setExclude(new String[]{"test"}) // 排除生成的表
                         // 自定义实体父类
                         // .setSuperEntityClass("com.baomidou.demo.TestEntity")
                         // 自定义实体，公共字段
                         .setSuperEntityColumns(new String[]{"test_id"})
                         .setTableFillList(tableFillList)
+                        .entityTableFieldAnnotationEnable(true)//是否生成实体时，生成字段注解
                 // 自定义 mapper 父类
                 // .setSuperMapperClass("com.baomidou.demo.TestMapper")
                 // 自定义 service 父类
