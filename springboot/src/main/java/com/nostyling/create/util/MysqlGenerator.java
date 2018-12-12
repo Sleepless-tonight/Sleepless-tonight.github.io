@@ -78,14 +78,14 @@ public class MysqlGenerator extends GeneratorTest {
                         // .setDbColumnUnderline(true)//全局下划线命名
                         .setTablePrefix(new String[]{"bmd_", "mp_"})// 此处可以修改为您的表前缀
                         .setNaming(NamingStrategy.underline_to_camel)// 表名生成策略
-                         .setInclude(new String[] { "oms_ware" }) // 需要生成的表
+                         .setInclude(new String[] { "oms_supplier" }) // 需要生成的表
                         // .setExclude(new String[]{"test"}) // 排除生成的表
                         // 自定义实体父类
                         // .setSuperEntityClass("com.baomidou.demo.TestEntity")
                         // 自定义实体，公共字段
                         .setSuperEntityColumns(new String[]{"test_id"})
                         .setTableFillList(tableFillList)
-                        .entityTableFieldAnnotationEnable(true)//是否生成实体时，生成字段注解
+                        .entityTableFieldAnnotationEnable(true)//生成实体时，是否生成字段注解
                 // 自定义 mapper 父类
                 // .setSuperMapperClass("com.baomidou.demo.TestMapper")
                 // 自定义 service 父类
