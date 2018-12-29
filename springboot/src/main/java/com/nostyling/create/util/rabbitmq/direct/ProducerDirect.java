@@ -27,22 +27,42 @@ public class ProducerDirect {
         //获得信道
         Channel channel = conn.createChannel();
         //声明队列
-        String exchangeName = "task_queue";
+        String exchangeName = "hello-exchange";
         ////永远不会丢失队列,需要声明它是持久的
         boolean durable = true;
-        channel.queueDeclare(exchangeName,durable,false,false,null);
+        channel.queueDeclare(exchangeName, durable, false, false, null);
         //路由键
-        String routingKey = "hola";
+        String routingKey = "green";
+        //路由键
+        String routingKey2 = "black";
         //发布消息
-        String quti = "发布消息：quit";
-        byte[] messageBodyBytes = quti.getBytes();
+        String quti = "发布消息： ";
+
         /**
          * 第一个参数是：交换的名称。空字符串表示默认或无名交换：消息被路由到具有routingKey（路由键）指定名称的队列（如果存在）。
          * 命名队列/路由键
          * 第三个参数是：将消息标记为持久性:MessageProperties.PERSISTENT_TEXT_PLAIN
          * 第三个参数是：消息
          */
-        channel.basicPublish(exchangeName, routingKey, MessageProperties.PERSISTENT_TEXT_PLAIN, messageBodyBytes);
+
+        for (int i = 1; i >= 0; i++) {
+            if (i % 2 == 1) {
+                channel.basicPublish(exchangeName, routingKey, MessageProperties.PERSISTENT_TEXT_PLAIN, ((i) + " " + quti + routingKey).getBytes());
+                System.out.println("消费的消息体内容:" + (i) + " " +
+                        "——>" + (quti + routingKey));
+
+            } else {
+
+                channel.basicPublish(exchangeName, routingKey2, MessageProperties.PERSISTENT_TEXT_PLAIN, ((i) + " " + quti + routingKey2).getBytes());
+                System.out.println("消费的消息体内容:" + (i) + " " +
+                        "——>" + (quti + routingKey2));
+            }
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
 
         //关闭通道和连接
         channel.close();

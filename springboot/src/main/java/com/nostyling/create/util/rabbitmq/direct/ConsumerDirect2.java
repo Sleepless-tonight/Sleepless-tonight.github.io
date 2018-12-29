@@ -15,7 +15,7 @@ import java.util.concurrent.TimeoutException;
  * @ Created by shiliang on 2018-11-12 14:01.
  * @ 类的描述：消息消费者
  */
-public class ConsumerDirect {
+public class ConsumerDirect2 {
     public static void main(String[] args) throws IOException, TimeoutException {
         ConnectionFactory factory = new ConnectionFactory();
         factory.setUsername("admin");
@@ -31,19 +31,19 @@ public class ConsumerDirect {
         channel.exchangeDeclare(exchangeName, "direct", true);
         //声明队列
         boolean durable = true; //永远不会丢失队列,需要声明它是持久的
-        //String queueName = channel.queueDeclare().getQueue();//创建一个非持久的，独占的自动删除队列：
-        channel.queueDeclare("task_queue",durable,false,false,null);
+        String queueName = channel.queueDeclare().getQueue();//创建一个非持久的，独占的自动删除队列：
+        //channel.queueDeclare("task_queue",durable,false,false,null);
         //路由键
-        String routingKey = "hola";
+        String routingKey = "black";
         //绑定队列，通过路由键 hola 将队列和交换器绑定起来;交换和队列之间的关系称为绑定。可以简单地理解为：队列对来自此交换的消息感兴趣。绑定可以采用额外的routingKey参数。为了避免与basic_publish参数混淆，我们将其称为:绑定密钥。扇出交换只是忽略了它的价值
-        channel.queueBind("task_queue", exchangeName, routingKey);
+        channel.queueBind(queueName, exchangeName, routingKey);
         //一次只接受一条未包含的消息
         channel.basicQos(1);
         while(true) {
             //消费消息
             boolean autoAck = false;
             String consumerTag = "";
-            channel.basicConsume("task_queue", autoAck, consumerTag, new DefaultConsumer(channel) {
+            channel.basicConsume(queueName, autoAck, consumerTag, new DefaultConsumer(channel) {
                 @Override
                 public void handleDelivery(String consumerTag,
                                            Envelope envelope,
