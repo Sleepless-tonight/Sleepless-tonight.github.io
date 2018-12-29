@@ -74,8 +74,8 @@ spring:
   datasource:
     username: admin
     password: d12h.Po(_f
-    driver-class-name: com.mysql.jdbc.Driver
     url: jdbc:mysql://192.168.2.100:3306/test?useUnicode=true&characterEncoding=UTF-8&allowMultiQueries=true&useSSL=false&allowPublicKeyRetrieval=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       minimum-idle: 5
       maximum-pool-size: 15

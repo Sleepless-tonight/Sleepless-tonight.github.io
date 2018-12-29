@@ -11,7 +11,6 @@ import com.baomidou.mybatisplus.generator.config.po.TableInfo;
 import com.baomidou.mybatisplus.generator.config.rules.DbColumnType;
 import com.baomidou.mybatisplus.generator.config.rules.NamingStrategy;
 import com.baomidou.mybatisplus.generator.engine.FreemarkerTemplateEngine;
-import com.nostyling.create.util.GeneratorTest;
 
 import java.util.*;
 
@@ -68,9 +67,9 @@ public class MysqlGenerator extends GeneratorTest {
                             }
                         })
                         .setDriverName("com.mysql.jdbc.Driver")
-                        .setUsername("dts")
-                        .setPassword("c1t5")
-                        .setUrl("jdbc:mysql://192.168.100.220:3306/dts?useUnicode=true&characterEncoding=UTF-8&allowMultiQueries=true&useSSL=false&allowPublicKeyRetrieval=true")
+                        .setUsername("root")
+                        .setPassword("lb,LtawoFcd.eV@J")
+                        .setUrl("jdbc:mysql://192.168.100.220:3306/dts2?autoReconnect=true&useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=CONVERT_TO_NULL&useSSL=false&useAffectedRows=true")
         ).setStrategy(
                 // 策略配置
                 new StrategyConfig()
@@ -78,7 +77,7 @@ public class MysqlGenerator extends GeneratorTest {
                         // .setDbColumnUnderline(true)//全局下划线命名
                         .setTablePrefix(new String[]{"bmd_", "mp_"})// 此处可以修改为您的表前缀
                         .setNaming(NamingStrategy.underline_to_camel)// 表名生成策略
-                         .setInclude(new String[] { "oms_supplier" }) // 需要生成的表
+                         .setInclude(new String[] { "oms_dealer" }) // 需要生成的表
                         // .setExclude(new String[]{"test"}) // 排除生成的表
                         // 自定义实体父类
                         // .setSuperEntityClass("com.baomidou.demo.TestEntity")
