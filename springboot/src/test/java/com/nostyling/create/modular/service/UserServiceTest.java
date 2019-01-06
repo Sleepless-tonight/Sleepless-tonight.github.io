@@ -28,7 +28,7 @@ public class UserServiceTest {
     @Test
     public void getUser() {
         //System.out.println("User:"+ Arrays.toString(userMapper.selectUsers(new HashMap <>()).toArray()));
-        System.out.println(("----- selectAll method test ------"));
+        System.out.println(("----- selectAll method Recv ------"));
         List<User> userList = userMapper.selectList(null);
         Assert.assertEquals(2, userList.size());
         userList.forEach(System.out::println);

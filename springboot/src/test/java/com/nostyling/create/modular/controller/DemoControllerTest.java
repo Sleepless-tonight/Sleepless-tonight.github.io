@@ -45,7 +45,7 @@ public class DemoControllerTest {
 
     @Test
     public void testDemo() throws Exception {
-        String msg = "this is a mock test";
+        String msg = "this is a mock Recv";
         MvcResult result = this.mockMvc.perform(get("/mock").param("msg", msg)).andDo(print()).andExpect(status().isOk())
                 .andReturn();
 

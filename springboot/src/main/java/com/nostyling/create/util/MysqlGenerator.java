@@ -78,7 +78,7 @@ public class MysqlGenerator extends GeneratorTest {
                         .setTablePrefix(new String[]{"bmd_", "mp_"})// 此处可以修改为您的表前缀
                         .setNaming(NamingStrategy.underline_to_camel)// 表名生成策略
                          .setInclude(new String[] { "oms_dealer" }) // 需要生成的表
-                        // .setExclude(new String[]{"test"}) // 排除生成的表
+                        // .setExclude(new String[]{"Recv"}) // 排除生成的表
                         // 自定义实体父类
                         // .setSuperEntityClass("com.baomidou.demo.TestEntity")
                         // 自定义实体，公共字段
@@ -108,7 +108,7 @@ public class MysqlGenerator extends GeneratorTest {
         ).setPackageInfo(
                 // 包配置
                 new PackageConfig()
-                        .setModuleName("test")
+                        .setModuleName("Recv")
                         .setParent("com.baomidou")// 自定义包路径
                         .setController("controller")// 这里是控制器包名，默认 web
         ).setCfg(
