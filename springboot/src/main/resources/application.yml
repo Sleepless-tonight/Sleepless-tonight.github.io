@@ -74,14 +74,14 @@ spring:
   datasource:
     username: admin
     password: d12h.Po(_f
-    url: jdbc:mysql://192.168.2.100:3306/test?useUnicode=true&characterEncoding=UTF-8&allowMultiQueries=true&useSSL=false&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://192.168.2.100:3306/Recv?useUnicode=true&characterEncoding=UTF-8&allowMultiQueries=true&useSSL=false&allowPublicKeyRetrieval=true
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       minimum-idle: 5
       maximum-pool-size: 15
       auto-commit: true
       idle-timeout: 30000
-      pool-name: test
+      pool-name: Recv
       max-lifetime: 1800000
       connection-timeout: 30000
       connection-test-query: select 1
