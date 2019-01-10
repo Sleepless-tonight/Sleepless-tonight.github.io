@@ -5,7 +5,7 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.DeliverCallback;
 
-public class Recv {
+public class Recv2 {
 
     private final static String HOST = "192.168.100.220";
     private final static Integer PORT = 5672;

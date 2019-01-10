@@ -3,6 +3,7 @@ package com.nostyling.create.util.rabbitmq;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.MessageProperties;
 
 
 public class Send {
@@ -21,10 +22,21 @@ public class Send {
         factory.setPort(PORT);
         try (Connection connection = factory.newConnection();
              Channel channel = connection.createChannel()) {
-            channel.queueDeclare(QUEUE_NAME, false, false, false, null);
-            String message = "Hello World!";
-            channel.basicPublish("", QUEUE_NAME, null, message.getBytes("UTF-8"));
-            System.out.println(" [x] Sent '" + message + "'");
+            channel.queueDeclare(QUEUE_NAME, true, false, false, null);
+            for (int i = 1; i >= 0; i++) {
+                String message = "Hello World!" + " ->  " + i;
+                channel.basicPublish("", QUEUE_NAME, null, message.getBytes("UTF-8"));
+                System.out.println(" [x] Sent '" + message + "'");
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                if (i > 10000) {
+                    break;
+                }
+            }
+
         }
     }
 }
