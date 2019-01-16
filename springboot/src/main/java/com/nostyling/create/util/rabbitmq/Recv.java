@@ -1,9 +1,8 @@
 package com.nostyling.create.util.rabbitmq;
 
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
-import com.rabbitmq.client.DeliverCallback;
+import com.rabbitmq.client.*;
+
+import java.io.IOException;
 
 public class Recv {
 
@@ -13,8 +12,9 @@ public class Recv {
     private final static String PASSWORD = "5672";
     private final static String QUEUE_NAME = "deliver_order_dts";
 
-    public static void main(String[] argv) throws Exception {
+    public static void main(String[] argv) throws Exception  {
 
+        String s = "";
         ConnectionFactory factory = new ConnectionFactory();
         factory.setUsername(USERNAME);
         factory.setPassword(PASSWORD);
@@ -24,12 +24,39 @@ public class Recv {
         Channel channel = connection.createChannel();
 
         channel.queueDeclare(QUEUE_NAME, true, false, false, null);
+
         System.out.println(" [*] Waiting for messages. To exit press CTRL+C");
 
-        DeliverCallback deliverCallback = (consumerTag, delivery) -> {
-            String message = new String(delivery.getBody(), "UTF-8");
-            System.out.println(" [x] Received '" + message + "'");
-        };
-        channel.basicConsume(QUEUE_NAME, true, deliverCallback, consumerTag -> { });
+        //一次只接受一条未包含的消息
+        channel.basicQos(1);
+        while(true) {
+            //消费消息
+            boolean autoAck = false;
+            String consumerTag = "";
+            //创建队列消费者
+            DefaultConsumer defaultConsumer = new DefaultConsumer(channel) {
+
+                @Override
+                public void handleDelivery(String consumerTag,
+                                           Envelope envelope,
+                                           AMQP.BasicProperties properties,
+                                           byte[] body) throws IOException {
+                    String routingKey = envelope.getRoutingKey();
+                    String contentType = properties.getContentType();
+                    System.out.println("消费的路由键：" + routingKey);
+                    System.out.println("消费的内容类型：" + contentType);
+                    long deliveryTag = envelope.getDeliveryTag();
+                    //手动消息确认
+                    channel.basicAck(deliveryTag, false);
+                    System.out.print("消费的消息体内容：");
+                    String bodyStr = new String(body, "UTF-8");
+                    System.out.println(bodyStr);
+                }
+            };
+
+            channel.basicConsume(QUEUE_NAME, autoAck, consumerTag, defaultConsumer);
+        }
     }
+
+
 }

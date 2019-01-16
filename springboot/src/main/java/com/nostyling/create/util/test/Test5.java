@@ -1,6 +1,12 @@
-package com.nostyling.create.util;
+package com.nostyling.create.util.test;
 
-public class test4 {
+/**
+ * @program: Sleepless-tonight.github.io
+ * @author: shiliang
+ * @create: 2019-01-11 11:40
+ * @description: 示例：异或运算交换整数值
+ **/
+public class Test5 {
     public static void main(String[] args) {
         int a = 1;//01
         int b = 2;//10

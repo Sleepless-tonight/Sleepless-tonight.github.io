@@ -1,4 +1,4 @@
-package com.nostyling.create.util;
+package com.nostyling.create.util.test;
 
 
 import com.rabbitmq.client.BuiltinExchangeType;
@@ -22,18 +22,10 @@ public class test2 {
         //BeanUtils.copyProperties(user, userVo,new String[]{"name"});
         //System.out.println(userVo.toString());
         //System.out.println(        BuiltinExchangeType.DIRECT );
-        for (int i = 1; i >= 0; i++) {
-            System.out.println(i % 2);
+        double v = 7 / 3D;
+        System.out.println(v);
+        System.out.println(7 / 3);
 
-            if (i % 2 == 1) {
-            }
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-        }
     }
 
 
