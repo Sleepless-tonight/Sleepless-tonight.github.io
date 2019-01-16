@@ -1,4 +1,4 @@
-package com.nostyling.create.util;
+package com.nostyling.create.util.test;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -12,7 +12,7 @@ import okhttp3.Response;
 /**
  * @ outhor: by com.nostyling.create.util
  * @ Created by shiliang on 2018/10/17 19:23.
- * @ 类的描述：
+ * @ 类的描述：OkHttpClient
  */
 public class test {
     public static void main(String[] args) throws IOException {
