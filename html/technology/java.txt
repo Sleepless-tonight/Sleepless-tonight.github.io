@@ -20,3 +20,11 @@
 
 4、this：
     this 这个关键字的最大作用就是让类中的一个方法，访问该类里的另一个方法或变量，
+
+5、实体类别：
+    Entity接近原始数据，Model接近业务对象～
+    Entity：是专用于EF的对数据库表的操作，
+    Model：是为页面提供数据和数据校验的，所以两者可以并存
+    POJO：POJO是Plain OrdinaryJava Object的缩写不错，但是它通指没有使用Entity Beans的普通java对象，可以把POJO作为支持业务逻辑的协助类。
+
+
