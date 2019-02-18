@@ -178,7 +178,18 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-freemarker</artifactId>
         </dependency>
-
+        <!--markdown to html-->
+        <dependency>
+            <groupId>com.vladsch.flexmark</groupId>
+            <artifactId>flexmark-all</artifactId>
+            <version>0.40.16</version>
+        </dependency>
+        <!--工具集-->
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+            <version>4.4.5</version>
+        </dependency>
         <!--测试REST服务-->
         <dependency>
             <groupId>com.jayway.restassured</groupId>
