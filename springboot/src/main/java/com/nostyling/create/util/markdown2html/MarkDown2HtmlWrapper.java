@@ -34,7 +34,7 @@ public class MarkDown2HtmlWrapper {
     private static String MD_CSS = null;
     static {
         try {
-            MD_CSS = FileUtil.file("github-markdown.css").getCanonicalPath();
+            MD_CSS = FileUtil.file("markdownCss/github-markdown.css").getCanonicalPath();
             MD_CSS = "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n" +
                     "<link rel=\"stylesheet\" href=\"" +
                     MD_CSS +
