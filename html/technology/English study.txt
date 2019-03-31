@@ -9,3 +9,53 @@
     time：2019年2月15日16:36:40
     content：
         学发音咩。。。
+        其实就是下了一堆App屁事没干。
+
+
+    title：打卡第2天
+    time：2019年2月25日10:29:56
+    content：
+        学发音咩。。。
+        艹，过去了这么久。。。
+        音标共48个：
+            元音20个：
+                单元音12个：
+                    前元音4个：
+                        [i:]
+                            衣...;sheep;e  me even\ee  beef deep\ea  meat reason tea\ie  believe achieve\ei  deceive conceive
+                        [i]
+                            A;fish;i  sit picture\u  build business\y  many dictionary\e  pretty blanket\a  village private\ui  quick guitar
+                        对比：[i:] 音拉长，[i] 小腹绷紧，
+                        [e]
+                            哎（短促）;very;e  never forget\ea bread heaven\a  marry many
+                        [æ]
+                            哎阿;apple black cat ;e  pen ten\ea bread heaven\a  marry many
+                        对比：就像哎啊一样，[e]稍微含着点，上牙堂前面使劲，[æ] 嘴的张开角度更大，上牙堂后面使劲
+                    中元音3个：
+                        [ɝ:]
+                            阿儿（儿化音那个意思）;sir;or  work worm\ir  girl bird\er  person term\ur  turn burn\ear  early pearl
+                        [ɚ]
+                            阿额;dollar;a  banana away\er  teacher under\or doctor  forget \o  together lesson\ure picture\ur saturday
+                        对比：一个发音感觉，就是一个带儿化音
+                        [ʌ]
+                            阿;cup dump;u  luck butter\o  monk onion\ou  trouble flourish\oo  blood flood
+
+                    后元音5个
+                        [u:]
+                            屋;school;oo  school fool\o woman wolf\ou soup group \u pollute blue \oe shoe canoe\ui fruit juice
+                        [u]
+                            屋;
+                双元音8个：
+                    开合双元音5个：
+                    集合双元音3个：
+            辅音28个：
+                爆破音15个：
+                    清辅音8个：
+                    浊辅音7个：
+                破擦音6个：
+                    清辅音3个：
+                    浊辅音3个：
+                鼻音3个：
+                舌则音2个：
+                半元音2个：
+
