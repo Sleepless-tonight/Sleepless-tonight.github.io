@@ -10,11 +10,11 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
 
-    <artifactId>springboot_create</artifactId>
+    <artifactId>springbootTest</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>springboot</name>
+    <name>springbootTest</name>
     <description>Demo project for Spring Boot</description>
 
 
