@@ -14,7 +14,7 @@ import okhttp3.Response;
  * @ Created by shiliang on 2018/10/17 19:23.
  * @ 类的描述：OkHttpClient
  */
-public class test {
+public class OkhttpTest {
     public static void main(String[] args) throws IOException {
         RequestBody body = new FormBody.Builder()
                 .add("sign", "755086ba29c6548f9c96be70a4a6d22c")

@@ -259,8 +259,8 @@
 //            return false;
 //        }
 //        // 如果目标目录在源目录中则返回false，看不懂的话好好想想递归怎么结束
-//        // srcPath : F:\\MyGithub\\AndroidUtilCode\\utilcode\\src\\test\\res
-//        // destPath: F:\\MyGithub\\AndroidUtilCode\\utilcode\\src\\test\\res1
+//        // srcPath : F:\\MyGithub\\AndroidUtilCode\\utilcode\\src\\OkhttpTest\\res
+//        // destPath: F:\\MyGithub\\AndroidUtilCode\\utilcode\\src\\OkhttpTest\\res1
 //        // 为防止以上这种情况出现出现误判，须分别在后面加个路径分隔符
 //        String srcPath = srcDir.getPath() + File.separator;
 //        String destPath = destDir.getPath() + File.separator;
