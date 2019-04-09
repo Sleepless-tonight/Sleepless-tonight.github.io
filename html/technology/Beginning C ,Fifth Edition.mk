@@ -1,3 +1,4 @@
+# Beginning C ,Fifth Edition
 ##### 前言&nbsp;
 有抱负的程序员必将面对的三重障碍，遍布程序设计语言中的各类术语、理解如何使用语言元素（而不仅仅只是知道它们的概念）、领会如何在手机场景中应用该语言。
 
@@ -47,7 +48,6 @@ gcc -c main.c
 #include <stdio.h>
  
  int main(void){
-     int a = 10;
      printf("Hello world!");
      return 0;
  }
@@ -61,7 +61,6 @@ gcc -c main.c
 #include <stdio.h>
  
  int main(void){
-     int a = 10;
      printf("Hello world!\n");
      return 0;
  }
@@ -98,7 +97,27 @@ gcc -c main.c
 
 ##### 1.8.3&nbsp;&nbsp;定义 main() 函数
 
-函数是两个括号主键执行某组操作的一段代码，每个 C 程序都是由一个或多个
+下面的5行指令定义了main()函数：
+```
+ int main(void)
+ {
+     printf("Hello world!\n");
+     return 0;
+ }
+```
+函数是两个括号主键执行某组操作的一段代码，每个 C 程序都是由一个或多个函数组成，每个 C 程序都必须有个 main() 函数，main()函数是每个 C 程序的执行起点。在执行阶段执行可执行文件时，操作系统会执行这个程序的main()函数。
+
+定义main()函数的第一行代码如下：
+```
+int main(void)
+```
+定义main()函数的第一行代码开头是一个关键字 int，它标示main()函数的返回值类型。
+
+在下面的语句中，指定了执行完 main()函数后要返回的值：
+```
+return 0;
+```
+
 
 
 
