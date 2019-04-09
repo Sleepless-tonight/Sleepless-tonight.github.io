@@ -31,11 +31,14 @@ import java.util.stream.Collectors;
  * @description:
  **/
 public class MarkDown2HtmlWrapper {
-    private static String MD_CSS = null;
+    private static String MD_CSS = "../Css/markdownCss/github-markdown.css";
+
     static {
         try {
-            MD_CSS = FileUtil.file("markdownCss/github-markdown.css").getCanonicalPath();
-            MD_CSS = "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n" +
+            if (null == MD_CSS) {
+                MD_CSS = FileUtil.file("markdownCss/github-markdown.css").getCanonicalPath();
+            }
+            MD_CSS = "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" charset=\"utf-8\">\n" +
                     "<link rel=\"stylesheet\" href=\"" +
                     MD_CSS +
                     "\">\n" +
@@ -58,6 +61,7 @@ public class MarkDown2HtmlWrapper {
             MD_CSS = "";
         }
     }
+
     /**
      * 将本地的markdown文件，转为html文档输出
      *
@@ -100,6 +104,7 @@ public class MarkDown2HtmlWrapper {
         entity.addDivStyle("class", "markdown-body ");
         return entity;
     }
+
     public static String parse(String content) {
         MutableDataSet options = new MutableDataSet().set(Parser.EXTENSIONS, Arrays.asList(
                 AutolinkExtension.create(),
