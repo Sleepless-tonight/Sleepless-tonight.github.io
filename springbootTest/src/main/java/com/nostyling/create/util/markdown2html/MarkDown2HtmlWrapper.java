@@ -31,8 +31,8 @@ import java.util.stream.Collectors;
  * @description:
  **/
 public class MarkDown2HtmlWrapper {
-    private static String MD_CSS = "../Css/markdownCss/github-markdown.css";
-
+    //private static String MD_CSS = "../Css/markdownCss/github-markdown.css";
+    private static String MD_CSS = null;
     static {
         try {
             if (null == MD_CSS) {
