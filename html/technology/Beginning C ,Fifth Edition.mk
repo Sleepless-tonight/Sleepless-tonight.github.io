@@ -117,6 +117,7 @@ int main(void)
 ```
 return 0;
 ```
+这个 return 语句结束了 main() 函数的执行。
 
 
 
