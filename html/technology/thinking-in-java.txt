@@ -188,7 +188,7 @@
                 boolean     1-bit    Boolean
                 byte        8-bit    Byte[11]
                 char        16-bit   Character
-                short       16-bit   Short1
+                short       16-bit   Short
                 int         32-bit   Integer
                 long        64-bit   Long
                 float       32-bit   Float
