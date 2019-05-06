@@ -630,6 +630,204 @@ long double biggest = 1234567.89123L;
 
 **函数：scanf("%f", &b);**
 
+```
+scanf("%f",&diameter);
+```
+
+scanf()是另一个需要包含头文件 stdio.h 的函数。它专门处理键盘输入,提取通过键盘输入的数据,按照第一个参数指定的方式解释它,第一个参数是放在双引号内的一个控制字符串。在这里,这个控制字符串是 %f.因为读取的值是float类型。scanf()将这个数存入第二个参数指定的变量 diameter 中。第一个参数是一个控制字符串,和print()函数的用法类似,但它控制的是输入,而不是输出。第10章将详细介绍 scanf()函数,附录 D总结了所有的控制字符串。
+
+注意,变量名 diameter 前的 & 是个新东西,它称为寻址运算符,它允许 scanf() 函数将读入的数值存进变量 diameter.它的做法和将参数值传给函数是一样的。这里不详细解释它;第8章会详细说明。唯一要记住的是,使用函数 scanf() 时,要在变量前加上寻让运算符 & ,而使用 print() 函数时不添加它。
+
+在函数 scanf()的控制字符串中, % 字符表示某数据项的格式说明符的开头。% 字符后面的 f 表示输入一个浮点数。在控制字符串中一般有几个格式说明符,它们按顺序确定了函数中后面各参数的数据类型。在 scanf() 的控制字符串后面有多少个参数,控制字符串就有多少个格式说明符,本书的后面将介绍 scanf() 函数的更多运用,表 2-8 列出了卖取各种类型的数据时所使用的格式说明符:
+
+表 2-8 
+
+操作 | 需要控制的字符串
+---|---
+读取 short 类型的数值  | %hd
+读取 int 类型的数值  | %d
+读取 long 类型的数值  | %ld
+读取 float 类型的数值  | %f 或者 %e
+读取 double 类型的数值  | %lf 或者 %le
+
+
+##### 2.8&nbsp;&nbsp;定义命名常量
+
+一个值在程序中保持不变可以设为常量。
+
+这有两种方法：第一种是定义一个符号，在程序编译期间取代它。
+
+```
+#include <stdio.h>
+#define PI 3.1415926f
+
+int main(void) {
+    float a = 1000000000.000f;
+    float b = 20.0f * PI;
+    printf("你好");
+    scanf("%f", &b);
+
+    printf("数值 a ——> %5.2f \n-- \n""数值 b ——> %f", a, b);
+    return 0;
+}
+
+```
+
+在注释和头文件的#include指令之后,有一个预处理指令:
+
+```
+#define PI 3.1415926f
+```
+
+这里将PI定义为一个要被3.14159f 取代的符号。使用 PI 而不是 Pi ,是因为在 C 语言中有一个通用的约定: #define 语句中的标识符都是大写。只要在程序里的表达式中引用 PI,预处理器就会用 #define 指令中的数值取代它。所有的取代动作都在程序编译之前完成。程序开始编译时,不再包含PI这个符号了,因为所有的PI都用 #define 指令中的数值取代了。这些动作都是在编译器处理时在内部发生的,源程序没有改变,仍包含符号 PI.
+
+> **警告：**
+>
+> &nbsp;&nbsp;&nbsp;&nbsp;在预处理器在替代代码中的符号时,不会考虑它是否有意义。如果在替代字符串中出错,例如,如果编写了3.14.159f,预处理器仍会用它替代每个PI,而程序不会编译。
+
+第二种方法是将 Pi 定义成变量,但告诉编译器,它的值是固定的,不能改变。声明变量时,在变量名前加上 const 关键字,可以固化变量的值,例如:
+
+```
+    const float b = 3.1415926f;
+```
+
+以这种方式定义 Pi 的优点是, Pi 现在定义为指定类型的一个常量值。在前面的例子中, PI 只是一个字符序列,替代代码中的所有 PI 。
+
+在 Pi 的声明中添加关键字 const,会使编译器检查代码是否试图改变它的值。这么做的代码会被标记为错误,且编译失败。
+
+##### 2.8.1&nbsp;&nbsp;极限值
+
+当然,一定要确定程序中给定的整数类型可以存储的极限值。如前所述,头文件 <limits.h>定义的符号表示每种类型的极限值。表2-9列出了对应于每种带符号整数类型的极限值符号名。
+
+表2-9 整数类型的极限值的符号
+
+类型 | 下限 | 上限
+---|---|---
+char | CHAR_MIN | CHAR_MAX
+short | SHORT_MIN | SHORT_MAX
+int | INT_MIN | INT_MAX
+long | LONG_MIN | LONG_MAX
+long long | LLONG_MIN | LLONG_MAX
+
+无符号整数类型的下限都是 0,所以它们没有特定的符号。无符号整数类型的上限的符号分别是 UCHAR_MAX,USHRT_MAX、UINT_MAX、ULONG_MAX 和 ULLONG_MAX。
+
+要在程序中使用这些符号,必须在源文件中添加 <limits.h> 头文件的 #include 指令：
+
+```
+#include <limits.h> 
+```
+
+初始化最大值 int 变量，如下所示：
+
+```
+//这个语句把number的值设置为最大值,编译器会利用该最大值编译代码。
+int number = INT_MAX;
+```
+
+<float.h>头文件定义了表示浮点数的符号,其中一些的技术含量很高,所以这里只介绍我们感兴趣的符号。 3 种浮点数类型可以表示的最大正值和最小正值如表2-10所示。还可以使用FLT_DIG、DBL_DIG 和 LDBL_DIG符号,它们指定了对应类型的二进制尾数可以表示的小数位数。下面用一个例子来说明如何使用表示整数和浮点数的符号。
+
+表2-10 表示浮点数类型的极限值的符号
+
+类型 | 下限 | 上限
+---|---|---
+float | CHAR_MIN | CHAR_MAX
+double | SHORT_MIN | SHORT_MAX
+long double | INT_MIN | INT_MAX
+
+```
+// Program 2.11 Finding the limits 
+#include <stdio.h>// For command line input and output
+#include <limits.h>//For limits on integer types
+#include <float.h>// For limits on floating-point types
+int main(void) {
+
+    printf ("Variables of type char store values from %d to %d\n", CHAR_MIN, CHAR_MAX);
+    printf ("Variables of type unsigned char store values from O to %u\n", UCHAR_MAX);
+    printf ("Variables of type short store values from %d to %d\n", SHRT_MIN, SHRT_MAX);
+    printf ("Variables of type unsigned short store values from o to %u\n", USHRT_MAX) ;
+    printf ("Variables of type int store values from %d to %d\n", INT_MIN, INT_MAX);
+    printf ("Variables of type unsigned int store values from o to %u\n", UINT_MAX) ;
+    printf ("Variables of type long store values from %ld to %ld\n", LONG_MIN, LONG_MAX) ;
+    printf ("Variables of type unsigned long store values from o to %lu\n", ULONG_MAX) ;
+    printf ("Variables of type long long store values from %lld to %lld\n", LIONG_MIN, LLONG_MAX);
+    printf ("Variables of type unsigned long long store values from 0 to %llu\n", ULLONG_MAX);
+
+    printf ("\nThe size of the smallest positive non-zero value of type float is %.3e\n", FLT_MIN);
+    printf ("The size of the largest value of type float is %.3e\n", FLT_MAX);
+    printf ("The size of the smallest non-zero value of type double is %.3e\n", DBL_MIN) ;
+    printf ("The size of the largest value of type double is %.3e\n", DBL_MAX) ;
+    printf ("The size of the smallest non-zero value of type long double is %.3Le\n", LDBL_MIN);
+    printf ("The size of the largest value of type long double is %.3Le\n", LDBL_MAX);
+    
+    printf ("\n Variables of type float provide %u decimal digits precision. \n", FLT_DIG);
+    printf ("Variables of type double provide %u decimal digits precision. \n", DBL_DIG);
+    printf ("Variables of type long double provide %u decimal digits precision. \n",LDBL_DIG);
+
+    return 0;
+}
+```
+
+在一系列的printf()函数调用中,输出<limits.h>和<float.h>头文件定义的符号的值。计算机中的数值总是受限于该机器可以存储的值域,这些符号的值表示每种数值类型的极限值。这里用说明符 %u 输出无符号整数值。如果用 %d 输出无符号类型的最大值,则最左边的位(带符号类型的符号位)为 1 的数值就得不到正确的解释。
+
+对浮点数的极限值使用说明符 %e,表示这个数值是指数形式。同时指定精确到小数点后的 3 位数,因为这里的输出不需要非常精确。print()函数显示的值是 long double类型时,需要使用 L 修饰符。L 必须是大写,这里没有使用小写字母 l。%f说明符表示没有指数的数值,它对于非常大或非常小的数来说相当不方便。在这个例子中试一试,就会明白其含义。
+
+##### 2.8.2&nbsp;&nbsp;sizeof运算符
+
+使用 sizeof 运算符可以确定给定的类型占据多少字节。当然,在 C 语言中 sizeof 是一个关键字。表达式 sizeof(int) 会得到int类型的变量所占的字节数,所得的值是一个size_t类型的整数。size_t 类型在标准头文件<stddef.h> (和其他头文件)中定义,对应于一个基本整数类型。但是,与 size_t类型对应的类型可能在不同的 C 库中有所不同,所以最好使用 size_t 变量存储 sizeof 运算符生成的值,即使知道它对应的基本类型,也应如此。下面的语句是存储用 sizeof 运算符计算所得的数值:
+
+```
+size_t size = sizef(long long);
+```
+也可以将 sizeo f运算符用于表达式,其结果是表达式的计算结果所占据的字节数。通常该表达式是某种类型的变量。除了确定某个基本类型的值占用的内存空间之外, sizeof 运算符还有其他用途,但这里只使用它确定每种类型占用的字节数。
+
+```
+#include <stdio.h>// For command line input and output
+int main(void) {
+
+    printf ("Variables of type  long long occupy %u butes. \n",sizef(long long));
+    printf ("Variables of type  float occupy %u butes. \n",sizef(float));
+    printf ("Variables of type  double occupy %u butes. \n",sizef(double));
+
+    return 0;
+}
+```
+
+因为 sizeof 运算符的结果是一个无符号整数,所以用 %u 说明符输出它。注意,使用表达式 sizeof var_name也可以得到变量 var-name 占用的字节数。显然,在关键字 sizeof 和变量名之间的空格是必不可少的。
+
+现在已经知道编译器给每个数值类型指定的极限值和占用的字节数了。
+
+> **注意：**
+>
+> &nbsp;&nbsp;&nbsp;&nbsp;如果希望把 sizeof 运算符应用于一个类型,则该类型名必须放在括号中,例如sizeof(long double),将 sizeof 运算符应用于表达式时,括号就是可选的。
+
+
+##### 2.9&nbsp;&nbsp;选择正确的类型
+
+必须仔细选择在计算过程中使用的变量类型,使之能包含我们期望的值。如果使用了错误的类型,程序就可能出现很难检测出来的错误。具体每类类型存储数值的区间如下：
+
+![image](https://nostyling-1256016577.cos.ap-beijing.myqcloud.com/1-1403161Z633114.png)
+
+类型名称 | 占字节数 | 其他叫法 | 表示的数据范围 | 无符号
+---|---|---|---|---
+char | 1 | signed char	 | -128 ~ 127  |  0 ~ 255
+int	 | 4 | 	signed int	 | -2,147,483,648 ~ 2,147,483,647 | 0 ~ 4,294,967,295
+short	 | 2 | 	short int	 | -32,768 ~ 32,767 | 0 ~ 65,535
+long	 | 4 | 	long int	 | -2,147,483,648 ~ 2,147,483,647 | 0 ~ 4,294,967,295
+long long	 | 8 | 	long	long int	 | -4,294,967,296 ~ 4,294,967,296 | 0 ~ 8,589,934,592
+float	 | 4 | 	none	 | 3.4E +/- 38 (7 digits)
+double	 | 8 | 	none	 | 1.7E +/- 308 (15 digits)
+long double	 | 10 | none | 1.2E +/- 4932 (19 digits)
+
+这里有一个编程宗旨，就是能用小不用大。
+
+可以利用自动类型转换。
+
+##### 2.10&nbsp;&nbsp;强制类型转换
+
+
+
+
+
 
 
 
