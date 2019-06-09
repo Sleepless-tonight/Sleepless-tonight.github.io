@@ -1,6 +1,6 @@
 package com.nostyling.create.modular.controller;
 
-import com.nostyling.create.DemoApplication;
+import com.nostyling.create.modular.entity.User;
 import com.nostyling.create.modular.service.IUserService;
 import com.nostyling.create.util.RedisUtil;
 import io.swagger.annotations.Api;
@@ -10,7 +10,7 @@ import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -43,6 +43,11 @@ public class UserController {
     private RedisUtil redisUtil;
 
 
+    /**
+     * @Cacheable和@CacheEvict.第一个注解代表从缓存中查询指定的key,如果有,从缓存中取,不再执行方法.如果没有则执
+     * 行方法, 并且将方法的返回值和指定的key关联起来, 放入到缓存中.而@CacheEvict则是从缓存中清除指定的key对应的数据.
+     * @return
+     */
     @ApiOperation(value="全用户列表")
     @ApiImplicitParams({
             @ApiImplicitParam(name = "page", value = "当前页数1开始",  dataType = "int",paramType = "query"),
@@ -51,12 +56,12 @@ public class UserController {
     })
     @RequestMapping("/getUser")
     @ResponseBody
-    public Object getUser() {
+    @Cacheable(value="thisredis", key="'users_'+#id")
+    public Object getUser(User entity) {
 
         redisUtil.set("Redis", "******  Redis is success!  *****",(long)5 * 60);
         logger.info(redisUtil.get("Redis").toString());
 
-        HashMap <String, Object> entity = new HashMap <String, Object>();
         return userService.selectUsers(entity);
     }
 

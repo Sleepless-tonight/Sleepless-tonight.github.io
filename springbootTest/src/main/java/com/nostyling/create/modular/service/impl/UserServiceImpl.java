@@ -25,8 +25,8 @@ public class UserServiceImpl implements IUserService {
 	private UserMapper userMapper;
 
     @Override
-    public List<User> selectUsers(Map<String, Object> map) {
-        return userMapper.selectUsers(map);
+    public List<User> selectUsers(User entity) {
+        return userMapper.selectUsers(entity);
     }
 
 }

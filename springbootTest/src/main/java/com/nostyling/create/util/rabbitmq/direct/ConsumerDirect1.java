@@ -38,12 +38,13 @@ public class ConsumerDirect1 {
         String routingKey = "orderMsgQueueTestLocalShi";
         //绑定队列，通过路由键 hola 将队列和交换器绑定起来;交换和队列之间的关系称为绑定。可以简单地理解为：队列对来自此交换的消息感兴趣。绑定可以采用额外的routingKey参数。为了避免与basic_publish参数混淆，我们将其称为:绑定密钥。扇出交换只是忽略了它的价值
         channel.queueBind(queueName, exchangeName, routingKey);
+        String consumerTag = "TestLocalShi";
+
         //一次只接受一条未包含的消息
         channel.basicQos(1);
         while(true) {
             //消费消息
             boolean autoAck = false;
-            String consumerTag = "";
             String s = channel.basicConsume(queueName, autoAck, consumerTag, new DefaultConsumer(channel) {
                 @Override
                 public void handleDelivery(String consumerTag,

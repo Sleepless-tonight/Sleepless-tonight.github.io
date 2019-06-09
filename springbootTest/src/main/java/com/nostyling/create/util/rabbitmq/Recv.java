@@ -10,7 +10,7 @@ public class Recv {
     private final static Integer PORT = 5672;
     private final static String USERNAME = "admin";
     private final static String PASSWORD = "5672";
-    private final static String QUEUE_NAME = "deliver_order_dts";
+    private final static String QUEUE_NAME = "deliver_order_dts_test2";
 
     public static void main(String[] argv) throws Exception  {
 

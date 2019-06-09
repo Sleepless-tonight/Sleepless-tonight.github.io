@@ -27,6 +27,12 @@ public class MysqlGenerator extends GeneratorTest {
      * </p>
      */
     public static void main(String[] args) {
+        //数据库名称
+        String DBName = "oms_api";
+        //需要生成的表
+        String[] TableName = new String[] {"trade_info"};
+
+
         int result = scanner();
         // 自定义需要填充的字段
         List<TableFill> tableFillList = new ArrayList<>();
@@ -66,10 +72,11 @@ public class MysqlGenerator extends GeneratorTest {
                                 return (DbColumnType)super.processTypeConvert(globalConfig, fieldType);
                             }
                         })
-                        .setDriverName("com.mysql.jdbc.Driver")
+                        .setDriverName("com.mysql.cj.jdbc.Driver")
                         .setUsername("root")
                         .setPassword("lb,LtawoFcd.eV@J")
-                        .setUrl("jdbc:mysql://192.168.100.220:3306/dts2?autoReconnect=true&useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=CONVERT_TO_NULL&useSSL=false&useAffectedRows=true")
+                        .setUrl("jdbc:mysql://192.168.100.220:3306/" +DBName+
+                                "?autoReconnect=true&useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=CONVERT_TO_NULL&useSSL=false&useAffectedRows=true")
         ).setStrategy(
                 // 策略配置
                 new StrategyConfig()
@@ -77,7 +84,7 @@ public class MysqlGenerator extends GeneratorTest {
                         // .setDbColumnUnderline(true)//全局下划线命名
                         .setTablePrefix(new String[]{"bmd_", "mp_"})// 此处可以修改为您的表前缀
                         .setNaming(NamingStrategy.underline_to_camel)// 表名生成策略
-                         .setInclude(new String[] { "oms_tax_items" }) // 需要生成的表
+                         .setInclude(TableName) // 需要生成的表
                         // .setExclude(new String[]{"Recv"}) // 排除生成的表
                         // 自定义实体父类
                         // .setSuperEntityClass("com.baomidou.demo.TestEntity")
