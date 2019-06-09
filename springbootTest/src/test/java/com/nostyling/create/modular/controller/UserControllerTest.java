@@ -25,7 +25,7 @@ public class UserControllerTest {
 
     @Test
     public void getUser() {
-        System.out.println("User:"+ Arrays.toString(userService.selectUsers(new HashMap <>()).toArray()));
+        System.out.println("User:"+ Arrays.toString(userService.selectUsers(new User()).toArray()));
 
     }
 }

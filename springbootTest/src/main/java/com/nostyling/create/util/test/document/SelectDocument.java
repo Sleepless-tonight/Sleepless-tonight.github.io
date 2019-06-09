@@ -25,7 +25,8 @@ public class SelectDocument {
 
         System.out.println("开始时间：" + format.format(new Date()));
 
-        String path = "C:\\";
+        //String path = "C:\\";
+        String path = "C:\\Users\\shiliang\\AppData\\Local\\Packages\\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\\LocalState\\Assets";
         get(path);
         System.out.println("文件数：" + FileSize);
         System.out.println("文件夹数：" + DocumentSize);
@@ -42,8 +43,8 @@ public class SelectDocument {
             if (file.isFile()) {
                 FileSize++;
                 //System.out.print(FileSize + "、 文件 Path: " + file.getPath() + "  --->  ");
-                //System.out.print("文件 Name: " + file.getName() + "  --->  ");
-                //System.out.println("文件大小 : " + file.length());
+                System.out.print("文件 Name: " + file.getName() + "  --->  ");
+                System.out.println("文件大小 : " + file.length());
             } else if (file.isDirectory()) {
                 if (file.canRead()) {
                     DocumentSize++;

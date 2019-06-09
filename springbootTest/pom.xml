@@ -81,7 +81,6 @@
         <dependency>
             <groupId>com.rabbitmq</groupId>
             <artifactId>amqp-client</artifactId>
-            <version>5.5.1</version>
         </dependency>
 
         <!--shiro依赖-->
@@ -265,6 +264,21 @@
             <!--<version>3.6</version>-->
         </dependency>
 
+        <!-- Commons IO是一个帮助开发IO功能的实用程序库。
+            主要包括六个方面：
+            Utility classes 实用程序类 - 使用静态方法执行常见任务
+            Input           输入 - 有用的输入流和读取器实现
+            Output          输出 - 有用的输出流和写入器实现
+            Filters         过滤器 - 文件过滤器的各种实现
+            Comparators     比较器 - 用于文件的 java.util.Comparator 的各种实现
+            File Monitor    文件监视器 - 用于监视文件系统事件的组件
+            -->
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.6</version>
+        </dependency>
+
         <!--  Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -291,6 +305,7 @@
                 </exclusion>
             </exclusions>
         </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-undertow</artifactId>

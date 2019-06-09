@@ -1,11 +1,5 @@
 package com.nostyling.create.util;
 
-/**
- * @ outhor: by com.nostyling.create.util
- * @ Created by shili on 2018/9/26 12:02.
- * @ 类的描述：
- */
-
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +17,7 @@ import java.util.concurrent.CountDownLatch;
 /**
  * 生产者
  * 使用@EnableScheduling注解开启定时任务
+ * @author shiliang
  */
 @Component
 @EnableScheduling

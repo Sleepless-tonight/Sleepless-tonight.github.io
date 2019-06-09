@@ -19,7 +19,7 @@ public interface UserMapper extends BaseMapper<User> {
     /**
      * 根据条件查询用户列表
      */
-	List<User> selectUsers(@Param("map") Map <String, Object> map);
+	List<User> selectUsers(User entity);
 
 
 }
