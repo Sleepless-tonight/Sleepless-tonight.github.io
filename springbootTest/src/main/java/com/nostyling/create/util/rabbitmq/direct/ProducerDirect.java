@@ -18,9 +18,9 @@ public class ProducerDirect {
         //创建连接工厂
         ConnectionFactory factory = new ConnectionFactory();
         factory.setUsername("admin");
-        factory.setPassword("5672");
+        factory.setPassword("ca&e6I^Z@a!pfh");
         //设置 RabbitMQ 地址
-        factory.setHost("192.168.100.220");
+        factory.setHost("dev-mq-vip.tae-tea.net");
         factory.setPort(5672);
         //建立到代理服务器到连接
         Connection conn = factory.newConnection();
@@ -34,7 +34,7 @@ public class ProducerDirect {
         //路由键
         String routingKey = "green";
         //路由键
-        String routingKey2 = "black";
+        String routingKey2 = "green";
         //发布消息
         String quti = "发布消息： ";
 

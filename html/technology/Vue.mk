@@ -2,7 +2,7 @@
 
 ### 1、node.js下载、安装略过
 
-npm cache clear -force清空缓存
+cnpm cache clear -force   清空缓存
 
 根据install.js，脚本通过http.get下载chromediriver二进制文件。
 但是zip文件已被移动，脚本不处理这种情况。

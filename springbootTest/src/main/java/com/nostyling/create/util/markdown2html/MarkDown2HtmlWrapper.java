@@ -31,14 +31,17 @@ import java.util.stream.Collectors;
  * @description:
  **/
 public class MarkDown2HtmlWrapper {
-    //private static String MD_CSS = "../Css/markdownCss/github-markdown.css";
-    private static String MD_CSS = null;
+    private static String MD_CSS = "../Css/markdownCss/github-markdown.css";
+    //private static String MD_CSS = null;
     static {
         try {
             if (null == MD_CSS) {
                 MD_CSS = FileUtil.file("markdownCss/github-markdown.css").getCanonicalPath();
             }
-            MD_CSS = "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" charset=\"utf-8\">\n" +
+            MD_CSS = "<head>\n" +
+                    "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" charset=\"utf-8\">\n" +
+                    "    <link rel=\"icon\" href=\"https://nostyling-1256016577.cos.ap-beijing.myqcloud.com/GitHub_cat.png\" type=\"image/x-icon\">\n" +
+                    "</head>" +
                     "<link rel=\"stylesheet\" href=\"" +
                     MD_CSS +
                     "\">\n" +

@@ -29,8 +29,15 @@ public class MysqlGenerator extends GeneratorTest {
     public static void main(String[] args) {
         //数据库名称
         String DBName = "oms_api";
-        //需要生成的表
         String[] TableName = new String[] {"trade_info"};
+
+        String Username = "root";
+        String Password = "lb,LtawoFcd.eV@J";
+        String Url = "192.168.100.220:3306";
+
+        String Author = "shiliang";
+        String DriverName = "com.mysql.cj.jdbc.Driver";
+        //需要生成的表
 
 
         int result = scanner();
@@ -49,7 +56,7 @@ public class MysqlGenerator extends GeneratorTest {
                         .setBaseResultMap(true)// XML ResultMap
                         .setBaseColumnList(true)// XML columList
                         //.setKotlin(true) 是否生成 kotlin 代码
-                        .setAuthor("shiliang")
+                        .setAuthor(Author)
                 // 自定义文件命名，注意 %s 会自动填充表实体属性！
                 // .setEntityName("%sEntity");
                 // .setMapperName("%sDao")
@@ -72,10 +79,12 @@ public class MysqlGenerator extends GeneratorTest {
                                 return (DbColumnType)super.processTypeConvert(globalConfig, fieldType);
                             }
                         })
-                        .setDriverName("com.mysql.cj.jdbc.Driver")
-                        .setUsername("root")
-                        .setPassword("lb,LtawoFcd.eV@J")
-                        .setUrl("jdbc:mysql://192.168.100.220:3306/" +DBName+
+                        .setDriverName(DriverName)
+                        .setUsername(Username)
+                        .setPassword(Password)
+                        .setUrl("jdbc:mysql://" +
+                                Url +
+                                "/" +DBName+
                                 "?autoReconnect=true&useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=CONVERT_TO_NULL&useSSL=false&useAffectedRows=true")
         ).setStrategy(
                 // 策略配置
