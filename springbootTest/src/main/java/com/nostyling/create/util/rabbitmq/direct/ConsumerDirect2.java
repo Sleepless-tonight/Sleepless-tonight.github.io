@@ -19,8 +19,9 @@ public class ConsumerDirect2 {
     public static void main(String[] args) throws IOException, TimeoutException {
         ConnectionFactory factory = new ConnectionFactory();
         factory.setUsername("admin");
-        factory.setPassword("5672");
-        factory.setHost("192.168.100.220");
+        factory.setPassword("ca&e6I^Z@a!pfh");
+        //设置 RabbitMQ 地址
+        factory.setHost("dev-mq-vip.tae-tea.net");
         factory.setPort(5672);
         //建立到代理服务器到连接
         Connection conn = factory.newConnection();
@@ -28,41 +29,40 @@ public class ConsumerDirect2 {
         final Channel channel = conn.createChannel();
         //声明交换器
         String exchangeName = "hello-exchange";
+        String queueName = "hello-exchange";
         channel.exchangeDeclare(exchangeName, "direct", true);
         //声明队列
         boolean durable = true; //永远不会丢失队列,需要声明它是持久的
-        String queueName = channel.queueDeclare().getQueue();//创建一个非持久的，独占的自动删除队列：
-        //channel.queueDeclare("task_queue",durable,false,false,null);
+        //String queueName = channel.queueDeclare().getQueue();//创建一个非持久的，独占的自动删除队列：
+        channel.queueDeclare(queueName, durable, false, false, null);
         //路由键
-        String routingKey = "black";
+        String routingKey = "green";
         //绑定队列，通过路由键 hola 将队列和交换器绑定起来;交换和队列之间的关系称为绑定。可以简单地理解为：队列对来自此交换的消息感兴趣。绑定可以采用额外的routingKey参数。为了避免与basic_publish参数混淆，我们将其称为:绑定密钥。扇出交换只是忽略了它的价值
         channel.queueBind(queueName, exchangeName, routingKey);
         //一次只接受一条未包含的消息
         channel.basicQos(1);
-        while(true) {
-            //消费消息
-            boolean autoAck = false;
-            String consumerTag = "";
-            channel.basicConsume(queueName, autoAck, consumerTag, new DefaultConsumer(channel) {
-                @Override
-                public void handleDelivery(String consumerTag,
-                                           Envelope envelope,
-                                           AMQP.BasicProperties properties,
-                                           byte[] body) throws IOException {
-                    String routingKey = envelope.getRoutingKey();
-                    String contentType = properties.getContentType();
-                    System.out.println("消费的路由键：" + routingKey);
-                    System.out.println("消费的内容类型：" + contentType);
-                    long deliveryTag = envelope.getDeliveryTag();
-                    //手动消息确认
-                    channel.basicAck(deliveryTag, false);
-                    System.out.print("消费的消息体内容：");
-                    String bodyStr = new String(body, "UTF-8");
-                    System.out.println(bodyStr);
+        //消费消息
+        boolean autoAck = false;
+        String consumerTag = "TestLocalShi2";
+        channel.basicConsume(queueName, autoAck, consumerTag, new DefaultConsumer(channel) {
+            @Override
+            public void handleDelivery(String consumerTag,
+                                       Envelope envelope,
+                                       AMQP.BasicProperties properties,
+                                       byte[] body) throws IOException {
+                String routingKey = envelope.getRoutingKey();
+                String contentType = properties.getContentType();
+                System.out.println("消费的路由键：" + routingKey);
+                System.out.println("消费的内容类型：" + contentType);
+                long deliveryTag = envelope.getDeliveryTag();
+                //手动消息确认
+                channel.basicAck(deliveryTag, false);
+                System.out.print("消费的消息体内容：");
+                String bodyStr = new String(body, "UTF-8");
+                System.out.println(bodyStr);
 
-                }
-            });
-        }
+            }
+        });
     }
 
 }

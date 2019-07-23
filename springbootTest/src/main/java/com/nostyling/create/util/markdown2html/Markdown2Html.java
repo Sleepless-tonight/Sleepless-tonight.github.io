@@ -12,8 +12,11 @@ import java.io.IOException;
  **/
 public class Markdown2Html {
     public static void main(String[] args) {
-        String file = "D:\\GitHub\\Sleepless-tonight.github.io\\html\\technology\\Beginning C ,Fifth Edition.mk";
-        String file2 = "C:\\Users\\shiliang\\Desktop\\Beginning C ,Fifth Edition.html";
+        //String file = "D:\\GitHub\\Sleepless-tonight.github.io\\html\\templates\\Beginning C ,Fifth Edition.mk";
+        //String file2 = "C:\\Users\\shiliang\\Desktop\\Beginning C ,Fifth Edition.html";
+
+         String file = "D:\\GitHub\\Sleepless-tonight.github.io\\html\\templates\\Thinking-In-Java.mk";
+        String file2 = "C:\\Users\\shiliang\\Desktop\\Thinking-In-Java.html";
         MarkdownEntity html = null;
         try {
             html = MarkDown2HtmlWrapper.ofFile(file);

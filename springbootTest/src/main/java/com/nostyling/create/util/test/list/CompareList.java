@@ -1,12 +1,14 @@
 package com.nostyling.create.util.test.list;
 
-import org.apache.commons.lang3.time.DateUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 
+/**
+ * 集合排序
+ */
 public class CompareList {
     public static void main(String[] args) {
 
