@@ -917,12 +917,142 @@ public class Test {
 
 ###### 但这是否意味着假如对象包含了其他对象，finalize()就应该明确释放那些对象呢？答案是否定的——垃圾收集器会负责释放所有对象占据的内存，无论这些对象是如何创建的。它将对 finalize()的需求限制到特殊的情况。在这种情况下，我们的对象可采用与创建对象时不同的方法分配一些存储空间。但大家或许会注意到，Java中的所有东西都是对象，所以这到底是怎么一回事呢？
 
-###### 之所以要使用finalize()，看起来似乎是由于有时需要采取与Java的普通方法不同的一种方法，通过分配内存来做一些具有C风格的事情。这主要可以通过“固有方法”来进行，它是从Java里调用非Java方法的一种方式（固有方法的问题在附录A讨论）。C和C++是目前唯一获得固有方法支持的语言。但由于它们能调用通过其他语言编写的子程序，所以能够有效地调用任何东西。在非Java代码内部，也许能调用C的 malloc()系列函数，用它分配存储空间。而且除非调用了free()，否则存储空间不会得到释放，从而造成内存“漏洞”的出现。当然，free()是一个C和C++函数，所以我们需要在finalize()内部的一个固有方法中调用它。
+###### 之所以要使用 finalize()，看起来似乎是由于有时需要采取与Java的普通方法不同的一种方法，通过分配内存来做一些具有C风格的事情。这主要可以通过“固有方法”来进行，它是从Java里调用非Java方法的一种方式（固有方法的问题在附录A讨论）。C和C++是目前唯一获得固有方法支持的语言。但由于它们能调用通过其他语言编写的子程序，所以能够有效地调用任何东西。在非Java代码内部，也许能调用C的 malloc()系列函数，用它分配存储空间。而且除非调用了free()，否则存储空间不会得到释放，从而造成内存“漏洞”的出现。当然，free()是一个C和C++函数，所以我们需要在finalize()内部的一个固有方法中调用它。
+
+> 个人总结一下：就是说在垃圾回收中需要注意的或者说影响垃圾回收行为的代码就是 finalize()，如果一个类有 finalize() ，那么它在第一次被垃圾回收器找上门的时候并不会直接被回收，而是执行 finalize() 中的代码，第二次被垃圾回收器找上门时才会被回收，另需注意的是，只有内存不足才会触发垃圾回收，才会进一步触发 finalize() 在中的代码，可能整个程序运行期间都不会进行垃圾回收，那么在 finalize() 中的代码也不会被执行。 
 
 ##### 4.3.2 必须执行清除
+###### 为清除一个对象，那个对象的用户必须在希望进行清除的地点调用一个清除方法。这听起来似乎很容易做到，但却与C++“破坏器”的概念稍有抵触。在C++中，所有对象都会破坏（清除）。或者换句话说，所有对象都“应该”破坏。若将C++对象创建成一个本地对象，比如在堆栈中创建（在Java中是不可能的），那么清除或破坏工作就会在“结束花括号”所代表的、创建这个对象的作用域的末尾进行。若对象是用new创建的（类似于Java），那么当程序员调用C++的delete命令时（Java没有这个命令），就会调用相应的破坏器。若程序员忘记了，那么永远不会调用破坏器，我们最终得到的将是一个内存“漏洞”，另外还包括对象的其他部分永远不会得到清除。
 
+###### 相反，Java不允许我们创建本地（局部）对象——无论如何都要使用new。但在Java中，没有“delete”命令来释放对象，因为垃圾收集器会帮助我们自动释放存储空间。所以如果站在比较简化的立场，我们可以说正是由于存在垃圾收集机制，所以Java没有破坏器。然而，随着以后学习的深入，就会知道垃圾收集器的存在并不能完全消除对破坏器的需要，或者说不能消除对破坏器代表的那种机制的需要（而且绝对不能直接调用finalize()，所以应尽量避免用它）。若希望执行除释放存储空间之外的其他某种形式的清除工作，仍然必须调用Java中的一个方法。它等价于C++的破坏器，只是没后者方便。
 
+###### finalize()最有用处的地方之一是观察垃圾收集的过程。下面这个例子向大家展示了垃圾收集所经历的过程，并对前面的陈述进行了总结。
 
+```java
+//: Garbage.java
+// Demonstration of the garbage
+// collector and finalization
+
+class Chair {
+  static boolean gcrun = false;
+  static boolean f = false;
+  static int created = 0;
+  static int finalized = 0;
+  int i;
+  Chair() {
+    i = ++created;
+    if(created == 47) 
+      System.out.println("Created 47");
+  }
+  protected void finalize() {
+    if(!gcrun) {
+      gcrun = true;
+      System.out.println(
+        "Beginning to finalize after " +
+        created + " Chairs have been created");
+    }
+    if(i == 47) {
+      System.out.println(
+        "Finalizing Chair #47, " +
+        "Setting flag to stop Chair creation");
+      f = true;
+    }
+    finalized++;
+    if(finalized >= created)
+      System.out.println(
+        "All " + finalized + " finalized");
+  }
+}
+
+public class Garbage {
+  public static void main(String[] args) {
+    if(args.length == 0) {
+      System.err.println("Usage: \n" +
+        "java Garbage before\n  or:\n" +
+        "java Garbage after");
+      return;
+    }
+    while(!Chair.f) {
+      new Chair();
+      new String("To take up space");
+    }
+    System.out.println(
+      "After all Chairs have been created:\n" +
+      "total created = " + Chair.created +
+      ", total finalized = " + Chair.finalized);
+    if(args[0].equals("before")) {
+      System.out.println("gc():");
+      System.gc();
+      System.out.println("runFinalization():");
+      System.runFinalization();
+    }
+    System.out.println("bye!");
+    if(args[0].equals("after"))
+      System.runFinalizersOnExit(true);
+  }
+} ///:~
+```
+
+###### 上面这个程序创建了许多Chair对象，而且在垃圾收集器开始运行后的某些时候，程序会停止创建Chair。由于垃圾收集器可能在任何时间运行，所以我们不能准确知道它在何时启动。因此，程序用一个名为gcrun的标记来指出垃圾收集器是否已经开始运行。利用第二个标记f，Chair可告诉main()它应停止对象的生成。这两个标记都是在finalize()内部设置的，它调用于垃圾收集期间。
+
+###### 另两个 static 变量——created以及 finalized——分别用于跟踪已创建的对象数量以及垃圾收集器已进行完收尾工作的对象数量。最后，每个Chair都有它自己的（非static）int i，所以能跟踪了解它具体的编号是多少。编号为47的Chair进行完收尾工作后，标记会设为true，最终结束Chair对象的创建过程。
+
+###### 所有这些都在main()的内部进行——在下面这个循环里：
+```java
+while(!Chair.f) {
+new Chair();
+new String("To take up space");
+}
+```
+###### 为强制进行收尾工作，可先调用System.gc()，再调用System.runFinalization()。这样可清除到目前为止没有使用的所有对象。若在这里首先调用runFinalization()，再调用gc()，收尾模块根本不会执行。
+
+> 有些Java虚拟机（JVM）可能已开始表现出不同的行为。为展示 GC 过程及 finalize() 作用，另寻以下示例：
+```java
+//示例代码--周志明著 Java虚拟机
+public class FinalizeEscapeGC {
+
+    public static FinalizeEscapeGC SAVE_HOOK = null;
+    public String name;
+    public FinalizeEscapeGC(String name) {
+        this.name = name;
+    }
+    public void isAlive() {
+        System.out.println("yes, i am still alive");
+    }
+    @Override
+    protected void finalize() throws Throwable {
+        super.finalize();
+        System.out.println("finalize method executed!");
+        System.out.println(this.name);
+        FinalizeEscapeGC.SAVE_HOOK = this;
+    }
+    public static void main(String[] args) throws Throwable {
+        SAVE_HOOK = new FinalizeEscapeGC("abc");
+        SAVE_HOOK =null;
+        System.gc();
+        Thread.sleep(500);
+        if(SAVE_HOOK != null) {
+            SAVE_HOOK.isAlive();
+        } else {
+            System.out.println("no, i am dead");
+        }
+        
+        SAVE_HOOK =null;
+        System.gc();
+        Thread.sleep(500);
+        if(SAVE_HOOK != null) {
+            SAVE_HOOK.isAlive();
+        } else {
+            System.out.println("no, i am dead");
+        }
+    }
+}
+// 第21行，第一次垃圾回收，名为abc的FinalizeEscapeGC实例对象的finalize()方法执行，此时全局静态变量 SAVE_HOOK又重新指向了改对象，使得该对象“复活”，
+// 第29行，再次切断引用链，30行，第二次垃圾回收，该对象的finalize()方法不会再执行了。该对象在堆中的空间被释放。
+
+```
+
+#### 4.4 成员初始化
 
 
 
