@@ -1384,7 +1384,6 @@ import mypackage.*;
 MyClass m = new MyClass();
 ```
 ###### 一定要记住 package 和 import 关键字允许我们做的事情就是分割单个全局命名空间，保证我们不会遇到名字的冲突——无论有多少人使用因特网，也无论多少人用Java编写自己的类。
-###### private-> default->  protected-> public
 
 ##### 5.1.1 创建独一无二的包名
 
@@ -1421,7 +1420,58 @@ CLASSPATH=.;D:\JAVA\LIB;C:\flavors\grape.jar
 ###### 大家应注意这样一个问题：每次创建一个包后，都在为包取名时间接地指定了一个目录结构。这个包必须存在（驻留）于由它的名字规定的目录内。而且这个目录必须能从CLASSPATH开始搜索并发现。最开始的时候，package关键字的运用可能会令人迷惑，因为除非坚持遵守根据目录路径指定包名的规则，否则就会在运行期获得大量莫名其妙的消息，指出找不到一个特定的类——即使那个类明明就在相同的目录中。若得到象这样的一条消息，请试着将package语句作为注释标记出去。如果这样做行得通，就可知道问题到底出在哪儿。
 
 
-#### 5.2 Java访问指示符
+#### 5.2 Java 访问指示符
+
+###### private -> default（Friendly） -> protected-> public
+###### 类中 -> 包内 -> 子类 -> 公开
+
+##### 5.2.1 default（Friendly）
+
+###### (4) Provide 提供“accessor／mutator”方法（亦称为“get／set”方法），以便读取和修改值。这是 OOP环境中最正规的一种方法，也是Java Beans的基础——具体情况会在第13章介绍。
+
+##### 5.2.3 private
+###### private 有非常重要的用途，特别是在涉及多线程处理的时候（详情见第14章）。
+
+```java
+//: IceCream.java
+// Demonstrates "private" keyword
+
+class Sundae {
+  private Sundae() {}
+  static Sundae makeASundae() { 
+    return new Sundae(); 
+  }
+}
+
+public class IceCream {
+  public static void main(String[] args) {
+    //! Sundae x = new Sundae();
+    Sundae x = Sundae.makeASundae();
+  }
+} ///:~
+```
+
+###### 例子演示了使用private的方便：有时可能想控制对象的创建方式，并防止有人直接访问一个特定的构建器（或者所有构建器）。在上面的例子中，我们不可通过它的构建器创建一个Sundae对象；相反，必须调用makeASundae()方法来实现（注释③）。
+
+> ③：此时还会产生另一个影响：由于默认构建器是唯一获得定义的，而且它的属性是private，所以可防止对这个类的继承（这是第6章要重点讲述的主题）。
+
+
+#### 5.3 接口与实现
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
