@@ -1481,12 +1481,69 @@ public class IceCream {
 ###### 进行访问控制的第二个、也是最重要的一个原因是：允许库设计者改变类的内部工作机制，同时不必担心它会对客户程序员产生什么影响。
 ###### 一个类的公共接口是所有用户都能看见的，所以在进行分析与设计的时候，这是应尽量保证其准确性的最重要的一个部分。但也不必过于紧张，少许的误差仍然是允许的。若最初设计的接口存在少许问题，可考虑添加更多的方法，只要保证不删除客户程序员已在他们的代码里使用的东西。
 
-### 第6章 类再生
+### 第 6 章 类再生
+###### 代码的重复使用
+1. 第一个最简单：在新类里简单地创建原有类的对象。我们把这种方法叫作“合成”，因为新类由现有类的对象合并而成。我们只是简单地重复利用代码的功能，而不是采用它的形式。
+2. 第二种方法则显得稍微有些技巧。它创建一个新类，将其作为现有类的一个“类型”。我们可以原样采取现有类的形式，并在其中加入新代码，同时不会对现有的类产生影响。这种魔术般的行为叫作“继承”（Inheritance），涉及的大多数工作都是由编译器完成的。对于面向对象的程序设计，“继承”是最重要的基础概念之一。
 
+#### 6.1 合成的语法
+###### 为进行合成，我们只需在新类里简单地置入对象句柄即可。对于非基本类型的对象来说，只需将句柄置于新类即可；而对于基本数据类型来说，则需在自己的类中定义它们。
+###### 每种非基本类型的对象都有一个toString()方法。若编译器本来希望一个String，但却获得某个这样的对象，就会调用这个方法（意思是说，把对象当 String 用的时候就会调用这个方法）。
+###### 在类内作为字段使用的基本数据会初始化成零，就象第2章指出的那样。但对象句柄会初始化成null。而且假若试图为它们中的任何一个调用方法，就会产生一次“违例”。这种结果实际是相当好的（而且很有用），我们可在不丢弃一次违例的前提下，仍然把它们打印出来。
+##### 编译器并不只是为每个句柄创建一个默认对象，因为那样会在许多情况下招致不必要的开销。如希望句柄得到初始化，可在下面这些地方进行：
+1. 在对象定义的时候。这意味着它们在构建器调用之前肯定能得到初始化。
+2. 在那个类的构建器中。
+3. 紧靠在要求实际使用那个对象之前。这样做可减少不必要的开销——假如对象并不需要创建的话。
+##### 下面向大家展示了所有这三种方法：
+```java
+//: Bath.java
+// Constructor initialization with composition
 
+class Soap {
+  private String s;
+  Soap() {
+    System.out.println("Soap()");
+    s = new String("Constructed");
+  }
+  public String toString() { return s; }
+}
 
+public class Bath {
+  private String 
+    // Initializing at point of definition:
+    s1 = new String("Happy"), 
+    s2 = "Happy", 
+    s3, s4;
+  Soap castille;
+  int i;
+  float toy;
+  Bath() {
+    System.out.println("Inside Bath()");
+    s3 = new String("Joy");
+    i = 47;
+    toy = 3.14f;
+    castille = new Soap();
+  }
+  void print() {
+    // Delayed initialization:
+    if(s4 == null)
+      s4 = new String("Joy");
+    System.out.println("s1 = " + s1);
+    System.out.println("s2 = " + s2);
+    System.out.println("s3 = " + s3);
+    System.out.println("s4 = " + s4);
+    System.out.println("i = " + i);
+    System.out.println("toy = " + toy);
+    System.out.println("castille = " + castille);
+  }
+  public static void main(String[] args) {
+    Bath b = new Bath();
+    b.print();
+  }
+} ///:~
+```
 
-
+#### 6.2 继承的语法
 
 
 
