@@ -33,4 +33,10 @@ public class GeneratorTest {
         }
         return slt;
     }
+
+    public static void main(String[] args) {
+        String url = "140105002001";
+        System.out.println(url.substring(0,2));
+        System.out.println(url.substring(2,4));
+    }
 }
