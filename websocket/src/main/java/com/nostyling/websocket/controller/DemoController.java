@@ -4,6 +4,7 @@ package com.nostyling.websocket.controller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
@@ -40,6 +41,19 @@ public class DemoController {
             System.out.println(s + " -> " + parameterMap.get(s)[0]);
         }
         return true;
+    }
+
+    /**
+     * 配置文件自定义属性
+     *
+     * @param
+     * @return
+     */
+    @RequestMapping("/restJson")
+    @ResponseBody
+    public Object test2(@RequestBody String entity) {
+        System.out.println(entity + "、");
+        return entity;
     }
 }
 

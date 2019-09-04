@@ -1,4 +1,4 @@
-package com.nostyling.create.util.test;
+package com.nostyling.create.util.test.taobao;
 
 import com.taobao.api.ApiException;
 import com.taobao.api.DefaultTaobaoClient;
@@ -15,8 +15,8 @@ import com.taobao.api.response.TmcUserGetResponse;
 public class Test12 {
     public static void main(String[] args) throws ApiException {
         String url = "https://eco.taobao.com/router/rest";
-        String appkey = "25782838";
-        String secret = "4946ff27732f470234db684441ea1ede";
+        String appkey = "appkey";
+        String secret = "secret";
         TaobaoClient client = new DefaultTaobaoClient(url, appkey, secret);
         TmcUserGetRequest req = new TmcUserGetRequest();
         req.setFields("user_nick,topics,user_id,is_valid,created,modified");
