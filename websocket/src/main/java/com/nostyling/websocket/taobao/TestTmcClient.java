@@ -1,10 +1,14 @@
-package com.nostyling.create.util.test;
+package com.nostyling.websocket.taobao;
 
 import com.taobao.api.internal.tmc.Message;
 import com.taobao.api.internal.tmc.MessageHandler;
 import com.taobao.api.internal.tmc.MessageStatus;
 import com.taobao.api.internal.tmc.TmcClient;
 import com.taobao.api.internal.toplink.LinkException;
+import org.apache.commons.logging.Log;
+import org.slf4j.Logger;
+import org.apache.commons.logging.LogFactory;
+import org.slf4j.LoggerFactory;
 
 /**
  * @program: Sleepless-tonight.github.io
@@ -12,9 +16,12 @@ import com.taobao.api.internal.toplink.LinkException;
  * @create: 2019-01-16 14:55
  * @description: 通过 淘宝消息服务 获取订单变更信息
  **/
-public class Test11 {
-
+public class TestTmcClient {
+    private final static Logger logger = LoggerFactory.getLogger(TestTmcClient.class);
     public static void main(String[] args) {
+        final org.apache.commons.logging.Log log  = LogFactory.getLog("tmcClient");
+
+
         TmcClient client = new TmcClient("25782838", "4946ff27732f470234db684441ea1ede", "default"); // 关于default参考消息分组说明
         client.setMessageHandler(new MessageHandler() {
             @Override

@@ -27,14 +27,14 @@ public class ProducerDirect {
         //获得信道
         Channel channel = conn.createChannel();
         //声明队列
-        String exchangeName = "hello-exchange";
+        String exchangeName = "yestae.exchange";
         ////永远不会丢失队列,需要声明它是持久的
         boolean durable = true;
         channel.queueDeclare(exchangeName, durable, false, false, null);
         //路由键
-        String routingKey = "green";
+        String routingKey = "OMS_Api_Send_Deliver_Order";
         //路由键
-        String routingKey2 = "green";
+        String routingKey2 = "OMS_Api_Send_Deliver_Order";
         //发布消息
         String quti = "发布消息： ";
 
