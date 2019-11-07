@@ -1,4 +1,4 @@
-package com.nostyling.create.util;
+package com.nostyling.create.util.mysql;
 
 import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.annotation.FieldFill;
@@ -28,12 +28,12 @@ public class MysqlGenerator extends GeneratorTest {
      */
     public static void main(String[] args) {
         //数据库名称
-        String DBName = "oms_api";
-        String[] TableName = new String[] {"trade_info"};
+        String DBName = "dev_atom_source_m_oms_0";
+        String[] TableName = new String[] {"oms_original_order","oms_original_order_detail","oms_original_order_log"};
 
-        String Username = "root";
-        String Password = "lb,LtawoFcd.eV@J";
-        String Url = "192.168.100.220:3306";
+        String Username = "dev_atom_source_m_oms_0";
+        String Password = "2yuuu6mxiqcrFXy";
+        String Url = "dev-atom-source-m-0.tae-tea.net:3306";
 
         String Author = "shiliang";
         String DriverName = "com.mysql.cj.jdbc.Driver";

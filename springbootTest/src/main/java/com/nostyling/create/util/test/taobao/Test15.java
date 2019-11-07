@@ -2,8 +2,11 @@ package com.nostyling.create.util.test.taobao;
 
 import com.taobao.api.ApiException;
 import com.taobao.api.BatchTaobaoClient;
+import com.taobao.api.DefaultTaobaoClient;
 import com.taobao.api.TaobaoBatchRequest;
 import com.taobao.api.TaobaoBatchResponse;
+import com.taobao.api.TaobaoClient;
+import com.taobao.api.internal.util.StringUtils;
 import com.taobao.api.request.TradeFullinfoGetRequest;
 import com.taobao.api.request.TradesSoldGetRequest;
 import com.taobao.api.request.TradesSoldIncrementGetRequest;
@@ -55,5 +58,8 @@ public class Test15 {
         } catch (ApiException e) {
             e.printStackTrace();
         }
+
+
+
     }
 }

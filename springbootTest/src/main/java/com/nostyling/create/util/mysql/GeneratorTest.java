@@ -1,4 +1,4 @@
-package com.nostyling.create.util;
+package com.nostyling.create.util.mysql;
 
 import java.util.Scanner;
 

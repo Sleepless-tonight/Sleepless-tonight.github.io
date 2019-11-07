@@ -28,15 +28,15 @@ public class ConsumerDirect2 {
         //获得信道
         final Channel channel = conn.createChannel();
         //声明交换器
-        String exchangeName = "hello-exchange";
-        String queueName = "hello-exchange";
+        String exchangeName = "yestae.exchange";
+        String queueName = "Mall_Order_Create_To_Count";
         channel.exchangeDeclare(exchangeName, "direct", true);
         //声明队列
         boolean durable = true; //永远不会丢失队列,需要声明它是持久的
         //String queueName = channel.queueDeclare().getQueue();//创建一个非持久的，独占的自动删除队列：
         channel.queueDeclare(queueName, durable, false, false, null);
         //路由键
-        String routingKey = "green";
+        String routingKey = "OrderCount";
         //绑定队列，通过路由键 hola 将队列和交换器绑定起来;交换和队列之间的关系称为绑定。可以简单地理解为：队列对来自此交换的消息感兴趣。绑定可以采用额外的routingKey参数。为了避免与basic_publish参数混淆，我们将其称为:绑定密钥。扇出交换只是忽略了它的价值
         channel.queueBind(queueName, exchangeName, routingKey);
         //一次只接受一条未包含的消息

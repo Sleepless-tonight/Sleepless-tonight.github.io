@@ -69,7 +69,7 @@ public class KeyPresser {
                                         num++;
                                         System.out.println(sdf.format(new Date()) + "    :" + out);
                                         System.out.println(num);
-                                        doit(x, y, robot, out);
+                                        doIt(x, y, robot, out);
 
 
                                         //鼠标左击——解锁
@@ -153,7 +153,7 @@ public class KeyPresser {
 
     }
 
-    public static void doit(int x,int y,Robot robot,String args) {
+    public static void doIt(int x, int y, Robot robot, String args) {
         char[] pring = args.toCharArray();
         for (int i = 0; i < pring.length; i++) {
             switch(pring[i]){

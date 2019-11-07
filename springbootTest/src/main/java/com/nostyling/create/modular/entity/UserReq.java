@@ -33,7 +33,7 @@ public class UserReq {
      * example–举例说明
      * hidden–隐藏
      */
-    @ApiModelProperty(value="编码",dataType="String",name="code",example="001")
+    @ApiModelProperty(value="编码",dataType="String",name="code",example="001",required = true)
     @NotBlank(message = "编码不能为空")
     String code;
 
