@@ -16,9 +16,10 @@ import java.util.ArrayList;
  * @program: Sleepless-tonight.github.io
  * @author: shiliang
  * @create: 2019-08-20 18:43
- * @description: 利用 jsoup 从国家统计局获得 区划代码和城乡划分代码
+ * @description: 利用 jsoup 从国家统计局获得 行政区域代码和城乡划分代码
  **/
 public class tjyqhdmhcxhfdm {
+
     public static void main(String[] args) throws IOException {
 
         ArrayList <Province> provinces = new ArrayList <>();
@@ -118,6 +119,7 @@ public class tjyqhdmhcxhfdm {
         } catch (IOException e) {
             e.printStackTrace();
             try {
+                // 指数退避
                 Thread.sleep(500 * time * time);//java.net.SocketTimeoutException: Read timed out
                 time++;
                 document = getDocument(url, time);
