@@ -1422,9 +1422,14 @@ CLASSPATH=.;D:\JAVA\LIB;C:\flavors\grape.jar
 
 #### 5.2 Java 访问指示符
 
-###### private -> default（Friendly） -> protected-> public
-###### 类中 -> 包内 -> 子类 -> 公开
-
+##### private -> default（Friendly） -> protected-> public
+##### 类中 -> 包内 -> 子类 -> 公开
+修饰符 | 类内部 | 同包 | 子类 | 任何地方
+---|---|---|---|---
+private | Yes |   |   |  
+default | Yes | Yes |   |  
+protected | Yes | Yes | Yes|  
+public | Yes | Yes | Yes | Yes
 ##### 5.2.1 default（Friendly）
 
 ###### (4) Provide 提供“accessor／mutator”方法（亦称为“get／set”方法），以便读取和修改值。这是 OOP环境中最正规的一种方法，也是Java Beans的基础——具体情况会在第13章介绍。
@@ -1546,6 +1551,7 @@ public class Bath {
 #### 6.2 继承的语法
 ###### 继承与Java（以及其他OOP语言）非常紧密地结合在一起。创建一个类时肯定会进行继承，因为若非如此，会从Java的标准根类Object中继承。
 ###### 需要继承的时候，需要给出类名,在类主体的起始花括号之前，放置一个关键字 extends，在后面跟随“基础类”的名字。就可自动获得基础类的所有数据成员以及方法。
+###### 我们可为自己的每个类都创建一个main()。对于在命令行请求的public类，只有main()才会得到调用。所以在这种情况下，当我们使用“java Detergent”的时候，调用的是Degergent.main()。采用这种将main()置入每个类的做法，可方便地为每个类都进行单元测试。
 
 
 
