@@ -4,6 +4,4 @@
 时间：2018年7月16日17:47:18
 连接：http://www.nostyling.cn/html/technology/Debug.txt
 
-    1、MySQL数据库的datetime类型字段在用Map<String,Object>集合进行接收的时候，会由正常的 2018-7-16 17:47:18 变为 2018-7-16 17:47:18:0，
-如果将此对象再转为Date类型可能会因为格式参数不匹配而发生失败，解决方式：DATE_FORMAT(wo.ob_finishtime,'%Y-%m-%d %H:%i:%S')AS obFinishtime，用 DATE_FORMAT 函数格式化，有效。
-    2、
+    1、内网穿透目前主要由 ngrok 和 frp 两种，都非常好用，国内 ngrok 免费的有 ittun、sunny 和 natapp，这三个都是免费的，前面两个可以自定义域名，后面的需要 vip 版本才可以自定义域名。
