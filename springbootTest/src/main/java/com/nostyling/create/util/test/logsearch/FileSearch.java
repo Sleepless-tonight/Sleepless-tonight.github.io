@@ -9,6 +9,8 @@ import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * @program: Sleepless-tonight.github.io
@@ -16,7 +18,7 @@ import java.util.HashMap;
  * @create: 2019-11-10 17:54
  * @description: 对 文本 文件查询是否包含某个字符串
  **/
-public class LogSearch {
+public class FileSearch {
     public static void main(String[] args) throws Exception {
         long start = System.currentTimeMillis();
         // 被搜索的文本
@@ -25,7 +27,7 @@ public class LogSearch {
         //String [] textToFind = {"700580641688476236"};
 
         // 被搜索的文件
-        String filepath = "C:\\Users\\shiliang\\Desktop\\root.log";
+        String filepath = "C:\\Users\\shiliang\\Desktop\\123.txt";
         //String filepath = "C:\\Users\\shiliang\\Desktop\\root.log";
 
         // 文件编码
@@ -38,33 +40,25 @@ public class LogSearch {
         BufferedReader reader = new BufferedReader(new InputStreamReader(fis, encoding), inputBufferSize);
 
         Long countLine = 0L;
-        ArrayList <HashMap> successList = new ArrayList <>();
+
+        Set <String> strings = new HashSet <>();
 
         String line = "";
         System.out.println("======开始=====");
         while ((line = reader.readLine()) != null) {
             countLine++;
-            for (String string : textToFind) {
-                boolean contains = line.contains(string);
-                if (contains) {
-                    HashMap <String, String> success = new HashMap <>();
+            for (String string : line.split(",")) {
 
-                    success.put("关键字", string);
-                    success.put("内容", String.valueOf(countLine));
-                    success.put("日志内容", line);
-                    successList.add(success);
-                }
+                strings.add(string);
             }
 
         }
         System.out.println("======================");
         System.out.println("文本总行数：" + countLine);
-        System.out.println("共搜索到：" + successList.size() + " 处。");
-        for (HashMap <String, String> success : successList) {
 
-            System.out.println(JSON.toJSONString(success));
-            System.out.println();
-        }
+
+        System.out.println(JSON.toJSONString(strings));
+
         System.out.println("======================");
         System.out.println("======结束=====");
         long end = System.currentTimeMillis();
