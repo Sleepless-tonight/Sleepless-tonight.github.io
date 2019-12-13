@@ -1,5 +1,7 @@
 package com.nostyling.create.util.test;
 
+import com.nostyling.create.util.test.taobao.Test14;
+
 /**
  * @program: Sleepless-tonight.github.io
  * @author: shiliang
@@ -8,12 +10,13 @@ package com.nostyling.create.util.test;
  *
  **/
 public class test4 {
+    public static final int[] a = { 1, 2, 3, 4, 5, 6 };
     public static void main(String[] args) {
-        int a = 1;
-        int b = 1;
-        System.out.println(a == b);
-        String c = new String("A");
-        String d = new String("B");
+        test4 test4 = new test4();
+        test4 test42 = new test4();
+        System.out.println(test4.a[0]);
+        test4.a[0] = 100;
+        System.out.println(test4.a[0]);
 
     }
 }
