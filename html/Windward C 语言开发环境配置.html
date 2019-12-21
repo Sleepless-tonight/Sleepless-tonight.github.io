@@ -1,0 +1,50 @@
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="utf-8">
+    <link rel="icon" href="https://nostyling-1256016577.cos.ap-beijing.myqcloud.com/GitHub_cat.png" type="image/x-icon">
+</head><link rel="stylesheet" href="../Css/markdownCss/github-markdown.css">
+<style>
+	.markdown-body {
+		box-sizing: border-box;
+		min-width: 200px;
+		max-width: 980px;
+		margin: 0 auto;
+		padding: 45px;
+	}
+
+	@media (max-width: 767px) {
+		.markdown-body {
+			padding: 15px;
+		}
+	}
+</style>
+<div class="markdown-body " >
+<h1>Windward C 语言开发环境配置</h1>
+<h4>1、下载安装 MSYS2</h4>
+<p>MSYS2官方网站：<a href="http://www.msys2.org/">http://www.msys2.org/</a></p>
+<p>清华大学开源镜像：<a href="https://mirrors.tuna.tsinghua.edu.cn/help/msys2/">https://mirrors.tuna.tsinghua.edu.cn/help/msys2/</a></p>
+<h4>2、修改软件源：</h4>
+<p>可修改 中科大源 或者 清华大学 源</p>
+<h4>3、配置更新</h4>
+<p>执行<br />
+pacman -Sy 刷新软件包数据即可。</p>
+<p>执行<br />
+pacman-key --init</p>
+<p>pacman -Syu</p>
+<blockquote>
+<p>更新软件，更新过程中可能要求重新打开终端，另外更新的时候，pacman的软件源可能恢复到默认，需要手动再修改一次。</p>
+</blockquote>
+<h4>4、安装工具链</h4>
+<ol>
+<li>pacman -S mingw-w64-x86_64-cmake mingw-w64-x86_64-extra-cmake-modules</li>
+<li>pacman -S mingw-w64-x86_64-make</li>
+<li>pacman -S mingw-w64-x86_64-gdb</li>
+<li>pacman -S mingw-w64-x86_64-toolchain</li>
+</ol>
+<blockquote>
+<p>命令出错可重新执行。</p>
+</blockquote>
+<h4>5、安装GTK3及其依赖项</h4>
+<p>运行：<br />
+pacman -S mingw-w64-x86_64-gtk3</p>
+
+</div>
