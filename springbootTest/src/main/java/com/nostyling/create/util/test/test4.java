@@ -11,6 +11,7 @@ import com.nostyling.create.util.test.taobao.Test14;
  **/
 public class test4 {
     public static final int[] a = { 1, 2, 3, 4, 5, 6 };
+    final int j; // Blank final
     public static void main(String[] args) {
         test4 test4 = new test4();
         test4 test42 = new test4();
@@ -18,5 +19,12 @@ public class test4 {
         test4.a[0] = 100;
         System.out.println(test4.a[0]);
 
+    }
+
+    public test4(int j) {
+        this.j = j;
+    }
+    public test4() {
+        this.j = 10;
     }
 }
