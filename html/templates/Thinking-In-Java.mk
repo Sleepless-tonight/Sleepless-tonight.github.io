@@ -1934,7 +1934,7 @@ final关键字的三种应用场合：数据、方法以及类。
 无论static还是final字段，都只能存储一个数据，而且不得改变。
 
 
-Static强调它们只有一个；而final表明它是一个常数。
+Static强调它们只有一个；而final表明它是一个常数。（属于类，而不是属于对象）
 
 
 不能由于某样东西的属性是final，就认定它的值能在编译时期知道。
@@ -2123,7 +2123,7 @@ j = 39
 > 总结：初始化和类装载
 > > 1. 先基础后衍生
 > > 2. 先类加载，然后立即执行static初始化
-> > 3. 实例变量，然后构建对象
+> > 3. 实例属性，然后构建对象
 
 ##### 6.10 总结
 
@@ -2159,7 +2159,7 @@ j = 39
 
 将一个方法调用同一个方法主体连接到一起就称为“绑定”（Binding）。若在程序运行以前执行绑定（由编译器和链接程序，如果有的话），就叫作“早期绑定”。大家以前或许从未听说过这个术语，因为它在任何程序化语言里都是不可能的。C编译器只有一种方法调用，那就是“早期绑定”。
 
-上述程序最令人迷惑不解的地方全与早期绑定有关，因为在只有一个 衍生类 句柄的前提下，编译器不知道具体该调用哪个方法。
+上述程序最令人迷惑不解的地方全与早期绑定有关，因为在只有一个 基础类 句柄的前提下，编译器不知道具体该调用哪个方法。
 
 解决的方法就是“后期绑定”，它意味着绑定在运行期间进行，以对象的类型为基础。后期绑定也叫作“动态绑定”或“运行期绑定”。若一种语言实现了后期绑定，同时必须提供一些机制，可在运行期间判断对象的类型，并分别调用适当的方法。也就是说，编译器此时依然不知道对象的类型，但方法调用机制能自己去调查，找到正确的方法主体。不同的语言对后期绑定的实现方法是有所区别的。但我们至少可以这样认为：它们都要在对象中安插某些特殊类型的信息。
 
@@ -2168,6 +2168,133 @@ Java中绑定的所有方法都采用后期绑定技术，除非一个方法已�
 为什么要把一个方法声明成final呢？正如上一章指出的那样，它能防止其他人覆盖那个方法。但也许更重要的一点是，它可有效地“关闭”动态绑定，或者告诉编译器不需要进行动态绑定。这样一来，编译器就可为final方法调用生成效率更高的代码。
 
 ##### 7.2.2 产生正确的行为
+知道Java里绑定的所有方法都通过后期绑定具有多形性以后，就可以相应地编写自己的代码，令其与基础类沟通。此时，所有的衍生类都保证能用相同的代码正常地工作。或者换用另一种方法，我们可以“将一条消息发给一个对象，让对象自行判断要做什么事情。”  
+
+在面向对象的程序设计中，有一个经典的“形状”例子。由于它很容易用可视化的形式表现出来，所以经常都用它说明问题。但很不幸的是，它可能误导初学者认为OOP只是为图形化编程设计的，这种认识当然是错误的。   
+
+形状例子有一个基础类，名为Shape；另外还有大量衍生类型：Circle（圆形），Square（方形），Triangle（三角形）等等。大家之所以喜欢这个例子，因为很容易理解“圆属于形状的一种类型”等概念。下面这幅继承图向我们展示了它们的关系：  
+
+![image](https://nostyling-1256016577.cos.ap-beijing.myqcloud.com/7-1.gif)    
+
+上溯造型可用下面这个语句简单地表现出来：
+```java
+Shape s = new Circle();
+```
+当我们调用其中一个基础类方法时（已在衍生类里覆盖）：    
+```java
+s.draw();
+```
+此时实际调用的是Circle.draw()，因为后期绑定已经介入（多形性）。    
+```java
+//: Shapes.java
+// Polymorphism in Java
+
+class Shape {
+  void draw() {}
+  void erase() {}
+}
+
+class Circle extends Shape {
+  void draw() {
+    System.out.println("Circle.draw()");
+  }
+  void erase() {
+    System.out.println("Circle.erase()");
+  }
+}
+
+class Square extends Shape {
+  void draw() {
+    System.out.println("Square.draw()");
+  }
+  void erase() {
+    System.out.println("Square.erase()");
+  }
+}
+
+class Triangle extends Shape {
+  void draw() {
+    System.out.println("Triangle.draw()");
+  }
+  void erase() {
+    System.out.println("Triangle.erase()");
+  }
+}
+
+public class Shapes {
+  public static Shape randShape() {
+    switch((int)(Math.random() * 3)) {
+      default: // To quiet the compiler
+      case 0: return new Circle();
+      case 1: return new Square();
+      case 2: return new Triangle();
+    }
+  }
+  public static void main(String[] args) {
+    Shape[] s = new Shape[9];
+    // Fill up the array with shapes:
+    for(int i = 0; i < s.length; i++)
+      s[i] = randShape();
+    // Make polymorphic method calls:
+    for(int i = 0; i < s.length; i++)
+      s[i].draw();
+  }
+} ///:~
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
