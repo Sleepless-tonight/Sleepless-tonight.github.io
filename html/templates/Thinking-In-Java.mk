@@ -2241,10 +2241,21 @@ public class Shapes {
   }
 } ///:~
 ```
+main()包含了Shape句柄的一个数组，其中的数据通过对randShape()的调用填入。在这个时候，我们知道自己拥有Shape，但不知除此之外任何具体的情况（编译器同样不知）。然而，当我们在这个数组里步进，并为每个元素调用draw()的时候，与各类型有关的正确行为会魔术般地发生，就象下面这个输出示例展示的那样：
+```java
+Circle.draw()
+Triangle.draw()
+Circle.draw()
+Circle.draw()
+Circle.draw()
+Square.draw()
+Triangle.draw()
+Square.draw()
+Square.draw()
+```
+由于几何形状是每次随机选择的，所以每次运行都可能有不同的结果。之所以要突出形状的随机选择，是为了让大家深刻体会这一点：为了在编译的时候发出正确的调用，编译器毋需获得任何特殊的情报。对draw()的所有调用都是通过动态绑定进行的。
 
-
-
-
+##### 7.2.3 扩展性
 
 
 
