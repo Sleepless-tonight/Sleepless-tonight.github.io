@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
  **/
 public class MarkDown2HtmlWrapper {
     private static String MD_CSS = "../Css/markdownCss/github-markdown.css";
+
     //private static String MD_CSS = null;
     static {
         try {
@@ -86,7 +87,7 @@ public class MarkDown2HtmlWrapper {
     public static MarkdownEntity ofStream(InputStream stream) {
         BufferedReader bufferedReader = new BufferedReader(
                 new InputStreamReader(stream, Charset.forName("UTF-8")));
-        List <String> lines = bufferedReader.lines().collect(Collectors.toList());
+        List<String> lines = bufferedReader.lines().collect(Collectors.toList());
         String content = Joiner.on("\n").join(lines);
         return ofContent(content);
     }
