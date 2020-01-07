@@ -1,0 +1,1168 @@
+﻿标题: Java设计模式之代理模式
+
+创建: 2019-11-29 14:25
+更新: 2019-12-02 10:51
+链接: http://scz.617.cn:8/misc/201911291425.txt
+
+--------------------------------------------------------------------------
+
+目录:
+
+    1) 静态代理模式
+        1.1) TicketService.java
+        1.2) TicketStation.java
+        1.3) TicketStationProxy.java
+        1.4) TicketServiceClient.java
+    2) 动态代理模式
+        2.1) GeneralInvocationHandler.java
+        2.2) TicketServiceClient1.java
+        2.3) GeneralInvocationHandler2.java
+        2.4) TicketServiceClient2.java
+        2.5) TicketStation.SellTicket()调用栈回溯
+        2.6) 获取动态生成的"com.sun.proxy.$Proxy0"
+        2.7) 反编译动态生成的"com.sun.proxy.$Proxy0"
+        2.8) 其他方案获取"com.sun.proxy.$Proxy0"
+    3) 简单对比静态代理模式、动态代理模式
+    4) cglib动态代理
+        4.1) GeneralCglibProxy.java
+        4.2) TicketServiceClient3.java
+        4.3) TicketStation.SellTicket()调用栈回溯
+        4.4) 获取动态生成的"TicketStation$$EnhancerByCGLIB$$abea2160"
+        4.5) 反编译动态生成的类
+        4.6) 其他方案获取动态生成的类
+            4.6.1) GeneralCglibProxy4.java
+            4.6.2) TicketServiceClient4.java
+    5) 简单对比Java原生动态代理、cglib动态代理
+
+--------------------------------------------------------------------------
+
+逆向工程中了解目标所用设计模式有助于提纲挈领。代理模式天然具有Hook能力，众
+多Java框架使用代理模式。
+
+本文没有直接展示Java动态代理技术与安全、逆向工程相关的应用方式，完全是从正
+经程序员的角度提供Java动态代理技术的"Hello World"。如果你是干我这行的，我
+觉得你再也找不到一篇比这篇更适合你入门的同类文章。
+
+设计模式这种东西，还是在战争中学习战争比较有意义，照搬固定模式显得生硬，吃
+不透背后的设计逻辑。程序员用程序来说话，说一千道一万，不如一套完整示例来得
+简单易懂。
+
+1) 静态代理模式
+
+1.1) TicketService.java
+
+--------------------------------------------------------------------------
+/*
+ * javac -encoding GBK -g TicketService.java
+ *
+ * 票务服务接口
+ */
+public interface TicketService
+{
+    void SellTicket ();     // 出售
+    void ConsultTicket ();  // 咨询
+    void ReturnTicket ();   // 退票
+}
+--------------------------------------------------------------------------
+
+1.2) TicketStation.java
+
+--------------------------------------------------------------------------
+/*
+ * javac -encoding GBK -g TicketStation.java
+ */
+import java.io.*;
+
+/*
+ * 售票站，具体实现票务服务接口，提供具体业务逻辑
+ */
+public class TicketStation implements TicketService
+{
+    @Override
+    public void SellTicket ()
+    {
+        System.out.println( "TicketStation.SellTicket()" );
+    }
+
+    @Override
+    public void ConsultTicket ()
+    {
+        System.out.println( "TicketStation.ConsultTicket()" );
+    }
+
+    @Override
+    public void ReturnTicket ()
+    {
+        System.out.println( "TicketStation.ReturnTicket()" );
+    }
+}
+--------------------------------------------------------------------------
+
+1.3) TicketStationProxy.java
+
+--------------------------------------------------------------------------
+/*
+ * javac -encoding GBK -g TicketStationProxy.java
+ */
+import java.io.*;
+
+/*
+ * 代理售票点，可以就近代替售票站提供便民服务。必须与售票站一样，实现票务
+ * 服务接口，但有些活儿可以不自己干，转发。
+ */
+public class TicketStationProxy implements TicketService
+{
+    private TicketStation   ts;
+
+    public TicketStationProxy ( TicketStation ts )
+    {
+        this.ts = ts;
+    }
+
+    @Override
+    public void SellTicket ()
+    {
+        /*
+         * 代理售票点在代理销售过程中可以提供额外服务、收取额外费用，通过
+         * before()、after()体现
+         */
+        before( "TicketStationProxy.SellTicket()" );
+        /*
+         * 代理售票点转发服务请求至售票站，不需要事必躬亲，但可以自己做，
+         * 比如销售假票、一票多售等等
+         */
+        ts.SellTicket();
+        after( "TicketStationProxy.SellTicket()" );
+    }
+
+    @Override
+    public void ConsultTicket ()
+    {
+        before( "TicketStationProxy.ConsultTicket()" );
+        ts.ConsultTicket();
+        after( "TicketStationProxy.ConsultTicket()" );
+    }
+
+    @Override
+    public void ReturnTicket ()
+    {
+        before( "TicketStationProxy.ReturnTicket()" );
+        ts.ReturnTicket();
+        after( "TicketStationProxy.ReturnTicket()" );
+    }
+
+    private void before ( String s )
+    {
+        System.out.println( "Before " + s );
+    }
+
+    private void after ( String s )
+    {
+        System.out.println( "After " + s );
+    }
+}
+--------------------------------------------------------------------------
+
+1.4) TicketServiceClient.java
+
+--------------------------------------------------------------------------
+/*
+ * javac -encoding GBK -g TicketServiceClient.java
+ * java TicketServiceClient
+ */
+import java.io.*;
+
+/*
+ * 票务服务接口的最终用户，就是我们这些买票人
+ */
+public class TicketServiceClient
+{
+    public static void main ( String[] argv ) throws Exception
+    {
+        /*
+         * 可以直接去售票站买票，但我们图省事，想就近在代理售票点买票
+         */
+        TicketStationProxy  tsp = new TicketStationProxy( new TicketStation() );
+        /*
+         * 调用票务服务接口的售票功能
+         */
+        tsp.SellTicket();
+        /*
+         * 调用票务服务接口的咨询功能，出事了，过年不能回湖南了，我想退票
+         */
+        tsp.ConsultTicket();
+        /*
+         * 调用票务服务接口的退票功能
+         */
+        tsp.ReturnTicket();
+    }
+}
+--------------------------------------------------------------------------
+
+$ java TicketServiceClient
+Before TicketStationProxy.SellTicket()
+TicketStation.SellTicket()
+After TicketStationProxy.SellTicket()
+Before TicketStationProxy.ConsultTicket()
+TicketStation.ConsultTicket()
+After TicketStationProxy.ConsultTicket()
+Before TicketStationProxy.ReturnTicket()
+TicketStation.ReturnTicket()
+After TicketStationProxy.ReturnTicket()
+
+有4种角色:
+
+票务服务接口    // 定义接口
+售票站          // 实现接口
+代理售票点      // 实现同一接口，可转发，可自实现，可增加额外动作
+买票人          // 访问接口，可以直接去售票站，也可以去代理售票点
+
+这些设计模式噱头居多，跟传统武术套路动作差不多，我胡说的，请忽略。
+
+2) 动态代理模式
+
+2.1) GeneralInvocationHandler.java
+
+--------------------------------------------------------------------------
+/*
+ * javac -encoding GBK -g GeneralInvocationHandler.java
+ */
+import java.io.*;
+import java.lang.reflect.*;
+
+/*
+ * https://docs.oracle.com/javase/8/docs/api/java/lang/reflect/InvocationHandler.html
+ *
+ * InvocationHandler is the interface implemented by the invocation
+ * handler of a proxy instance. Each proxy instance has an associated
+ * invocation handler. When a method is invoked on a proxy instance, the
+ * method invocation is encoded and dispatched to the invoke method of its
+ * invocation handler.
+ */
+public class GeneralInvocationHandler implements InvocationHandler
+{
+    private Object  realobj;
+
+    public GeneralInvocationHandler ( Object realobj )
+    {
+        this.realobj    = realobj;
+    }
+
+    /*
+     * This method will be invoked on an invocation handler when a method
+     * is invoked on a proxy instance that it is associated with.
+     */
+    @Override
+    public Object invoke ( Object proxy, Method method, Object[] args ) throws Throwable
+    {
+        /*
+         * 转发至目标对象
+         */
+        Object  obj = method.invoke( realobj, args );
+        return( obj );
+    }
+}
+--------------------------------------------------------------------------
+
+如果看到谁把GeneralInvocationHandler这种类称为"动态代理类"，你可以喷TA一脸，
+那是TA英语太差。
+
+GeneralInvocationHandler与Ticket*没有任何静态关系，是个通用实现。因为本例
+目的是演示动态代理模式的程序框架，越基本越易抓住要点。
+
+可以让GeneralInvocationHandler与Ticket*紧耦合，在
+GeneralInvocationHandler.invoke()中进行额外操作，比如before()、after()之类
+的，甚至可以彻底改变预期动作，相当于把静态代理模式中TicketStationProxy的拦
+截动作集中到GeneralInvocationHandler.invoke()中。
+
+2.2) TicketServiceClient1.java
+
+--------------------------------------------------------------------------
+/*
+ * javac -encoding GBK -g TicketServiceClient1.java
+ * java TicketServiceClient1
+ */
+import java.io.*;
+import java.lang.reflect.*;
+
+public class TicketServiceClient1
+{
+    public static void main ( String[] argv ) throws Exception
+    {
+        GeneralInvocationHandler    gih = new GeneralInvocationHandler( new TicketStation() );
+        /*
+         * https://docs.oracle.com/javase/8/docs/api/java/lang/reflect/Proxy.html
+         *
+         * Java与C不同，后者续行用反斜杠(\)，Java不需要额外的续行符，直接
+         * 折行即可。
+         */
+        TicketService               ts  =
+        ( TicketService )Proxy.newProxyInstance
+        (
+            TicketService.class.getClassLoader(),
+            new  Class[] { TicketService.class },
+            gih
+        );
+        /*
+         * 另一种方式得到ts，写法复杂
+         */
+        // ( TicketService )Proxy.
+        // getProxyClass( TicketService.class.getClassLoader(), TicketService.class ).
+        // getConstructor( InvocationHandler.class ).
+        // newInstance( gih );
+        /*
+         * 就本例而言，会去调用TicketStation.SellTicket()
+         */
+        ts.SellTicket();
+        ts.ConsultTicket();
+        ts.ReturnTicket();
+    }
+}
+--------------------------------------------------------------------------
+
+$ java TicketServiceClient1
+TicketStation.SellTicket()
+TicketStation.ConsultTicket()
+TicketStation.ReturnTicket()
+
+相比静态代理模式，动态代理模式没有TicketStationProxy，但多了一个
+GeneralInvocationHandler。
+
+2.3) GeneralInvocationHandler2.java
+
+--------------------------------------------------------------------------
+/*
+ * javac -encoding GBK -g GeneralInvocationHandler2.java
+ */
+import java.io.*;
+import java.lang.reflect.*;
+
+public class GeneralInvocationHandler2 implements InvocationHandler
+{
+    private Object  realobj;
+
+    /*
+     * 实现bind()，简化编程，参看TicketServiceClient2.java。函数名任意。
+     */
+    public Object bind ( Object realobj )
+    {
+        this.realobj    = realobj;
+        Object  obj     = Proxy.newProxyInstance
+        (
+            realobj.getClass().getClassLoader(),
+            /*
+             * https://docs.oracle.com/javase/8/docs/api/java/lang/Class.html
+             *
+             * 返回"Class<?>[]"
+             */
+            realobj.getClass().getInterfaces(),
+            this
+        );
+        return( obj );
+    }
+
+    @Override
+    public Object invoke ( Object proxy, Method method, Object[] args ) throws Throwable
+    {
+        /*
+         * 转发至目标对象
+         */
+        Object  obj = method.invoke( realobj, args );
+        return( obj );
+    }
+}
+--------------------------------------------------------------------------
+
+GeneralInvocationHandler2与Ticket*同样没有任何静态关系，是个通用实现。
+
+2.4) TicketServiceClient2.java
+
+--------------------------------------------------------------------------
+/*
+ * javac -encoding GBK -g TicketServiceClient2.java
+ * java TicketServiceClient2
+ */
+import java.io.*;
+
+public class TicketServiceClient2
+{
+    public static void main ( String[] argv ) throws Exception
+    {
+        GeneralInvocationHandler2   gih = new GeneralInvocationHandler2();
+        /*
+         * GeneralInvocationHandler2实现bind()，简化编程
+         */
+        TicketService               ts  = ( TicketService )gih.bind( new TicketStation() );
+        ts.SellTicket();
+        ts.ConsultTicket();
+        ts.ReturnTicket();
+    }
+}
+--------------------------------------------------------------------------
+
+TicketServiceClient2比TicketServiceClient1更简捷，进一步隐藏不必要暴露的细
+节。
+
+2.5) TicketStation.SellTicket()调用栈回溯
+
+$ java -version
+openjdk version "1.8.0_232"
+OpenJDK Runtime Environment (build 1.8.0_232-b09)
+OpenJDK 64-Bit Server VM (build 25.232-b09, mixed mode)
+
+$ java -agentlib:jdwp=transport=dt_socket,address=127.0.0.1:8005,server=y,suspend=y TicketServiceClient2
+$ jdb -connect com.sun.jdi.SocketAttach:hostname=127.0.0.1,port=8005
+
+stop in TicketStation.SellTicket
+
+  [1] TicketStation.SellTicket (TicketStation.java:14), pc = 0
+  [2] sun.reflect.NativeMethodAccessorImpl.invoke0 (native method)
+  [3] sun.reflect.NativeMethodAccessorImpl.invoke (NativeMethodAccessorImpl.java:62), pc = 100
+  [4] sun.reflect.DelegatingMethodAccessorImpl.invoke (DelegatingMethodAccessorImpl.java:43), pc = 6
+  [5] java.lang.reflect.Method.invoke (Method.java:498), pc = 56
+  [6] GeneralInvocationHandler2.invoke (GeneralInvocationHandler2.java:37), pc = 6
+  [7] com.sun.proxy.$Proxy0.SellTicket (null), pc = 9
+  [8] TicketServiceClient2.main (TicketServiceClient2.java:16), pc = 24
+
+调用栈回溯中出现一个在内存中动态生成的类:
+
+com.sun.proxy.$Proxy0
+
+它在设计模式中的地位相当于静态代理模式中的TicketStationProxy，但它是动态生
+成的，所以这种技术方案叫动态代理模式。
+
+TicketServiceClient2.java中的ts，其类型正是"com.sun.proxy.$Proxy0"。
+
+查看这个类:
+
+class com.sun.proxy.$Proxy0
+
+    Class: com.sun.proxy.$Proxy0
+    extends: java.lang.reflect.Proxy
+    implements: TicketService
+
+显示它的方法:
+
+methods com.sun.proxy.$Proxy0
+
+    ...
+    TicketService SellTicket()
+    TicketService ConsultTicket()
+    TicketService ReturnTicket()
+
+2.6) 获取动态生成的"com.sun.proxy.$Proxy0"
+
+--------------------------------------------------------------------------
+/*
+ * javac -encoding GBK -g -XDignore.symbol.file TicketServiceGetTmpProxy0.java
+ * java TicketServiceGetTmpProxy0 TicketServiceTmpProxy0
+ *
+ * warning: ProxyGenerator is internal proprietary API and may be removed in a future release
+ *
+ * 为了抑制这个编译时个警告，Java 8可以指定"-XDignore.symbol.file"
+ */
+import java.io.*;
+/*
+ * http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/sun/misc/ProxyGenerator.java
+ */
+import sun.misc.ProxyGenerator;
+
+public class TicketServiceGetTmpProxy0
+{
+    private static void WriteByte
+    (
+        String  logname,
+        /*
+         * 如果是String，可以调用"somthing".getBytes()得到byte[]
+         */
+        byte[]  log
+    )
+    {
+        FileOutputStream    fos;
+
+        /*
+         * 非Append模式，不存在时会自动创建
+         */
+        try
+        {
+            fos = new FileOutputStream( logname, false );
+            fos.write( log );
+            fos.flush();
+            fos.close();
+        }
+        catch ( IOException e )
+        {
+            e.printStackTrace();
+        }
+    }  /* end of WriteByte */
+
+    public static void main ( String[] argv ) throws Exception
+    {
+        byte[]  buf = ProxyGenerator.generateProxyClass
+        (
+            argv[0],
+            new Class[] { TicketService.class }
+        );
+        WriteByte( argv[0] + ".class", buf );
+    }
+}
+--------------------------------------------------------------------------
+
+$ java TicketServiceGetTmpProxy0 TicketServiceTmpProxy0
+
+在当前目录下生成TicketServiceTmpProxy0.class。TicketServiceTmpProxy0这个名
+字我随便起的，可以是任意值。
+
+2.7) 反编译动态生成的"com.sun.proxy.$Proxy0"
+
+用JD-GUI查看TicketServiceTmpProxy0.class，对应"com.sun.proxy.$Proxy0"。
+
+--------------------------------------------------------------------------
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.lang.reflect.UndeclaredThrowableException;
+
+public final class TicketServiceTmpProxy0 extends Proxy implements TicketService
+{
+    private static Method m4;
+    private static Method m5;
+    private static Method m3;
+
+    /*
+     * GeneralInvocationHandler2从此处传进来
+     */
+    public TicketServiceTmpProxy0 ( InvocationHandler paramInvocationHandler )
+    {
+        /*
+         * 设置this.h
+         */
+        super( paramInvocationHandler );
+    }
+
+    public final void ConsultTicket ()
+    {
+        try
+        {
+            this.h.invoke( this, m4, null );
+            return;
+        }
+        ...
+    }
+
+    public final void ReturnTicket ()
+    {
+        try
+        {
+            this.h.invoke( this, m5, null );
+            return;
+        }
+        ...
+    }
+
+    public final void SellTicket()
+    {
+        try
+        {
+            this.h.invoke( this, m3, null );
+            return;
+        }
+        ...
+    }
+
+    static
+    {
+        try
+        {
+            ...
+            m4  = Class.forName( "TicketService" ).getMethod( "ConsultTicket", new Class[0] );
+            m5  = Class.forName( "TicketService" ).getMethod( "ReturnTicket", new Class[0] );
+            m3  = Class.forName( "TicketService" ).getMethod( "SellTicket", new Class[0] );
+            return;
+        }
+        ...
+    }
+}
+--------------------------------------------------------------------------
+
+2.8) 其他方案获取"com.sun.proxy.$Proxy0"
+
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/sun/misc/ProxyGenerator.java
+
+如果系统属性sun.misc.ProxyGenerator.saveGeneratedFiles为true，则内部变量
+saveGeneratedFiles为true；generateProxyClass()中发现saveGeneratedFiles为
+true时，会自动转储动态生成的类。下面演示另一种办法获取动态生成的
+"com.sun.proxy.$Proxy0"。
+
+--------------------------------------------------------------------------
+/*
+ * javac -encoding GBK -g -XDignore.symbol.file TicketServiceOtherGetTmpProxy0.java
+ * mkdir -p com/sun/proxy
+ * java TicketServiceOtherGetTmpProxy0 true 0
+ * java TicketServiceOtherGetTmpProxy0 true 1 TicketServiceTmpProxy0
+ * ls -l com/sun/proxy/
+ */
+import java.io.*;
+import sun.misc.ProxyGenerator;
+
+public class TicketServiceOtherGetTmpProxy0
+{
+    public static void main ( String[] argv ) throws Exception
+    {
+        /*
+         * 如果argv[0]不为"true"，generateProxyClass()不会自动转储动态生成
+         * 的类。
+         */
+        System.getProperties().put( "sun.misc.ProxyGenerator.saveGeneratedFiles", argv[0] );
+
+        if ( argv[1].equals( "0" ) )
+        {
+            /*
+             * 在当前目录下生成"com/sun/proxy/$Proxy0.class"，要求
+             * "com/sun/proxy/"事先存在，否则报错
+             */
+            GeneralInvocationHandler2   gih = new GeneralInvocationHandler2();
+            TicketService               ts  = ( TicketService )gih.bind( new TicketStation() );
+        }
+        else
+        {
+            /*
+             * 在当前目录下生成"argv[2].class"，跟"com/sun/proxy/"没关系
+             */
+            byte[]  buf = ProxyGenerator.generateProxyClass
+            (
+                argv[2],
+                new Class[] { TicketService.class }
+            );
+        }
+    }
+}
+--------------------------------------------------------------------------
+
+上例演示了多种情形，注意看注释。下面两种设置系统属性的方式等效:
+
+System.setProperty()
+System.getProperties().put()
+
+可以用一种更简单的办法获取动态生成的"com.sun.proxy.$Proxy0":
+
+$ java -Dsun.misc.ProxyGenerator.saveGeneratedFiles=true TicketServiceClient2
+$ ls -l com/sun/proxy/
+-rw-rw-r--. 1 scz scz 2179 Nov 28 17:42 $Proxy0.class
+
+喜欢逆向工程的，记住这个方案。
+
+3) 简单对比静态代理模式、动态代理模式
+
+静态代理模式                动态代理模式
+TicketService.java          TicketService.java
+TicketStation.java          TicketStation.java
+TicketStationProxy.java     com.sun.proxy.$Proxy0 and GeneralInvocationHandler2.java
+TicketServiceClient.java    TicketServiceClient2.java
+
+前两行双方都一样，重点是第三行不同。静态代理模式需要程序员自己实现
+TicketStationProxy.java，动态代理模式会在运行时动态生成
+com.sun.proxy.$Proxy0，同时动态代理模式需要程序员自己实现
+GeneralInvocationHandler2.java。至于第四行的区别，那是自然而来的。
+
+4) cglib动态代理
+
+参看:
+
+cglib
+https://github.com/cglib/cglib
+
+前面演示的动态代理是Java原生方案，有个限制，要求目标必须实现了某个接口，比
+如TicketStation实现TicketService。cglib动态代理则没有这个限制，即使
+TicketStation没有实现某个接口，也能拦截。外面很多cglib示例太复杂，这里继续
+用TicketService、TicketStation为目标，给一个简洁示例。
+
+4.1) GeneralCglibProxy.java
+
+--------------------------------------------------------------------------
+/*
+ * javac -encoding GBK -g -cp cglib-nodep-3.3.0.jar GeneralCglibProxy.java
+ */
+import java.io.*;
+import java.lang.reflect.Method;
+import net.sf.cglib.proxy.*;
+
+public class GeneralCglibProxy implements MethodInterceptor
+{
+    /*
+     * 实现bind()，简化编程，参看TicketServiceClient3.java。函数名任意。
+     */
+    public Object bind ( Class<?> clazz )
+    {
+        Enhancer    e = new Enhancer();
+        e.setSuperclass( clazz );
+        e.setCallback( this );
+        return( e.create() );
+    }
+
+    /*
+     * 相当于GeneralInvocationHandler2.java中的invoke()，是个通用拦截点。
+     */
+    @Override
+    public Object intercept
+    (
+        Object      proxy,
+        Method      method,
+        Object[]    args,
+        MethodProxy fastMethod
+    ) throws Throwable
+    {
+        before( "GeneralCglibProxy.intercept():" + fastMethod + "=>" + method );
+        /*
+         * 转发至目标对象
+         */
+        Object  obj = fastMethod.invokeSuper( proxy, args );
+        after( "GeneralCglibProxy.intercept():" + fastMethod + "=>" + method );
+        return( obj );
+    }
+
+    private void before ( String s )
+    {
+        System.out.println( "Before " + s );
+    }
+
+    private void after ( String s )
+    {
+        System.out.println( "After " + s );
+    }
+}
+--------------------------------------------------------------------------
+
+GeneralCglibProxy与Ticket*没有任何静态关系，是个通用实现，但可以让
+GeneralCglibProxy与Ticket*紧耦合。
+
+4.2) TicketServiceClient3.java
+
+--------------------------------------------------------------------------
+/*
+ * javac -encoding GBK -g -cp "cglib-nodep-3.3.0.jar:." TicketServiceClient3.java
+ * java -cp "cglib-nodep-3.3.0.jar:." TicketServiceClient3
+ */
+import java.io.*;
+
+public class TicketServiceClient3
+{
+    public static void main ( String[] argv ) throws Exception
+    {
+        /*
+         * GeneralCglibProxy的相当于GeneralInvocationHandler2
+         */
+        GeneralCglibProxy   gcp = new GeneralCglibProxy();
+        /*
+         * GeneralCglibProxy实现bind()，简化编程
+         */
+        TicketService       ts  = ( TicketService )gcp.bind( TicketStation.class );
+        ts.SellTicket();
+        ts.ConsultTicket();
+        ts.ReturnTicket();
+    }
+}
+--------------------------------------------------------------------------
+
+TicketService的存在是不必要的，代码写成这样是为了最大限度接近
+TicketServiceClient2.java，更容易对比差异所在。
+
+$ java -cp "cglib-nodep-3.3.0.jar:." TicketServiceClient3
+Before GeneralCglibProxy.intercept():net.sf.cglib.proxy.MethodProxy@5a2e4553=>public void TicketStation.SellTicket()
+TicketStation.SellTicket()
+After GeneralCglibProxy.intercept():net.sf.cglib.proxy.MethodProxy@5a2e4553=>public void TicketStation.SellTicket()
+Before GeneralCglibProxy.intercept():net.sf.cglib.proxy.MethodProxy@7e32c033=>public void TicketStation.ConsultTicket()
+TicketStation.ConsultTicket()
+After GeneralCglibProxy.intercept():net.sf.cglib.proxy.MethodProxy@7e32c033=>public void TicketStation.ConsultTicket()
+Before GeneralCglibProxy.intercept():net.sf.cglib.proxy.MethodProxy@7ab2bfe1=>public void TicketStation.ReturnTicket()
+TicketStation.ReturnTicket()
+After GeneralCglibProxy.intercept():net.sf.cglib.proxy.MethodProxy@7ab2bfe1=>public void TicketStation.ReturnTicket()
+
+4.3) TicketStation.SellTicket()调用栈回溯
+
+$ java -agentlib:jdwp=transport=dt_socket,address=127.0.0.1:8005,server=y,suspend=y -cp "cglib-nodep-3.3.0.jar:." TicketServiceClient3
+$ jdb -connect com.sun.jdi.SocketAttach:hostname=127.0.0.1,port=8005
+
+stop in TicketStation.SellTicket
+
+  [1] TicketStation.SellTicket (TicketStation.java:14), pc = 0
+  [2] TicketStation$$EnhancerByCGLIB$$abea2160.CGLIB$SellTicket$0 (null), pc = 1
+  [3] TicketStation$$EnhancerByCGLIB$$abea2160$$FastClassByCGLIB$$68e8c394.invoke (null), pc = 282
+  [4] net.sf.cglib.proxy.MethodProxy.invokeSuper (MethodProxy.java:228), pc = 19
+  [5] GeneralCglibProxy.intercept (GeneralCglibProxy.java:37), pc = 37
+  [6] TicketStation$$EnhancerByCGLIB$$abea2160.SellTicket (null), pc = 31
+  [7] TicketServiceClient3.main (TicketServiceClient3.java:19), pc = 19
+
+调用栈回溯中出现几个在内存中动态生成的类:
+
+TicketStation$$EnhancerByCGLIB$$abea2160
+TicketStation$$EnhancerByCGLIB$$abea2160$$FastClassByCGLIB$$68e8c394
+
+相当于之前讲过的"com.sun.proxy.$Proxy0"。
+
+4.4) 获取动态生成的"TicketStation$$EnhancerByCGLIB$$abea2160"
+
+设置系统属性"cglib.debugLocation"即可转储动态生成的类:
+
+$ java -Dcglib.debugLocation=/tmp -cp "cglib-nodep-3.3.0.jar:." TicketServiceClient3
+$ ls -l /tmp/TicketStation*
+-rw-rw-r--. 1 scz scz 5852 Nov 29 12:02 /tmp/TicketStation$$EnhancerByCGLIB$$abea2160.class
+-rw-rw-r--. 1 scz scz 7177 Nov 29 12:02 /tmp/TicketStation$$EnhancerByCGLIB$$abea2160$$FastClassByCGLIB$$68e8c394.class
+-rw-rw-r--. 1 scz scz 2579 Nov 29 12:02 /tmp/TicketStation$$FastClassByCGLIB$$9d2b1868.class
+
+4.5) 反编译动态生成的类
+
+依次反编译动态生成的三个类，其中TicketStation$$FastClassByCGLIB$$9d2b1868
+是干啥的，没有深究。下文做了删减，重点关注SellTicket相关代码。
+
+--------------------------------------------------------------------------
+public class TicketStation$$EnhancerByCGLIB$$abea2160 extends TicketStation implements Factory
+{
+    private boolean CGLIB$BOUND;
+    public static Object CGLIB$FACTORY_DATA;
+    private static final ThreadLocal CGLIB$THREAD_CALLBACKS;
+    private static final Callback[] CGLIB$STATIC_CALLBACKS;
+    private MethodInterceptor CGLIB$CALLBACK_0;
+    private static Object CGLIB$CALLBACK_FILTER;
+    private static final Method CGLIB$SellTicket$0$Method;
+    private static final MethodProxy CGLIB$SellTicket$0$Proxy;
+    private static final Object[] CGLIB$emptyArgs;
+    private static final Method CGLIB$ReturnTicket$1$Method;
+    private static final MethodProxy CGLIB$ReturnTicket$1$Proxy;
+    private static final Method CGLIB$ConsultTicket$2$Method;
+    private static final MethodProxy CGLIB$ConsultTicket$2$Proxy;
+    private static final Method CGLIB$equals$3$Method;
+    private static final MethodProxy CGLIB$equals$3$Proxy;
+    private static final Method CGLIB$toString$4$Method;
+    private static final MethodProxy CGLIB$toString$4$Proxy;
+    private static final Method CGLIB$hashCode$5$Method;
+    private static final MethodProxy CGLIB$hashCode$5$Proxy;
+    private static final Method CGLIB$clone$6$Method;
+    private static final MethodProxy CGLIB$clone$6$Proxy;
+
+    static void CGLIB$STATICHOOK1() {
+        final Method[] methods2 = ReflectUtils.findMethods(new String[] { "SellTicket", "()V", "ReturnTicket", "()V", "ConsultTicket", "()V" }, (forName3 = Class.forName("TicketStation")).getDeclaredMethods());
+        CGLIB$SellTicket$0$Method = methods2[0];
+        CGLIB$SellTicket$0$Proxy = MethodProxy.create((Class)forName3, (Class)forName, "()V", "SellTicket", "CGLIB$SellTicket$0");
+        CGLIB$ReturnTicket$1$Method = methods2[1];
+        CGLIB$ReturnTicket$1$Proxy = MethodProxy.create((Class)forName3, (Class)forName, "()V", "ReturnTicket", "CGLIB$ReturnTicket$1");
+        CGLIB$ConsultTicket$2$Method = methods2[2];
+        CGLIB$ConsultTicket$2$Proxy = MethodProxy.create((Class)forName3, (Class)forName, "()V", "ConsultTicket", "CGLIB$ConsultTicket$2");
+    }
+
+    final void CGLIB$SellTicket$0() {
+        /*
+         * 父类是TicketStation，此处去调TicketStation.SellTicket()
+         */
+        super.SellTicket();
+    }
+
+    /*
+     * TicketServiceClient3先调到这个位置，并不会从此函数中直接去调
+     * TicketStation.SellTicket()，因为需要给GeneralCglibProxy.intercept()
+     * 机会，否则怎么拦截。
+     */
+    public final void SellTicket() {
+        MethodInterceptor cglib$CALLBACK_2;
+        MethodInterceptor cglib$CALLBACK_0;
+        if ((cglib$CALLBACK_0 = (cglib$CALLBACK_2 = this.CGLIB$CALLBACK_0)) == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            cglib$CALLBACK_2 = (cglib$CALLBACK_0 = this.CGLIB$CALLBACK_0);
+        }
+        if (cglib$CALLBACK_0 != null) {
+            /*
+             * 去调GeneralCglibProxy.intercept()
+             */
+            cglib$CALLBACK_2.intercept((Object)this, TicketStation$$EnhancerByCGLIB$$abea2160.CGLIB$SellTicket$0$Method, TicketStation$$EnhancerByCGLIB$$abea2160.CGLIB$emptyArgs, TicketStation$$EnhancerByCGLIB$$abea2160.CGLIB$SellTicket$0$Proxy);
+            return;
+        }
+        super.SellTicket();
+    }
+
+    public static MethodProxy CGLIB$findMethodProxy(final Signature signature) {
+        final String string = signature.toString();
+        switch (string.hashCode()) {
+            case -1338220137: {
+                if (string.equals("SellTicket()V")) {
+                    return TicketStation$$EnhancerByCGLIB$$abea2160.CGLIB$SellTicket$0$Proxy;
+                }
+                break;
+            }
+        }
+        return null;
+    }
+
+    static {
+        CGLIB$STATICHOOK1();
+    }
+}
+--------------------------------------------------------------------------
+public class TicketStation$$EnhancerByCGLIB$$abea2160$$FastClassByCGLIB$$68e8c394 extends FastClass
+{
+    public int getIndex(final Signature signature) {
+        final String string = signature.toString();
+        switch (string.hashCode()) {
+            case -1338220137: {
+                if (string.equals("SellTicket()V")) {
+                    return 0;
+                }
+                break;
+            }
+            case -1126423064: {
+                if (string.equals("CGLIB$SellTicket$0()V")) {
+                    return 11;
+                }
+                break;
+            }
+        }
+        return -1;
+    }
+
+    public int getIndex(final String s, final Class[] array) {
+        Label_1255: {
+            switch (s.hashCode()) {
+                case 1815919902: {
+                    if (!s.equals("SellTicket")) {
+                        break;
+                    }
+                    switch (array.length) {
+                        case 0: {
+                            return 0;
+                        }
+                        default: {
+                            break Label_1255;
+                        }
+                    }
+                    break;
+                }
+                case 2110177901: {
+                    if (!s.equals("CGLIB$SellTicket$0")) {
+                        break;
+                    }
+                    switch (array.length) {
+                        case 0: {
+                            return 11;
+                        }
+                        default: {
+                            break Label_1255;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+        return -1;
+    }
+
+    public Object invoke(final int n, final Object o, final Object[] array) throws InvocationTargetException {
+        final TicketStation$$EnhancerByCGLIB$$abea2160 ticketStation$$EnhancerByCGLIB$$abea2160 = (TicketStation$$EnhancerByCGLIB$$abea2160)o;
+        try {
+            switch (n) {
+                case 0: {
+                    ticketStation$$EnhancerByCGLIB$$abea2160.SellTicket();
+                    return null;
+                }
+                case 11: {
+                    /*
+                     * 去调TicketStation$$EnhancerByCGLIB$$abea2160.CGLIB$SellTicket$0()
+                     */
+                    ticketStation$$EnhancerByCGLIB$$abea2160.CGLIB$SellTicket$0();
+                    return null;
+                }
+            }
+        }
+    }
+}
+--------------------------------------------------------------------------
+public class TicketStation$$FastClassByCGLIB$$9d2b1868 extends FastClass
+{
+    public int getIndex(final Signature signature) {
+        final String string = signature.toString();
+        switch (string.hashCode()) {
+            case -1338220137: {
+                if (string.equals("SellTicket()V")) {
+                    return 0;
+                }
+                break;
+            }
+        }
+        return -1;
+    }
+
+    public int getIndex(final String s, final Class[] array) {
+        Label_0294: {
+            switch (s.hashCode()) {
+                case 1815919902: {
+                    if (!s.equals("SellTicket")) {
+                        break;
+                    }
+                    switch (array.length) {
+                        case 0: {
+                            return 0;
+                        }
+                        default: {
+                            break Label_0294;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+        return -1;
+    }
+
+    public Object invoke(final int n, final Object o, final Object[] array) throws InvocationTargetException {
+        final TicketStation ticketStation = (TicketStation)o;
+        try {
+            switch (n) {
+                case 0: {
+                    ticketStation.SellTicket();
+                    return null;
+                }
+            }
+        }
+    }
+
+    public Object newInstance(final int n, final Object[] array) throws InvocationTargetException {
+        try {
+            switch (n) {
+                case 0: {
+                    return new TicketStation();
+                }
+            }
+        }
+    }
+}
+--------------------------------------------------------------------------
+
+4.6) 其他方案获取动态生成的类
+
+4.6.1) GeneralCglibProxy4.java
+
+--------------------------------------------------------------------------
+/*
+ * javac -encoding GBK -g -cp cglib-nodep-3.3.0.jar GeneralCglibProxy4.java
+ */
+import java.io.*;
+import java.lang.reflect.Method;
+import net.sf.cglib.proxy.*;
+import net.sf.cglib.core.DefaultGeneratorStrategy;
+
+public class GeneralCglibProxy4 implements MethodInterceptor
+{
+    /*
+     * 用于递增文件名序号
+     */
+    private int count   = 0;
+
+    private void WriteByte
+    (
+        String  logname,
+        byte[]  log
+    )
+    {
+        FileOutputStream    fos;
+
+        try
+        {
+            /*
+             * 非追加模式
+             */
+            fos = new FileOutputStream( logname, false );
+            fos.write( log );
+            fos.flush();
+            fos.close();
+        }
+        catch ( IOException e )
+        {
+            e.printStackTrace();
+        }
+    }
+
+    public Object bind ( Class<?> clazz, String basename )
+    {
+        Enhancer    e = new Enhancer();
+        e.setSuperclass( clazz );
+        e.setCallback( this );
+        if ( basename != null )
+        {
+            e.setStrategy
+            (
+                new DefaultGeneratorStrategy()
+                {
+                    protected byte[] transform ( byte[] b )
+                    {
+                        WriteByte( basename + "_" + count + ".class", b );
+                        count++;
+                        return( b );
+                    }
+                }
+            );
+
+        }
+        return( e.create() );
+    }
+
+    @Override
+    public Object intercept
+    (
+        Object      proxy,
+        Method      method,
+        Object[]    args,
+        MethodProxy fastMethod
+    ) throws Throwable
+    {
+        Object  obj = fastMethod.invokeSuper( proxy, args );
+        return( obj );
+    }
+}
+--------------------------------------------------------------------------
+
+上例中transform()可以获取动态类的字节码，将之写入文件系统即可。显然此处可
+以做任何动作。
+
+4.6.2) TicketServiceClient4.java
+
+--------------------------------------------------------------------------
+/*
+ * javac -encoding GBK -g -cp "cglib-nodep-3.3.0.jar:." TicketServiceClient4.java
+ * java -cp "cglib-nodep-3.3.0.jar:." TicketServiceClient4 TicketStationTmpProxy
+ */
+import java.io.*;
+
+public class TicketServiceClient4
+{
+    public static void main ( String[] argv ) throws Exception
+    {
+        GeneralCglibProxy4  gcp = new GeneralCglibProxy4();
+        TicketService       ts  = ( TicketService )gcp.bind( TicketStation.class, argv[0] );
+        ts.SellTicket();
+        ts.ConsultTicket();
+        ts.ReturnTicket();
+    }
+}
+--------------------------------------------------------------------------
+
+$ java -cp "cglib-nodep-3.3.0.jar:." TicketServiceClient4 TicketStationTmpProxy
+
+将在当前目录下生成若干TicketStationTmpProxy_n.class。TicketStationTmpProxy
+是我随便起的名，可以是任意值。
+
+$ ls -l TicketStationTmpProxy*
+-rw-rw-r--. 1 scz scz 5852 Nov 29 14:02 TicketStationTmpProxy_0.class
+-rw-rw-r--. 1 scz scz 2579 Nov 29 14:02 TicketStationTmpProxy_1.class
+-rw-rw-r--. 1 scz scz 7177 Nov 29 14:02 TicketStationTmpProxy_2.class
+
+5) 简单对比Java原生动态代理、cglib动态代理
+
+Java原生动态代理                cglib动态代理
+TicketService.java(必要)        TicketService.java(不必要)
+TicketStation.java              TicketStation.java
+
+动态生成类                      动态生成类
+com.sun.proxy.$Proxy0           TicketStation$$EnhancerByCGLIB$$abea2160
+                                TicketStation$$FastClassByCGLIB$$9d2b1868
+                                TicketStation$$EnhancerByCGLIB$$abea2160$$FastClassByCGLIB$$68e8c394
+
+GeneralInvocationHandler2.java  GeneralCglibProxy.java
+TicketServiceClient2.java       TicketServiceClient3.java
