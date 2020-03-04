@@ -82,6 +82,7 @@ pacman -S mingw-w64-x86_64-gtk3
     ```
        cmake -DCMAKE_C_FLAGS="-mwindows"
     ```
+   在 GUI 环境相同设置：
    ![image](https://nostyling-1256016577.cos.ap-beijing.myqcloud.com/2020-03-04_184732.png)
 
 
