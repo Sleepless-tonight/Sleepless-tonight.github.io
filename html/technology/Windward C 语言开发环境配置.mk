@@ -35,6 +35,13 @@ pacman -Syu
 pacman -S mingw-w64-x86_64-gtk3
 
 
+步骤5（可选）：安装构建工具
+如果要用其他语言（例如C，C ++，Fortran等）开发GTK3应用程序，则需要像gcc和其他开发工具这样的编译器：
+pacman -S mingw-w64-x86_64-toolchain base-devel
+
+
+
+
 #### 6、在做GTK开发时隐藏 cmd窗口的办法
 1. 第一种：CMakeLists.txt
     ```
