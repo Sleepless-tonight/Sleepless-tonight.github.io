@@ -20,3 +20,15 @@
     1. 强大的富文本编辑器框架，具有模块化体系结构，现代化的集成和协作编辑等功能。
 8. Atom
     1. Atom 是github专门为程序员推出的一个跨平台文本编辑器。
+
+9. Radare2是一款开放源代码的逆向工程平台，它的强大超越你的想象，包括反汇编、分析数据、打补丁、比较数据、搜索、替换、虚拟化等等，同时具备超强的脚本加载能力，并且可以运行在几乎所有主流的平台（GNU/Linux, .Windows *BSD, iOS, OSX, Solaris…）上。
+
+10. x86架构操作系统内核的实现 http://wiki.0xffffff.org/posts/hurlex-1.html
+
+11. 虚拟内存探究，深入理解进程地址空间 http://blog.coderhuo.tech/2017/10/19/Virtual_Memory_summary/
+
+
+11. 南京大学 计算机科学与技术系 计算机系统基础 课程实验 2019 https://nju-projectn.github.io/ics-pa-gitbook/ics2019/
+
+
+
