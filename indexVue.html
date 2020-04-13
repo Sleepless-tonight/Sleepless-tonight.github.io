@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <!-- import CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+</head>
+<body>
+<div id="app">
+    <el-container>
+        <el-header>
+            <el-tag>标签一</el-tag>
+            <el-tag type="success">标签二</el-tag>
+            <el-tag type="info">标签三</el-tag>
+            <el-tag type="warning">标签四</el-tag>
+            <el-tag type="danger">标签五</el-tag>
+        </el-header>
+        <el-container>
+            <el-aside width="200px">
+
+                <div class="block">
+                    <el-avatar shape="circle" :size="120" :fit="contain" src="https://nostyling-1256016577.cos.ap-beijing.myqcloud.com/1AE6E8C6-6BBA-4AD1-9011-A9D69483ADA82%20.jpg"></el-avatar>
+                </div>
+            </el-aside>
+            <el-container>
+                <el-main>
+                    <el-tabs v-model="activeName" @tab-click="handleClick">
+                        <el-tab-pane label="用户管理" name="first">用户管理</el-tab-pane>
+                        <el-tab-pane label="配置管理" name="second">配置管理</el-tab-pane>
+                        <el-tab-pane label="角色管理" name="third">角色管理</el-tab-pane>
+                        <el-tab-pane label="定时任务补偿" name="fourth">定时任务补偿</el-tab-pane>
+                    </el-tabs>
+                </el-main>
+                <el-footer>Footer</el-footer>
+            </el-container>
+        </el-container>
+    </el-container>
+
+</div>
+</body>
+<!-- import Vue before Element -->
+<script src="https://unpkg.com/vue/dist/vue.js"></script>
+<!-- import JavaScript -->
+<script src="https://unpkg.com/element-ui/lib/index.js"></script>
+<script>
+    new Vue({
+        el: '#app',
+        data: function() {
+            return { visible: false }
+        }
+    })
+</script>
+<style>
+    .el-header, .el-footer {
+        background-color: #B3C0D1;
+        color: #333;
+        text-align: center;
+        line-height: 60px;
+    }
+
+    .el-aside {
+        background-color: #D3DCE6;
+        color: #333;
+        text-align: center;
+        line-height: 500px;
+    }
+
+    .el-main {
+        background-color: #E9EEF3;
+        color: #333;
+        text-align: center;
+        line-height: 60px;
+    }
+
+    body > .el-container {
+        margin-bottom: 40px;
+    }
+
+    .el-container:nth-child(5) .el-aside,
+    .el-container:nth-child(6) .el-aside {
+        line-height: 260px;
+    }
+
+    .el-container:nth-child(7) .el-aside {
+        line-height: 320px;
+    }
+</style>
+</html>
