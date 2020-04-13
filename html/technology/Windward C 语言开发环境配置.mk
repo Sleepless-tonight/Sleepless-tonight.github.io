@@ -6,6 +6,7 @@ MSYS2官方网站：http://www.msys2.org/
 
 清华大学开源镜像：https://mirrors.tuna.tsinghua.edu.cn/help/msys2/
 
+中国科学技术大学源 https://mirrors.ustc.edu.cn/help/msys2.html
 #### 2、修改软件源：
 可修改 中科大源 或者 清华大学 源
 
