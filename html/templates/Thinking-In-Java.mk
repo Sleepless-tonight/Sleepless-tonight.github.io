@@ -2157,7 +2157,7 @@ j = 39
 此处有个问题：基于上溯造型，用基础类做方法 自变量时，真正调用方法时传入的自变量类型为基础类的衍生类时。它接收 基础类 句柄。所以在这种情况下，编译器怎样才能知道 基础类 句柄指向的是一个真正的 衍生类，而不是一个其他衍生类呢？编译器无从得知。为了深入了理解这个问题，我们有必要探讨一下“绑定”这个主题。
 ##### 7.2.1 方法调用的绑定
 
-将一个方法调用同一个方法主体连接到一起就称为“绑定”（Binding）。若在程序运行以前执行绑定（由编译器和链接程序，如果有的话），就叫作“早期绑定”。大家以前或许从未听说过这个术语，因为它在任何程序化语言里都是不可能的。C编译器只有一种方法调用，那就是“早期绑定”。
+将一个方法调用 同一个方法主体 连接到一起就称为“绑定”（Binding）。若在程序运行以前执行绑定（由编译器和链接程序，如果有的话），就叫作“早期绑定”。大家以前或许从未听说过这个术语，因为它在任何程序化语言里都是不可能的。C编译器只有一种方法调用，那就是“早期绑定”。
 
 上述程序最令人迷惑不解的地方全与早期绑定有关，因为在只有一个 基础类 句柄的前提下，编译器不知道具体该调用哪个方法。
 
@@ -2297,8 +2297,59 @@ abstract void X();
 
 接口中的方法声明明确定义为“public”。但即便不明确定义，它们也会默认为public。所以在实现一个接口的时候，来自接口的方法必须定义成public。否则的话，它们会默认为“友好的”，而且会限制我们在继承过程中对一个方法的访问——Java编译器不允许我们那样做。
 
+为了生成与一个特定的接口（或一组接口）相符的类，要使用implements（实现）关键字。我们要表达的意思是“接口看起来就象那个样子，这儿是它具体的工作细节”。除这些之外，我们其他的工作都与继承极为相似。
 
+具体实现了一个接口以后，就获得了一个普通的类，可用标准方式对其进行扩展。
 
+接口的一个方法即使没被声明为public，但它们都会自动获得public属性。
+
+##### 7.5.1 Java的“多重继承”
+
+接口只是比抽象类“更纯”的一种形式。它的用途并不止那些。由于接口根本没有具体的实施细节——也就是说，没有与存储空间与“接口”关联在一起——所以没有任何办法可以防止多个接口合并到一起。这一点是至关重要的，因为我们经常都需要表达这样一个意思：“x从属于a，也从属于b，也从属于c”。在C++中，将多个类合并到一起的行动称作“多重继承”，而且操作较为不便，因为每个类都可能有一套自己的实施细节。在Java中，我们可采取同样的行动，但只有其中一个类拥有具体的实施细节。所以在合并多个接口的时候，C++的问题不会在Java中重演。
+
+在一个衍生类中，我们并不一定要拥有一个抽象或具体（没有抽象方法）的基础类。如果确实想从一个非接口继承，那么只能从一个继承。剩余的所有基本元素都必须是“接口”。我们将所有接口名置于implements关键字的后面，并用逗号分隔它们。可根据需要使用多个接口，而且每个接口都会成为一个独立的类型，可对其进行上溯造型。下面这个例子展示了一个“具体”类同几个接口合并的情况，它最终生成了一个新类：
+```
+//: Adventure.java
+// Multiple interfaces
+import java.util.*;
+
+interface CanFight {
+  void fight();
+}
+
+interface CanSwim {
+  void swim();
+}
+
+interface CanFly {
+  void fly();
+}
+
+class ActionCharacter {
+  public void fight() {}
+}
+
+class Hero extends ActionCharacter
+    implements CanFight, CanSwim, CanFly {
+  public void swim() {}
+  public void fly() {}
+}
+
+public class Adventure {
+  static void t(CanFight x) { x.fight(); }
+  static void u(CanSwim x) { x.swim(); }
+  static void v(CanFly x) { x.fly(); }
+  static void w(ActionCharacter x) { x.fight(); }
+  public static void main(String[] args) {
+    Hero i = new Hero();
+    t(i); // Treat it as a CanFight
+    u(i); // Treat it as a CanSwim
+    v(i); // Treat it as a CanFly
+    w(i); // Treat it as an ActionCharacter
+  }
+} ///:~
+```
+从中可以看到，Hero将具体类ActionCharacter同接口CanFight，CanSwim以及CanFly合并起来。按这种形式合并一个具体类与接口的时候，具体类必须首先出现，然后才是接口（否则编译器会报错）。
 
 
 
