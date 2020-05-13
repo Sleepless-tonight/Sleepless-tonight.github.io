@@ -174,7 +174,7 @@ LambdaBody:
     Expression
     Block
 ```
-Unlike code appearing in anonymous class declarations, the meaning of names and the this and super keywords appearing in a lambda body, along with the accessibility of referenced declarations, are the same as in the surrounding context (except that lambda parameters introduce new names).
+Unlike code appearing in anonymous class declarations, the meaning of names and the this and super keywords appearing in a lambda body, along with the accessibility of referenced declarations, are the same as in the surrounding context (except that lambda parameters introduce new names). 与出现在匿名类声明中的代码不同，在lambda正文中出现的名称和thisand super关键字的含义以及引用声明的可访问性与周围环境相同（除了lambda参数引入新名称）。
 
 The transparency of this (both explicit and implicit) in the body of a lambda expression - that is, treating it the same as in the surrounding context - allows more flexibility for implementations, and prevents the meaning of unqualified names in the body from being dependent on overload resolution.
 
