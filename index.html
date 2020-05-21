@@ -1,114 +1,203 @@
-<!DOCTYPE html>
-<html lang="zh-cn">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Hello World</title>
-    <link rel="icon" href="https://nostyling-1256016577.cos.ap-beijing.myqcloud.com/GitHub_cat.png" type="image/x-icon">
-    <!--<link rel="shortcut icon" href="https://nostyling-1256016577.cos.ap-beijing.myqcloud.com/cat.gif">-->
+    <title>Title</title>
+    <!--主体 CSS-->
+    <style>
+        #header {
+            background-color: black;
+            color: white;
+            text-align: center;
+            height: 10%;
+            display: -webkit-flex;
+            -webkit-justify-content: center;
+            -webkit-align-items: center;
+        }
+
+        #nav {
+            line-height: 30px;
+            background-color: #eeeeee;
+            width: 100px;
+            float: left;
+        }
+
+        #section {
+            margin-left: 100px; /*属性设置元素的左外边距*/
+            overflow-y: auto;
+        }
+
+        #footer {
+            background-color: black;
+            color: white;
+            clear: both;
+            text-align: center;
+            width: 100%;
+            height: 5%;
+            display: -webkit-flex;
+            -webkit-justify-content: center;
+            -webkit-align-items: center;
+        }
+
+        #footer_url {
+            color: white;
+        }
+
+    </style>
+
+    <style>
+        li {
+            display: none
+        }
+    </style>
 </head>
 
+<!--onresize 事件 事件对象 实例 当浏览器被重置大小时执行-->
+<body onresize="showMsg(t)">
+
+<div id="header">
+    <h1>现代主义的真诚感动和后现代主义的冷漠戏谑之间正弦摆动</h1>
+</div>
+
+<div id="nav">
+    <ol id="TEST" onclick=showLi(this.id)>
+        <p>TEST</p>
+        <a href="javascript:load_home('html/html/test.html');">
+            <li>背景图片</li>
+        </a>
+        <a href="javascript:load_home('html/html/notify1.html');">
+            <li>2017年终总结</li>
+        </a>
+        <a href="javascript:load_home('html/html/notify2.html');">
+            <li>2018年终总结</li>
+        </a>
+    </ol>
+
+    <ol id="mood" onclick=showLi(this.id)>
+        <p>mood</p>
+        <a href="javascript:load_home('html/mood/2018/2018716174555.txt');">
+            <li>2018716181526</li>
+        </a>
+        <a href="javascript:load_home('html/mood/2018/2018719195734.txt');">
+            <li>2018719195734</li>
+        </a>
+        <a href="javascript:load_home('html/mood/2019/2019214114737.txt');">
+            <li>2019214114737</li>
+        </a>
+    </ol>
 
 
-</body>
+    <ol id="Java" onclick=showLi(this.id)>
+        <p>Java</p>
+        <a href="javascript:load_home('html/technology/java.txt');">
+            <li>Java</li>
+        </a>
+        <a href="javascript:load_home('html/technology/networkSecurity.txt');">
+            <li>networkSecurity</li>
+        </a>
+        <a href="javascript:load_home('html/html/Thinking-In-Java.html');">
+            <li>Thinking-In-Java</li>
+        </a>
+        <a href="javascript:load_home('html/html/Beginning%20C%20,Fifth%20Edition.html');">
+            <li>Beginning C ,Fifth Edition</li>
+        </a>
+        <a href="javascript:load_home('html/technology/Dffective_Java.txt');">
+            <li>Dffective_Java</li>
+        </a>
+        <a href="javascript:load_home('html/technology/MyBatis3.txt');">
+            <li>MyBatis3</li>
+        </a>
+        <a href="javascript:load_home('html/technology/Debug.txt');">
+            <li>Debug</li>
+        </a>
+        <a href="javascript:load_home('html/technology/constraint_propagation_and_search.txt');">
+            <li>constraint_propagation_and_search</li>
+        </a>
+        <a href="javascript:load_home('html/technology/tip.txt');">
+            <li>tip</li>
+        </a>
+        <a href="javascript:load_home('html/technology/RabbitMQ.txt');">
+            <li>RabbitMQ</li>
+        </a>
+        <a href="javascript:load_home('html/technology/Tomcat vs. Jetty vs. Undertow：Spring Boot Embedded Servlet容器的比较 示例Java Code Geeks - 2018.pdf');">
+            <li>Tomcat vs. Jetty vs. Undertow：Spring Boot Embedded Servlet容器的比较</li>
+        </a>
+        <a href="javascript:load_home('html/html/Windward%20C%20语言开发环境配置.html');">
+            <li>Windward C 语言开发环境配置</li>
+        </a>
+        <a href="javascript:load_home('html/html/JavaFx.html');">
+            <li>JavaFx</li>
+        </a>
+    </ol>
 
+    <ol id="System" onclick=showLi(this.id)>
+        <p>System</p>
+        <a href="javascript:load_home('html/html/分区表.html');">
+            <li>分区表</li>
+        </a>
+    </ol>
 
-<body background="https://nostyling-1256016577.cos.ap-beijing.myqcloud.com/5.jpg">
+</div>
 
+<div id="section">
 
-    <DIV id="cat" style="position:fixed; left:94%;
-				top:90%; width:80px; height:80px; z-index:1; transform: scale(-1, 1);" >
-        <marquee direction="left"  behavior="alternate" >
-            <img src="https://nostyling-1256016577.cos.ap-beijing.myqcloud.com/cat.gif" width="80px"  border="0">
-        </marquee>
-    </DIV>
+</div>
 
-        <ul type="">
-
-            <li>
-                <p>TEST</p>
-                <ul type="circle">
-                    <li>
-                        <a href="html/html/test.html" name="背景图片" data-index="16">背景图片</a>
-                    </li>
-                    <li>
-                        <a href="html/html/notify1.html" name="2017年终总结" data-index="16">2017年终总结</a>
-                    </li>
-                    <li>
-                        <a href="html/html/notify2.html" name="2018年终总结" data-index="16">2018年终总结</a>
-                    </li>
-                </ul>
-            </li>
-
-            <li>
-                <p>mood</p>
-                <ul type="circle">
-                    <li>
-                        <a  href="html/mood/2018/2018716174555.txt" name="2018716181526" data-index="16">2018716181526</a>
-                    </li>
-                    <li>
-                        <a  href="html/mood/2018/2018719195734.txt" name="2018719195734" data-index="16">2018719195734</a>
-                    </li>
-                    <li>
-                        <a  href="html/mood/2019/2019214114737.txt" name="2019214114737" data-index="16">2019214114737</a>
-                    </li>
-                </ul>
-            </li>
-
-            <li>
-                <p>Java</p>
-                <ul type="circle">
-                    <li>
-                        <a  href="html/technology/java.txt" name="Java" data-index="17">Java</a>
-                    </li>
-                    <li>
-                        <a  href="html/technology/networkSecurity.txt" name="Java" data-index="17">networkSecurity</a>
-                    </li>
-                    <li>
-                        <a href="html/html/Thinking-In-Java.html" name="thinking-in-java" data-index="17">Thinking-In-Java</a>
-                    </li>
-                    <li>
-                        <a href="html/html/Beginning%20C%20,Fifth%20Edition.html" name="Beginning C ,Fifth Edition" data-index="17">Beginning C ,Fifth Edition</a>
-                    </li>
-                    <li>
-                        <a  href="html/technology/Dffective_Java.txt" name="Dffective_Java" data-index="17">Dffective_Java</a>
-                    </li>
-                    <li>
-                        <a  href="html/technology/MyBatis3.txt" name="MyBatis3" data-index="17">MyBatis3</a>
-                    </li>
-                    <li>
-                        <a  href="html/technology/Debug.txt" name="Debug" data-index="17">Debug</a>
-                    </li>
-                    <li>
-                        <a  href="html/technology/constraint_propagation_and_search.txt" name="constraint_propagation_and_search" data-index="17">constraint_propagation_and_search</a>
-                    </li>
-                    <li>
-                        <a href="html/technology/tip.txt" name="tip" data-index="16">tip</a>
-                    </li>
-                    <li>
-                        <a href="html/technology/RabbitMQ.txt" name="RabbitMQ" data-index="16">RabbitMQ</a>
-                    </li>
-                    <li>
-                        <a href="html/technology/Tomcat vs. Jetty vs. Undertow：Spring Boot Embedded Servlet容器的比较 示例Java Code Geeks - 2018.pdf" name="Tomcat vs. Jetty vs. Undertow：Spring Boot Embedded Servlet容器的比较" data-index="16">Tomcat vs. Jetty vs. Undertow：Spring Boot Embedded Servlet容器的比较</a>
-                    </li>
-                    <li>
-                        <a href="html/html/Windward%20C%20语言开发环境配置.html" name="Windward C 语言开发环境配置" data-index="17">Windward C 语言开发环境配置</a>
-                    </li>
-                    <li>
-                        <a href="html/html/JavaFx.html" name="JavaFx" data-index="17">JavaFx</a>
-                    </li>
-                </ul>
-            </li>
-
-            <li>
-                <p>System</p>
-                <ul type="circle">
-                    <li>
-                        <a href="html/html/分区表.html" name="分区表" data-index="17">分区表</a>
-                    </li>
-                </ul>
-            </li>
-
-        </ul>
+<div id="footer">
+    <a id="footer_url" href="http://www.nostyling.cn/">http://www.nostyling.cn</a>
+</div>
 
 </body>
+
+<script>
+    /**
+     * section 加载指定页面
+     * @param url
+     */
+    function load_home(url) {
+        document.getElementById("section").innerHTML = '<object type="text/html" data="' +
+            url +
+            '" width="100%" height="100%"></object>';
+    }
+
+    /**
+     * section 加载指定 id 页面
+     * @param id
+     */
+    function showLi(id) {
+        let outerHTML = document.getElementById(id).outerHTML;
+        document.getElementById("section").innerHTML = outerHTML;
+        let elementsByTagName = document.getElementById("section").getElementsByTagName('li');
+
+        let length = elementsByTagName.length;
+        for (let i = 0; i < length; i++) {
+            elementsByTagName.item(i) .style.display = 'block'
+        }
+
+    }
+
+</script>
+
+<script>
+    // 配置边框宽高
+    let number = 0.85;
+    let number1 = window.innerHeight * number;
+    console.log(number1);
+    console.log(window.innerHeight);
+    document.getElementById('nav').style.height = number1 + "px";
+    document.getElementById('section').style.height = number1 + "px";
+
+    // document.getElementById('section').style.width = window.innerWidth - 120 +"px";
+
+    function showMsg() {
+        let number = 0.85;
+        let number1 = window.innerHeight * number;
+        console.log(number1);
+        document.getElementById('nav').style.height = number1 + "px";
+        document.getElementById('section').style.height = number1 + "px";
+        // document.getElementById('section').style.width = window.innerWidth - 120 +"px";
+    }
+
+    // 配置边框宽高
+</script>
+
 </html>
