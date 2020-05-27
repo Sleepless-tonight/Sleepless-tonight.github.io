@@ -1,90 +1,89 @@
 ﻿toolkit 工具包
 
-commons-validator（通用验证系统）
-		验证体系对付用户界面的用户千变万化的输入可能。
+##### commons-validator（通用验证系统）
+    验证体系对付用户界面的用户千变万化的输入可能。
 
-Apache ShardingSphere（分布式数据库中间件）
-		一套开源的分布式数据库中间件解决方案组成的生态圈，它由Sharding-JDBC、Sharding-Proxy和Sharding-Sidecar（规划中）这3款相互独立，却又能够混合部署配合使用的产品组成。它们均提供标准化的数据分片、分布式事务和数据库治理功能，可适用于如Java同构、异构语言、云原生等各种多样化的应用场景。
+##### Apache ShardingSphere（分布式数据库中间件）
+    一套开源的分布式数据库中间件解决方案组成的生态圈，它由Sharding-JDBC、Sharding-Proxy和Sharding-Sidecar（规划中）这3款相互独立，却又能够混合部署配合使用的产品组成。它们均提供标准化的数据分片、分布式事务和数据库治理功能，可适用于如Java同构、异构语言、云原生等各种多样化的应用场景。
 
-Apache Tika
-		Apache Tika™工具箱可从一千多种不同的文件类型（例如PPT，XLS和PDF）中检测并提取元数据和文本。所有这些文件类型都可以通过一个界面进行解析，从而使Tika可用于搜索引擎索引，内容分析，翻译等等。
+##### Apache Tika
+    Apache Tika™工具箱可从一千多种不同的文件类型（例如PPT，XLS和PDF）中检测并提取元数据和文本。所有这些文件类型都可以通过一个界面进行解析，从而使Tika可用于搜索引擎索引，内容分析，翻译等等。
 		
-Apache Nutch
-		Nutch是基于Lucene实现的搜索引擎。包括全文搜索和Web爬虫
+##### Apache Nutch
+    Nutch是基于Lucene实现的搜索引擎。包括全文搜索和Web爬虫
 
-Apache PDFBox® 
-		在Apache PDFBox的®库是与PDF文档工作的一个开源的Java工具。该项目允许创建新的PDF文档，处理现有文档以及从文档中提
-	取内容的能力。Apache PDFBox还包含几个命令行工具。Apache PDFBox在Apache许可证2.0版下发布。		
+##### Apache PDFBox® 
+    在Apache PDFBox的®库是与PDF文档工作的一个开源的Java工具。该项目允许创建新的PDF文档，处理现有文档以及从文档中提
+    取内容的能力。Apache PDFBox还包含几个命令行工具。Apache PDFBox在Apache许可证2.0版下发布。		
 
-ImageMagick®
-		使用ImageMagick的®创建，编辑，撰写，或转换位图图像。它可以读取和写入各种格式的图像（超过200种），包括PNG，JPEG，GIF，
-	HEIC，TIFF，DPX，EXR，WebP，Postscript，PDF和SVG。使用ImageMagick调整，翻转，镜像，旋转，扭曲，剪切和变换图像，调整图像颜色，
-	应用各种特殊效果，或绘制文本，线条，多边形，椭圆和贝塞尔曲线。
+##### ImageMagick®
+    使用ImageMagick的®创建，编辑，撰写，或转换位图图像。它可以读取和写入各种格式的图像（超过200种），包括PNG，JPEG，GIF，
+    HEIC，TIFF，DPX，EXR，WebP，Postscript，PDF和SVG。使用ImageMagick调整，翻转，镜像，旋转，扭曲，剪切和变换图像，调整图像颜色，
+    应用各种特殊效果，或绘制文本，线条，多边形，椭圆和贝塞尔曲线。
 
-Batik
-		是一个基于Java技术的SVG(可扩展矢量图)工具包。
+##### Batik
+    是一个基于Java技术的SVG(可扩展矢量图)工具包。
 
-FOP 
-		FOP是由James Tauber发起的一个开源项目，原先的版本是利用xsl-fo将xml文件转换成pdf文件。
-	但最新的版本它可以将xml文件转换成pdf，mif，pcl，txt等多种格式以及直接输出到打印机，并且支持使用SVG描述图形。
+##### FOP 
+    FOP是由James Tauber发起的一个开源项目，原先的版本是利用xsl-fo将xml文件转换成pdf文件。
+    但最新的版本它可以将xml文件转换成pdf，mif，pcl，txt等多种格式以及直接输出到打印机，并且支持使用SVG描述图形。
 	
-XML Graphics 
-		XML Graphics：发展 XML 与图形进行转换的计划项目
+##### XML Graphics 
+    XML Graphics：发展 XML 与图形进行转换的计划项目
 
-axis2c 
-		Axis2/c是一个用C语言实现的Web服务引擎，它服从可扩展的，灵活的Axis架构。Axis2/C可以用来提供web服务，
-	也可以作为web服务的客户端。它可以很方便的嵌入到其他软件中，从而使该软件具有web功能。
+##### axis2c 
+    Axis2/c是一个用C语言实现的Web服务引擎，它服从可扩展的，灵活的Axis架构。Axis2/C可以用来提供web服务，
+    也可以作为web服务的客户端。它可以很方便的嵌入到其他软件中，从而使该软件具有web功能。
 	
-WSS4J 
-		WSS4J 是 Web服务安全规范 (OASIS Web Service Security , WS-Security) 的 Java 实现。WSS4J 是一个 Java 的类库用来
-	对 SOAP 消息进行签名和校验，使用 Apache Axis 和 Apache XML-Security 项目。	
+##### WSS4J 
+    WSS4J 是 Web服务安全规范 (OASIS Web Service Security , WS-Security) 的 Java 实现。WSS4J 是一个 Java 的类库用来
+    对 SOAP 消息进行签名和校验，使用 Apache Axis 和 Apache XML-Security 项目。	
 
-Apache Forrest 
-		Apache Forrest是一个把来自各种不同的输入数据源转换成用一种或多种输出格式(比如HTML,PDF等)来统一显示的发布系统。它
+##### Apache Forrest 
+    Apache Forrest是一个把来自各种不同的输入数据源转换成用一种或多种输出格式(比如HTML,PDF等)来统一显示的发布系统。它
 	基于Apache Cocoon并分离了内容与内容结构,不仅可以生成静态的文档也可以当作一个动态的服务器。
 
-Xalan 
-		xalan是一套xslt处理器（有C和JAVA语言两种版本），用来将XML文件转换为HTML,TEXT和XML等其他类型文件格式。	
+##### Xalan 
+    xalan是一套xslt处理器（有C和JAVA语言两种版本），用来将XML文件转换为HTML,TEXT和XML等其他类型文件格式。	
 	
-Anakia 
-		Anakia 是一个XML的转化工具，它使用 JDOM 和 Velocity 来将XML文档转换成你所需要的文档格式。
-	支持在 Ant 中设置转换任务以及使用 XSL 进行XML文件处理。	
+##### Anakia 
+    Anakia 是一个XML的转化工具，它使用 JDOM 和 Velocity 来将XML文档转换成你所需要的文档格式。
+    支持在 Ant 中设置转换任务以及使用 XSL 进行XML文件处理。	
 	
-Roller
-		是一个全功能的多用户博客平台。采用Java语言开发		
+##### Roller
+    是一个全功能的多用户博客平台。采用Java语言开发		
 		
-Commons-Net 
-		Commons项目中封装了各种网络协议的客户端		
+##### Commons-Net 
+    Commons项目中封装了各种网络协议的客户端		
 	
-Sanselan 
-		是一个纯 Java 的图形库，可以读写各种格式的图像文件，包括快速解析图片信息例如大小/颜色/icc以及元数据等
+##### Sanselan 
+    是一个纯 Java 的图形库，可以读写各种格式的图像文件，包括快速解析图片信息例如大小/颜色/icc以及元数据等
 
-jsoup: 
-		Java的HTML解析器
-	jsoup是一个用于处理真实世界HTML的Java库。它提供了一个非常方便的API来提取和操作数据，使用最好的DOM，CSS和类似jquery的方法。
+##### jsoup: 
+    Java的HTML解析器
+    jsoup是一个用于处理真实世界HTML的Java库。它提供了一个非常方便的API来提取和操作数据，使用最好的DOM，CSS和类似jquery的方法。
 	
 	
 	
-Quartz: 
-		Java的任务调度框架
-	Quartz 具有诸如 JTA 事务和集群等功能，可用于企业级应用程序的支持。
+##### Quartz: 
+    Java的任务调度框架
+    Quartz 具有诸如 JTA 事务和集群等功能，可用于企业级应用程序的支持。
 
-Ok HTTP：
-	HTTP 通讯框架
+##### Ok HTTP：
+    HTTP 通讯框架
 
-Joda Time：
-	作为 Java 中日期和时间类的一个很好的替代品。
+##### Joda Time：
+    作为 Java 中日期和时间类的一个很好的替代品。
 
 
-XStream
+##### XStream
 	将对象序列化到 XML 中
 
-Apache OpenNLP
+##### Apache OpenNLP
     Apache OpenNLP软件支持最常见的NLP任务，例如标记化，句子分段，词性标记，命名实体提取，分块，解析和共指解析。这些任务通常是构建更高级的文本处理服务所必需的。OpenNLP还包括最大熵和基于感知器的机器学习。
 
 
-Apache Camel
-    
+##### Apache Camel
     骆驼是 开源集成框架 使您能够快速轻松地集成使用或生成数据的各种系统。
     装满 数百个组件用于访问数据库，消息队列，API或基本上在阳光下的任何东西。帮助您与一切集成。
 

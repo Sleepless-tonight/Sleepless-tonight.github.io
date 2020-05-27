@@ -2160,7 +2160,9 @@ j = 39
 
 > 总结：论合成与继承
 > > 1. 如果想利用新类内部一个现有类的特性，而不想使用它的接口，通常应选择合成。也就是说，我们可嵌入一个对象，使自己能用它实现新类的特性。但新类的用户会看到我们已定义的接口，而不是来自嵌入对象的接口。考虑到这种效果，我们需在新类里嵌入现有类的private对象。
-> > 2. “属于”关系是用继承来表达的，而“包含”关系是用合成来表达的。
+> > 2. “属于”或者“类似”关系是用继承来表达的，而“包含”关系是用合成来表达的。
+> > 3. 继承 用来表达同一个系列不同种对象的行为间的差异。
+> > 4. 句柄在运行期间可以重新与一个不同的对象绑定或结合起来,这样一来，我们在运行期间 通过改变句柄绑定的子类类型 就获得了很大的灵活性。与此相反，我们不能在运行期间换用不同的形式来进行继承；它要求在编译期间完全决定下来。
 
 ## 第7章 多形性
 
@@ -3008,13 +3010,226 @@ WithInner.class
 
 一个“应用程序框架”是指一个或一系列类，它们专门设计用来解决特定类型的问题。为应用应用程序框架，我们可从一个或多个类继承，并覆盖其中的部分方法。我们在覆盖方法中编写的代码用于定制由那些应用程序框架提供的常规方案，以便解决自己的实际问题。“控制框架”属于应用程序框架的一种特殊类型，受到对事件响应的需要的支配；主要用来响应事件的一个系统叫作“由事件驱动的系统”。在应用程序设计语言中，最重要的问题之一便是“图形用户界面”（GUI），它几乎完全是由事件驱动的。正如大家会在第13章学习的那样，Java 1.1 AWT属于一种控制框架，它通过内部类完美地解决了GUI的问题。
 
+为理解内部类如何简化控制框架的创建与使用，可认为一个控制框架的工作就是在事件“就绪”以后执行它们。尽管“就绪”的意思很多，但在目前这种情况下，我们却是以计算机时钟为基础。随后，请认识到针对控制框架需要控制的东西，框架内并未包含任何特定的信息。首先，它是一个特殊的接口，描述了所有控制事件。它可以是一个抽象类，而非一个实际的接口。由于默认行为是根据时间控制的，所以部分实施细节可能包括：
 
+```
+abstract public class Event {
+  private long evtTime;
+  public Event(long eventTime) {
+    evtTime = eventTime;
+  }
+  public boolean ready() {
+    return System.currentTimeMillis() >= evtTime;
+  }
+  abstract public void action();
+  abstract public String description();
+} ///:~
+```
+希望Event（事件）运行的时候，构建器即简单地捕获时间。同时ready()告诉我们何时该运行它。当然，ready()也可以在一个衍生类中被覆盖，将事件建立在除时间以外的其他东西上。
 
+action()是事件就绪后需要调用的方法，而description()提供了与事件有关的文字信息。
 
+下面这个文件包含了实际的控制框架，用于管理和触发事件。第一个类实际只是一个“助手”类，它的职责是容纳Event对象。可用任何适当的集合替换它。而且通过第8章的学习，大家会知道另一些集合可简化我们的工作，不需要我们编写这些额外的代码：
+```
+class EventSet {
+  private Event[] events = new Event[100];
+  private int index = 0;
+  private int next = 0;
+  public void add(Event e) {
+    if(index >= events.length)
+      return; // (In real life, throw exception)
+    events[index++] = e;
+  }
+  public Event getNext() {
+    boolean looped = false;
+    int start = next;
+    do {
+      next = (next + 1) % events.length;
+      // See if it has looped to the beginning:
+      if(start == next) looped = true;
+      // If it loops past start, the list
+      // is empty:
+      if((next == (start + 1) % events.length)
+         && looped)
+        return null;
+    } while(events[next] == null);
+    return events[next];
+  }
+  public void removeCurrent() {
+    events[next] = null;
+  }
+}
 
+public class Controller {
+  private EventSet es = new EventSet();
+  public void addEvent(Event c) { es.add(c); }
+  public void run() {
+    Event e;
+    while((e = es.getNext()) != null) {
+      if(e.ready()) {
+        e.action();
+        System.out.println(e.description());
+        es.removeCurrent();
+      }
+    }
+  }
+} ///:~
+```
+EventSet可容纳100个事件（若在这里使用来自第8章的一个“真实”集合，就不必担心它的最大尺寸，因为它会根据情况自动改变大小）。index（索引）在这里用于跟踪下一个可用的空间，而next（下一个）帮助我们寻找列表中的下一个事件，了解自己是否已经循环到头。在对getNext()的调用中，这一点是至关重要的，因为一旦运行，Event对象就会从列表中删去（使用removeCurrent()）。所以getNext()会在列表中向前移动时遇到“空洞”。
 
+注意removeCurrent()并不只是指示一些标志，指出对象不再使用。相反，它将句柄设为null。这一点是非常重要的，因为假如垃圾收集器发现一个句柄仍在使用，就不会清除对象。若认为自己的句柄可能象现在这样被挂起，那么最好将其设为null，使垃圾收集器能够正常地清除它们。
 
+Controller是进行实际工作的地方。它用一个EventSet容纳自己的Event对象，而且addEvent()允许我们向这个列表加入新事件。但最重要的方法是run()。该方法会在EventSet中遍历，搜索一个准备运行的Event对象——ready()。对于它发现ready()的每一个对象，都会调用action()方法，打印出description()，然后将事件从列表中删去。
 
+注意在迄今为止的所有设计中，我们仍然不能准确地知道一个“事件”要做什么。这正是整个设计的关键；它怎样“将发生变化的东西同没有变化的东西区分开”？或者用我的话来讲，“改变的意图”造成了各类Event对象的不同行动。我们通过创建不同的Event子类，从而表达出不同的行动。
+
+这里正是内部类大显身手的地方。它们允许我们做两件事情：
+
+(1) 在单独一个类里表达一个控制框架应用的全部实施细节，从而完整地封装与那个实施有关的所有东西。内部类用于表达多种不同类型的action()，它们用于解决实际的问题。除此以外，后续的例子使用了private内部类，所以实施细节会完全隐藏起来，可以安全地修改。
+
+(2) 内部类使我们具体的实施变得更加巧妙，因为能方便地访问外部类的任何成员。若不具备这种能力，代码看起来就可能没那么使人舒服，最后不得不寻找其他方法解决。
+
+现在要请大家思考控制框架的一种具体实施方式，它设计用来控制温室（Greenhouse）功能（注释④）。每个行动都是完全不同的：控制灯光、供水以及温度自动调节的开与关，控制响铃，以及重新启动系统。但控制框架的设计宗旨是将不同的代码方便地隔离开。对每种类型的行动，都要继承一个新的Event内部类，并在action()内编写相应的控制代码。
+
+④：由于某些特殊原因，这对我来说是一个经常需要解决的、非常有趣的问题；原来的例子在《C++ Inside & Out》一书里也出现过，但Java提供了一种更令人舒适的解决方案。
+
+作为应用程序框架的一种典型行为，GreenhouseControls类是从Controller继承的：
+```
+public class GreenhouseControls
+    extends Controller {
+  private boolean light = false;
+  private boolean water = false;
+  private String thermostat = "Day";
+  private class LightOn extends Event {
+    public LightOn(long eventTime) {
+      super(eventTime);
+    }
+    public void action() {
+      // Put hardware control code here to
+      // physically turn on the light.
+      light = true;
+    }
+    public String description() {
+      return "Light is on";
+    }
+  }
+  private class LightOff extends Event {
+    public LightOff(long eventTime) {
+      super(eventTime);
+    }
+    public void action() {
+      // Put hardware control code here to
+      // physically turn off the light.
+      light = false;
+    }
+    public String description() {
+      return "Light is off";
+    }
+  }
+  private class WaterOn extends Event {
+    public WaterOn(long eventTime) {
+      super(eventTime);
+    }
+    public void action() {
+      // Put hardware control code here
+      water = true;
+    }
+    public String description() {
+      return "Greenhouse water is on";
+    }
+  }
+  private class WaterOff extends Event {
+    public WaterOff(long eventTime) {
+      super(eventTime);
+    }
+    public void action() {
+      // Put hardware control code here
+      water = false;
+    }
+    public String description() {
+      return "Greenhouse water is off";
+    }
+  }
+  private class ThermostatNight extends Event {
+    public ThermostatNight(long eventTime) {
+      super(eventTime);
+    }
+    public void action() {
+      // Put hardware control code here
+      thermostat = "Night";
+    }
+    public String description() {
+      return "Thermostat on night setting";
+    }
+  }
+  private class ThermostatDay extends Event {
+    public ThermostatDay(long eventTime) {
+      super(eventTime);
+    }
+    public void action() {
+      // Put hardware control code here
+      thermostat = "Day";
+    }
+    public String description() {
+      return "Thermostat on day setting";
+    }
+  }
+  // An example of an action() that inserts a
+  // new one of itself into the event list:
+  private int rings;
+  private class Bell extends Event {
+    public Bell(long eventTime) {
+      super(eventTime);
+    }
+    public void action() {
+      // Ring bell every 2 seconds, rings times:
+      System.out.println("Bing!");
+      if(--rings > 0)
+        addEvent(new Bell(
+          System.currentTimeMillis() + 2000));
+    }
+    public String description() {
+      return "Ring bell";
+    }
+  }
+  private class Restart extends Event {
+    public Restart(long eventTime) {
+      super(eventTime);
+    }
+    public void action() {
+      long tm = System.currentTimeMillis();
+      // Instead of hard-wiring, you could parse
+      // configuration information from a text
+      // file here:
+      rings = 5;
+      addEvent(new ThermostatNight(tm));
+      addEvent(new LightOn(tm + 1000));
+      addEvent(new LightOff(tm + 2000));
+      addEvent(new WaterOn(tm + 3000));
+      addEvent(new WaterOff(tm + 8000));
+      addEvent(new Bell(tm + 9000));
+      addEvent(new ThermostatDay(tm + 10000));
+      // Can even add a Restart object!
+      addEvent(new Restart(tm + 20000));
+    }
+    public String description() {
+      return "Restarting system";
+    }
+  }
+  public static void main(String[] args) {
+    GreenhouseControls gc =
+      new GreenhouseControls();
+    long tm = System.currentTimeMillis();
+    gc.addEvent(gc.new Restart(tm));
+    gc.run();
+  }
+} ///:~
+```
+注意light（灯光）、water（供水）、thermostat（调温）以及rings都隶属于外部类GreenhouseControls，所以内部类可以毫无阻碍地访问那些字段。此外，大多数action()方法也涉及到某些形式的硬件控制，这通常都要求发出对非Java代码的调用。
+
+大多数Event类看起来都是相似的，但Bell（铃）和Restart（重启）属于特殊情况。Bell会发出响声，若尚未响铃足够的次数，它会在事件列表里添加一个新的Bell对象，所以以后会再度响铃。请注意内部类看起来为什么总是类似于多重继承：Bell拥有Event的所有方法，而且也拥有外部类GreenhouseControls的所有方法。
+
+Restart负责对系统进行初始化，所以会添加所有必要的事件。当然，一种更灵活的做法是避免进行“硬编码”，而是从一个文件里读入它们（第10章的一个练习会要求大家修改这个例子，从而达到这个目标）。由于Restart()仅仅是另一个Event对象，所以也可以在Restart.action()里添加一个Restart对象，使系统能够定期重启。在main()中，我们需要做的全部事情就是创建一个GreenhouseControls对象，并添加一个Restart对象，令其工作起来。 这个例子应该使大家对内部类的价值有一个更加深刻的认识，特别是在一个控制框架里使用它们的时候。此外，在第13章的后半部分，大家还会看到如何巧妙地利用内部类描述一个图形用户界面的行为。完成那里的学习后，对内部类的认识将上升到一个前所未有的新高度。
 
 
 ### 内部类总结
@@ -3174,66 +3389,322 @@ for(int i=0;i<20;i++){
 
 
 
+### 7.7 构建器和多形性
+同往常一样，构建器与其他种类的方法是有区别的。在涉及到多形性的问题后，这种方法依然成立。尽管构建器并不具有多形性（即便可以使用一种“虚拟构建器”——将在第11章介绍），但仍然非常有必要理解构建器如何在复杂的分级结构中以及随同多形性使用。这一理解将有助于大家避免陷入一些令人不快的纠纷。
+
+#### 7.7.1 构建器的调用顺序
+构建器调用的顺序已在第4章进行了简要说明，但那是在继承和多形性问题引入之前说的话。
+
+用于基础类的构建器肯定在一个衍生类的构建器中调用，而且逐渐向上链接，使每个基础类使用的构建器都能得到调用。之所以要这样做，是由于构建器负有一项特殊任务：检查对象是否得到了正确的构建。一个衍生类只能访问它自己的成员，不能访问基础类的成员（这些成员通常都具有private属性）。只有基础类的构建器在初始化自己的元素时才知道正确的方法以及拥有适当的权限。所以，必须令所有构建器都得到调用，否则整个对象的构建就可能不正确。那正是编译器为什么要强迫对衍生类的每个部分进行构建器调用的原因。在衍生类的构建器主体中，若我们没有明确指定对一个基础类构建器的调用，它就会“默默”地调用默认构建器。如果不存在默认构建器，编译器就会报告一个错误（若某个类没有构建器，编译器会自动组织一个默认构建器）。
+
+对于一个复杂的对象，构建器的调用遵照下面的顺序：
+- (1) 调用基础类构建器。这个步骤会不断重复下去，首先得到构建的是分级结构的根部，然后是下一个衍生类，等等。直到抵达最深一层的衍生类。
+- (2) 按声明顺序调用成员初始化模块。
+- (3) 调用衍生构建器的主体。
+
+构建器调用的顺序是非常重要的。进行继承时，我们知道关于基础类的一切，并且能访问基础类的任何public和protected成员。这意味着当我们在衍生类的时候，必须能假定基础类的所有成员都是有效的。采用一种标准方法，构建行动已经进行，所以对象所有部分的成员均已得到构建。但在构建器内部，必须保证使用的所有成员都已构建。为达到这个要求，唯一的办法就是首先调用基础类构建器。然后在进入衍生类构建器以后，我们在基础类能够访问的所有成员都已得到初始化。此外，所有成员对象（亦即通过合成方法置于类内的对象）在类内进行定义的时候（比如上例中的b，c和l），由于我们应尽可能地对它们进行初始化，所以也应保证构建器内部的所有成员均为有效。若坚持按这一规则行事，会有助于我们确定所有基础类成员以及当前对象的成员对象均已获得正确的初始化。但不幸的是，这种做法并不适用于所有情况，这将在下一节具体说明。
+
+#### 7.7.2 继承和 finalize()
+
+通过“合成”方法创建新类时，永远不必担心对那个类的成员对象的收尾工作。每个成员都是一个独立的对象，所以会得到正常的垃圾收集以及收尾处理——无论它是不是不自己某个类一个成员。但在进行初始化的时候，必须覆盖衍生类中的finalize()方法——如果已经设计了某个特殊的清除进程，要求它必须作为垃圾收集的一部分进行。覆盖衍生类的finalize()时，务必记住调用finalize()的基础类版本。否则，基础类的初始化根本不会发生。下面这个例子便是明证：
+```java
+//: Frog.java
+// Testing finalize with inheritance
+
+class DoBaseFinalization {
+  public static boolean flag = false;
+}
+
+class Characteristic {
+  String s;
+  Characteristic(String c) {
+    s = c;
+    System.out.println(
+      "Creating Characteristic " + s);
+  }
+  protected void finalize() {
+    System.out.println(
+      "finalizing Characteristic " + s);
+  }
+}
+
+class LivingCreature {
+  Characteristic p = 
+    new Characteristic("is alive");
+  LivingCreature() {
+    System.out.println("LivingCreature()");
+  }
+  protected void finalize() {
+    System.out.println(
+      "LivingCreature finalize");
+    // Call base-class version LAST!
+    if(DoBaseFinalization.flag)
+      try {
+        super.finalize();
+      } catch(Throwable t) {}
+  }
+}
+
+class Animal extends LivingCreature {
+  Characteristic p = 
+    new Characteristic("has heart");
+  Animal() {
+    System.out.println("Animal()");
+  }
+  protected void finalize() {
+    System.out.println("Animal finalize");
+    if(DoBaseFinalization.flag)
+      try {
+        super.finalize();
+      } catch(Throwable t) {}
+  }
+}
+
+class Amphibian extends Animal {
+  Characteristic p = 
+    new Characteristic("can live in water");
+  Amphibian() {
+    System.out.println("Amphibian()");
+  }
+  protected void finalize() {
+    System.out.println("Amphibian finalize");
+    if(DoBaseFinalization.flag)
+      try {
+        super.finalize();
+      } catch(Throwable t) {}
+  }
+}
+
+public class Frog extends Amphibian {
+  Frog() {
+    System.out.println("Frog()");
+  }
+  protected void finalize() {
+    System.out.println("Frog finalize");
+    if(DoBaseFinalization.flag)
+      try {
+        super.finalize();
+      } catch(Throwable t) {}
+  }
+  public static void main(String[] args) {
+    if(args.length != 0 && 
+       args[0].equals("finalize"))
+       DoBaseFinalization.flag = true;
+    else
+      System.out.println("not finalizing bases");
+    new Frog(); // Instantly becomes garbage
+    System.out.println("bye!");
+    // Must do this to guarantee that all 
+    // finalizers will be called:
+    System.runFinalizersOnExit(true);
+  }
+} ///:~
+```
+DoBasefinalization类只是简单地容纳了一个标志，向分级结构中的每个类指出是否应调用super.finalize()。这个标志的设置建立在命令行参数的基础上，所以能够在进行和不进行基础类收尾工作的前提下查看行为。 分级结构中的每个类也包含了Characteristic类的一个成员对象。大家可以看到，无论是否调用了基础类收尾模块，Characteristic成员对象都肯定会得到收尾（清除）处理。
+
+每个被覆盖的finalize()至少要拥有对protected成员的访问权力，因为Object类中的finalize()方法具有protected属性，而编译器不允许我们在继承过程中消除访问权限（“友好的”比“受到保护的”具有更小的访问权限）。
+
+在Frog.main()中，DoBaseFinalization标志会得到配置，而且会创建单独一个Frog对象。请记住垃圾收集（特别是收尾工作）可能不会针对任何特定的对象发生，所以为了强制采取这一行动，System.runFinalizersOnExit(true)添加了额外的开销，以保证收尾工作的正常进行。若没有基础类初始化
+则输出结果是：
+```
+not finalizing bases
+Creating Characteristic is alive
+LivingCreature()
+Creating Characteristic has heart
+Animal()
+Creating Characteristic can live in water
+Amphibian()
+Frog()
+bye!
+Frog finalize
+finalizing Characteristic is alive
+finalizing Characteristic has heart
+finalizing Characteristic can live in water
+```
+从中可以看出确实没有为基础类Frog调用收尾模块。但假如在命令行加入“finalize”自变量，则会获得下述结果：
+```
+Creating Characteristic is alive
+LivingCreature()
+Creating Characteristic has heart
+Animal()
+Creating Characteristic can live in water
+Amphibian()
+Frog()
+bye!
+Frog finalize
+Amphibian finalize
+Animal finalize
+LivingCreature finalize
+finalizing Characteristic is alive
+finalizing Characteristic has heart
+finalizing Characteristic can live in water
+```
+尽管成员对象按照与它们创建时相同的顺序进行收尾，但从技术角度说，并没有指定对象收尾的顺序。但对于基础类，我们可对收尾的顺序进行控制。采用的最佳顺序正是在这里采用的顺序，它与初始化顺序正好相反。按照与C++中用于“破坏器”相同的形式，我们应该首先执行衍生类的收尾，再是基础类的收尾。这是由于衍生类的收尾可能调用基础类中相同的方法，要求基础类组件仍然处于活动状态。因此，必须提前将它们清除（破坏）。
+
+#### 7.7.3 构建器内部的多形性方法的行为
+
+构建器调用的分级结构（顺序）为我们带来了一个有趣的问题，或者说让我们进入了一种进退两难的局面。若当前位于一个构建器的内部，同时调用准备构建的那个对象的一个动态绑定方法，那么会出现什么情况呢？在原始的方法内部，我们完全可以想象会发生什么——动态绑定的调用会在运行期间进行解析，因为对象不知道它到底从属于方法所在的那个类，还是从属于从它衍生出来的某些类。为保持一致性，大家也许会认为这应该在构建器内部发生。 但实际情况并非完全如此。若调用构建器内部一个动态绑定的方法，会使用那个方法被覆盖的定义。然而，产生的效果可能并不如我们所愿，而且可能造成一些难于发现的程序错误。
+
+从概念上讲，构建器的职责是让对象实际进入存在状态。在任何构建器内部，整个对象可能只是得到部分组织——我们只知道基础类对象已得到初始化，但却不知道哪些类已经继承。然而，一个动态绑定的方法调用却会在分级结构里“向前”或者“向外”前进。它调用位于衍生类里的一个方法。如果在构建器内部做这件事情，那么对于调用的方法，它要操纵的成员可能尚未得到正确的初始化——这显然不是我们所希望的。 通过观察下面这个例子，这个问题便会昭然若揭：
+```
+abstract class Glyph {
+  abstract void draw();
+  Glyph() {
+    System.out.println("Glyph() before draw()");
+    draw(); 
+    System.out.println("Glyph() after draw()");
+  }
+}
+
+class RoundGlyph extends Glyph {
+  int radius = 1;
+  RoundGlyph(int r) {
+    radius = r;
+    System.out.println(
+      "RoundGlyph.RoundGlyph(), radius = "
+      + radius);
+  }
+  void draw() { 
+    System.out.println(
+      "RoundGlyph.draw(), radius = " + radius);
+  }
+}
+
+public class PolyConstructors {
+  public static void main(String[] args) {
+    new RoundGlyph(5);
+  }
+} ///:~
+```
+在Glyph中，draw()方法是“抽象的”（abstract），所以它可以被其他方法覆盖。事实上，我们在RoundGlyph中不得不对其进行覆盖。但Glyph构建器会调用这个方法，而且调用会在RoundGlyph.draw()中止，这看起来似乎是有意的。但请看看输出结果：
+```
+Glyph() before draw()
+RoundGlyph.draw(), radius = 0
+Glyph() after draw()
+RoundGlyph.RoundGlyph(), radius = 5
+```
+当Glyph的构建器调用draw()时，radius的值甚至不是默认的初始值1，而是0。这可能是由于一个点号或者屏幕上根本什么都没有画而造成的。这样就不得不开始查找程序中的错误，试着找出程序不能工作的原因。 前一节讲述的初始化顺序并不十分完整，而那是解决问题的关键所在。初始化的实际过程是这样的：
+- (1) 在采取其他任何操作之前，为对象分配的存储空间初始化成二进制零。
+- (2) 就象前面叙述的那样，调用基础类构建器。此时，被覆盖的draw()方法会得到调用（的确是在RoundGlyph构建器调用之前），此时会发现radius的值为0，这是由于步骤(1)造成的。
+- (3) 按照原先声明的顺序调用成员初始化代码。
+- (4) 调用衍生类构建器的主体。
+
+采取这些操作要求有一个前提，那就是所有东西都至少要初始化成零（或者某些特殊数据类型与“零”等价的值），而不是仅仅留作垃圾。其中包括通过“合成”技术嵌入一个类内部的对象句柄。如果假若忘记初始化那个句柄，就会在运行期间出现违例事件。其他所有东西都会变成零，这在观看结果时通常是一个严重的警告信号。
+
+在另一方面，应对这个程序的结果提高警惕。从逻辑的角度说，我们似乎已进行了无懈可击的设计，所以它的错误行为令人非常不可思议。而且没有从编译器那里收到任何报错信息（C++在这种情况下会表现出更合理的行为）。象这样的错误会很轻易地被人忽略，而且要花很长的时间才能找出。
+
+因此，设计构建器时一个特别有效的规则是：用尽可能简单的方法使对象进入就绪状态；如果可能，避免调用任何方法。在构建器内唯一能够安全调用的是在基础类中具有final属性的那些方法（也适用于private方法，它们自动具有final属性）。这些方法不能被覆盖，所以不会出现上述潜在的问题。
+
+### 7.8 通过继承进行设计
+学习了多形性的知识后，由于多形性是如此“聪明”的一种工具，所以看起来似乎所有东西都应该继承。但假如过度使用继承技术，也会使自己的设计变得不必要地复杂起来。事实上，当我们以一个现成类为基础建立一个新类时，如首先选择继承，会使情况变得异常复杂。
+
+一个更好的思路是首先选择“合成”——如果不能十分确定自己应使用哪一个。合成不会强迫我们的程序设计进入继承的分级结构中。同时，合成显得更加灵活，因为可以动态选择一种类型（以及行为），而继承要求在编译期间准确地知道一种类型。下面这个例子对此进行了阐释：
+```java
+interface Actor {
+  void act();
+}
+
+class HappyActor implements Actor {
+  public void act() {
+    System.out.println("HappyActor");
+  }
+}
+
+class SadActor implements Actor {
+  public void act() {
+    System.out.println("SadActor");
+  }
+}
+
+class Stage {
+  Actor a = new HappyActor();
+  void change() { a = new SadActor(); }
+  void go() { a.act(); }
+}
+
+public class Transmogrify {
+  public static void main(String[] args) {
+    Stage s = new Stage();
+    s.go(); // Prints "HappyActor"
+    s.change();
+    s.go(); // Prints "SadActor"
+  }
+} ///:~
+```
+在这里，一个Stage对象包含了指向一个Actor的句柄，后者被初始化成一个HappyActor对象。这意味着go()会产生特定的行为。但由于句柄在运行期间可以重新与一个不同的对象绑定或结合起来，所以SadActor对象的句柄可在a中得到替换，然后由go()产生的行为发生改变。这样一来，我们在运行期间就获得了很大的灵活性。与此相反，我们不能在运行期间换用不同的形式来进行继承；它要求在编译期间完全决定下来。
+
+一条常规的设计准则是：用继承表达行为间的差异，并用成员变量表达状态的变化。在上述例子中，两者都得到了应用：继承了两个不同的类，用于表达act()方法的差异；而Stage通过合成技术允许它自己的状态发生变化。在这种情况下，那种状态的改变同时也产生了行为的变化。
+
+> 具体该如何应用“合成”、“继承”在 **_6.10 总结_** 有说明
 
 
+#### 7.8.1 纯继承与扩展
+学习继承时，为了创建继承分级结构，看来最明显的方法是采取一种“纯粹”的手段。也就是说，只有在基础类或“接口”中已建立的方法才可在衍生类中被覆盖
+
+可将其描述成一种纯粹的“属于”关系，因为一个类的接口已规定了它到底“是什么”或者“属于什么”。通过继承，可保证所有衍生类都只拥有基础类的接口。如果按上述示意图操作，衍生出来的类除了基础类的接口之外，也不会再拥有其他什么。
+
+可将其想象成一种“纯替换”，因为衍生类对象可为基础类完美地替换掉。使用它们的时候，我们根本没必要知道与子类有关的任何额外信息。
+
+也就是说，基础类可接收我们发给衍生类的任何消息，因为两者拥有完全一致的接口。我们要做的全部事情就是从衍生上溯造型，而且永远不需要回过头来检查对象的准确类型是什么。所有细节都已通过多形性获得了完美的控制。 若按这种思路考虑问题，那么一个纯粹的“属于”关系似乎是唯一明智的设计方法，其他任何设计方法都会导致混乱不清的思路，而且在定义上存在很大的困难。但这种想法又属于另一个极端。经过细致的研究，我们发现扩展接口对于一些特定问题来说是特别有效的方案。可将其称为“类似于”关系，因为扩展后的衍生类“类似于”基础类——它们有相同的基础接口——但它增加了一些特性，要求用额外的方法加以实现。
+
+尽管这是一种有用和明智的做法（由具体的环境决定），但它也有一个缺点：衍生类中对接口扩展的那一部分不可在基础类中使用。所以一旦上溯造型，就不可再调用新方法：
+
+若在此时不进行上溯造型，则不会出现此类问题。但在许多情况下，都需要重新核实对象的准确类型，使自己能访问那个类型的扩展方法。在后面的小节里，我们具体讲述了这是如何实现的。
+
+#### 7.8.2 下溯造型与运行期类型标识
+由于我们在上溯造型（在继承结构中向上移动）期间丢失了具体的类型信息，所以为了获取具体的类型信息——亦即在分级结构中向下移动——我们必须使用 “下溯造型”技术。然而，我们知道一个上溯造型肯定是安全的；基础类不可能再拥有一个比衍生类更大的接口。因此，我们通过基础类接口发送的每一条消息都肯定能够接收到。但在进行下溯造型的时候，我们（举个例子来说）并不真的知道一个几何形状实际是一个圆，它完全可能是一个三角形、方形或者其他形状。
+
+为解决这个问题，必须有一种办法能够保证下溯造型正确进行。只有这样，我们才不会冒然造型成一种错误的类型，然后发出一条对象不可能收到的消息。这样做是非常不安全的。
+
+在某些语言中（如C++），为了进行保证“类型安全”的下溯造型，必须采取特殊的操作。但在Java中，所有造型都会自动得到检查和核实！所以即使我们只是进行一次普通的括弧造型，进入运行期以后，仍然会毫无留情地对这个造型进行检查，保证它的确是我们希望的那种类型。如果不是，就会得到一个ClassCastException（类造型违例）。在运行期间对类型进行检查的行为叫作“运行期类型标识”（RTTI）。
+
+和在示意图中一样，MoreUseful（更有用的）对Useful（有用的）的接口进行了扩展。但由于它是继承来的，所以也能上溯造型到一个Useful。我们可看到这会在对数组x（位于main()中）进行初始化的时候发生。由于数组中的两个对象都属于Useful类，所以可将f()和g()方法同时发给它们两个。而且假如试图调用u()（它只存在于MoreUseful），就会收到一条编译期出错提示。
+
+若想访问一个MoreUseful对象的扩展接口，可试着进行下溯造型。如果它是正确的类型，这一行动就会成功。否则，就会得到一个ClassCastException。我们不必为这个违例编写任何特殊的代码，因为它指出的是一个可能在程序中任何地方发生的一个编程错误。
+
+RTTI的意义远不仅仅反映在造型处理上。例如，在试图下溯造型之前，可通过一种方法了解自己处理的是什么类型。整个第11章都在讲述Java运行期类型标识的方方面面。
 
 
+### 7.9 总结
+“多形性”意味着“不同的形式”。在面向对象的程序设计中，我们有相同的外观（基础类的通用接口）以及使用那个外观的不同形式：动态绑定或组织的、不同版本的方法。
 
+通过这一章的学习，大家已知道假如不利用数据抽象以及继承技术，就不可能理解、甚至去创建多形性的一个例子。多形性是一种不可独立应用的特性（就象一个switch语句），只可与其他元素协同使用。我们应将其作为类总体关系的一部分来看待。人们经常混淆Java其他的、非面向对象的特性，比如方法过载等，这些特性有时也具有面向对象的某些特征。但不要被愚弄：如果以后没有绑定，就不成其为多形性。
 
+为使用多形性乃至面向对象的技术，特别是在自己的程序中，必须将自己的编程视野扩展到不仅包括单独一个类的成员和消息，也要包括类与类之间的一致性以及它们的关系。尽管这要求学习时付出更多的精力，但却是非常值得的，因为只有这样才可真正有效地加快自己的编程速度、更好地组织代码、更容易做出包容面广的程序以及更易对自己的代码进行维护与扩展。
 
+## 第8章 对象的容纳
+“如果一个程序只含有数量固定的对象，而且已知它们的存在时间，那么这个程序可以说是相当简单的。”
 
+通常，我们的程序需要根据程序运行时才知道的一些标准创建新对象。若非程序正式运行，否则我们根本不知道自己到底需要多少数量的对象，甚至不知道它们的准确类型。为了满足常规编程的需要，我们要求能在任何时候、任何地点创建任意数量的对象。所以不可依赖一个已命名的句柄来容纳自己的每一个对象，
+因为根本不知道自己实际需要多少这样的东西。
 
+为解决这个非常关键的问题，Java提供了容纳对象（或者对象的句柄）的多种方式。其中内建的类型是数组，我们之前已讨论过它，本章准备加深大家对它的认识。此外，Java的工具（实用程序）库提供了一些“集合类”（亦称作“容器类”，但该术语已由AWT使用，所以这里仍采用“集合”这一称呼）。利用这些集合类，我们可以容纳乃至操纵自己的对象。本章的剩余部分会就此进行详细讨论。
 
+### 8.1 数组
+数组只是容纳对象的一种方式。但由于还有其他大量方法可容纳数组，所以是哪些地方使数组显得如此特别呢？ 有两方面的问题将数组与其他集合类型区分开来：效率和类型。对于Java来说，为保存和访问一系列对象（实际是对象的句柄）数组，最有效的方法莫过于数组。数组实际代表一个简单的线性序列，它使得元素的访问速度非常快，但我们却要为这种速度付出代价：创建一个数组对象时，它的大小是固定的，而且不可在那个数组对象的“存在时间”内发生改变。可创建特定大小的一个数组，然后假如用光了存储空间，就再创建一个新数组，将所有句柄从旧数组移到新数组。这属于“矢量”（Vector）类的行为，本章稍后还会详细讨论它。然而，由于为这种大小的灵活性要付出较大的代价，所以我们认为矢量的效率并没有数组高。
 
+C++的矢量类知道自己容纳的是什么类型的对象，但同Java的数组相比，它却有一个明显的缺点：C++矢量类的operator[]不能进行范围检查，所以很容易超出边界（然而，它可以查询vector有多大，而且at()方法确实能进行范围检查）。在Java中，无论使用的是数组还是集合，都会进行范围检查——若超过边界，就会获得一个RuntimeException（运行期违例）错误。正如大家在第9章会学到的那样，这类违例指出的是一个程序员错误，所以不需要在代码中检查它。在另一方面，由于C++的vector不进行范围检查，所以访问速度较快——在Java中，由于对数组和集合都要进行范围检查，所以对性能有一定的影响。
 
+本章还要学习另外几种常见的集合类：Vector（矢量）、Stack（堆栈）以及Hashtable（散列表）。这些类都涉及对对象的处理——好象它们没有特定的类型。换言之，它们将其当作Object类型处理（Object类型是Java中所有类的“根”类）。从某个角度看，这种处理方法是非常合理的：我们仅需构建一个集合，然后任何Java对象都可以进入那个集合（除基本数据类型外——可用Java的基本类型封装类将其作为常数置入集合，或者将其封装到自己的类内，作为可以变化的值使用）。这再一次反映了数组优于常规集合：创建一个数组时，可令其容纳一种特定的类型。这意味着可进行编译期类型检查，预防自己设置了错误的类型，或者错误指定了准备提取的类型。当然，在编译期或者运行期，Java会防止我们将不当的消息发给一个对象。所以我们不必考虑自己的哪种做法更加危险，只要编译器能及时地指出错误，同时在运行期间加快速度，目的也就达到了。此外，用户很少会对一次违例事件感到非常惊讶的。
 
+考虑到执行效率和类型检查，应尽可能地采用数组。然而，当我们试图解决一个更常规的问题时，数组的局限也可能显得非常明显。在研究过数组以后，本章剩余的部分将把重点放到Java提供的集合类身上。
 
+#### 8.1.1 数组和第一类对象
+无论使用的数组属于什么类型，数组标识符实际都是指向真实对象的一个句柄。那些对象本身是在内存“堆”里创建的。堆对象既可“隐式”创建（即默认产生），亦可“显式”创建（即明确指定，用一个new表达式）。堆对象的一部分（实际是我们能访问的唯一字段或方法）是只读的length（长度）成员，它告诉我们那个数组对象里最多能容纳多少元素。对于数组对象，“[]”语法是我们能采用的唯一另类访问方法。
 
+下面这个例子展示了对数组进行初始化的不同方式，以及如何将数组句柄分配给不同的数组对象。它也揭示出对象数组和基本数据类型数组在使用方法上几乎是完全一致的。唯一的差别在于对象数组容纳的是句柄，而基本数据类型数组容纳的是具体的数值（若在执行此程序时遇到困难，请参考第3章的“赋值”小节）：
 
+length只告诉我们可将多少元素置入那个数组。换言之，我们只知道数组对象的大小或容量，不知其实际容纳了多少个元素。
+尽管如此，由于数组对象在创建之初会自动初始化成null，所以可检查它是否为null，判断一个特定的数组“空位”是否容纳一个对象。类似地，由基本数据类型构成的数组会自动初始化成零（针对数值类型）、null（字符类型）或者false（布尔类型）。
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+### 8.2 集合
+### 8.3 枚举器（反复器）
+### 8.4 集合的类型
+### 8.5 排序
+### 8.6 通用集合库
+### 8.7 新集合
+### 8.8 总结
+### 8.9 练习
 
 
 
@@ -3426,7 +3897,6 @@ for(int i=0;i<20;i++){
 
 
 ---
-(8) 第8章：对象的容纳
 (9) 第9章：违例差错控制
 (10) 第10章：Java IO系统
 (11) 第11章：运行期类型鉴定
