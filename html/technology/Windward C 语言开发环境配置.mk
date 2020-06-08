@@ -95,6 +95,167 @@ pacman -S mingw-w64-x86_64-toolchain base-devel
 
 
 
+####  安裝文字介面下的純文字編輯器─vim
+```
+pacman -S vim
+```
+
+
+####  安裝 MinGW
+```
+pacman -S pacman -S mingw-w64-x86_64-toolchain
+```
+
+
+####  如果要查看目前工作目錄對應Windows環境的檔案路徑，可以再對「pwd」指令加上「-W」選項
+```
+pwd -W
+```
+####  更新MSYS2
+```
+pacman -Syu
+```
+更新到一半時，MSYS2可能會要求使用者要直接關閉MSYS2。
+
+此時要用一般關閉視窗的方法來關閉MSYS2的終端機，而不要用「Ctrl+c」去中止MSYS2的更新程式。
+
+關閉MSYS2後，重新開啟MSYS2的終端機，並輸入以下指令：
+
+```
+pacman -Su
+```
+接著繼續把套件的更新跑完。
+#### 如何在MSYS2中編譯Rust程式
+Windows作業系統中的Rust程式，預設會使用MSVC來編譯的。但是如果Rust程式有使用到GNU相關的函式庫(例如GTK)時，就得搭配MinGW來編譯了。MSYS2是一套整合MinGW和POSIX環境的工具，可以在Windows作業系統上模擬出Linux作業系統的開發環境，且能利用MinGW直接編譯出在Windows作業系統上執行的程式。
+
+在Windows作業系統安裝Rust開發環境
+如果您的Windows作業系統已經有Rust的開發環境(在命令提示字元下可以直接使用rustup、cargo等指令)，可以跳過這個部份。
+
+首先在MSYS2的終端機上執行以下指令：
+```
+curl https://sh.rustup.rs -sSf | sh
+```
+1、安裝程式可能會提示說需要微軟的Visual C++ Build Tools。不要理它，輸入「y」繼續。
+
+2、選擇第二個選項來自訂Rust要如何安裝。
+
+3、host triple的部份，輸入「x86_64-pc-windows-gnu」，也就是我們的Rust編譯器預設使用的目標(target)名稱。
+
+接著輸入Rust的版本，建議使用「stable」，如果有nightly需求的話就用「nightly」吧！
+```
+Default toolchain? (stable/beta/nightly/none)
+nightly
+
+Profile (which tools and data to install)? (minimal/default/complete)
+complete
+
+info: installing component 'cargo'
+info: installing component 'clippy'
+info: installing component 'llvm-tools-preview'
+info: installing component 'miri'
+info: installing component 'rls'
+info: installing component 'rust-analysis'
+info: installing component 'rust-docs'
+info: installing component 'rust-mingw'
+info: installing component 'rust-src'
+info: installing component 'rust-std'
+info: installing component 'rustc'
+info: installing component 'rustc-dev'
+
+
+```
+4、接著設定是否要修改「PATH」環境變數，輸入「y」。
+
+5、然後回到選單，選擇第一項，開始用我們剛才的設定來安裝Rust。
+
+6、安裝好後，確認「PATH」環境變數是否有包含「%USERPROFILE%\.cargo\bin」路徑，沒有的話就加上去。
+
+7、在命令提示字元中輸入「rustup」和「cargo」指令來確認Windows作業系統的Rust開發環境是否安裝且設定成功。如果有設定成功，指令才會存在。
+
+8、此時可以在MSYS2的終端機中利用以下指令來查看「PATH」環境變數：
+```
+echo $PATH
+```
+9、之後就可以在MSYS2的終端機中使用「rustup」和「cargo」等Rust開發環境的相關指令了！
+  
+#### 替Rust加入「x86_64-pc-windows-gnu」目標
+如果您在安裝Rust的時候已經設定使用了「x86_64-pc-windows-gnu」目標，可以跳過這個部份。
+
+在MSYS2的終端機中使用以下指令，來查看Rust開發環境目前已加入的目標：
+```
+rustup toolchain list
+```
+如果沒有看到「x86_64-pc-windows-gnu」目標的話，可以使用以下指令來安裝：
+```
+rustup target add x86_64-pc-windows-gnu
+```
+讓Rust使用MinGW
+在MSYS2的終端機中使用vim等文字編輯軟體，開啟「/c/Users/您的Windows使用者名稱/.cargo/config」檔案。
+```
+vim "/c/User/Magic Len/.cargo/config"
+```
+在檔案內加上以下內容：
+```
+[target.x86_64-pc-windows-gnu]
+linker = "C:\msys64\mingw64\bin\gcc.exe"
+ar = "C:\msys64\mingw64\bin\ar.exe"
+```
+如此一來，不論是哪個Cargo程式專案，在使用「x86_64-pc-windows-gnu」目標來編譯程式時，就會去用MinGW提供的「gcc.exe」和「ar.exe」來做函式庫的連結。
+
+Rust與MSYS2的Hello World
+
+為了確定我們的Rust開發環境沒有問題，可以在MSYS2的終端機中，使用以下幾個指令來測試預設的Cargo程式專案(Hello World)是否可以正常被編譯執行。
+```
+cargo new --bin hello
+```
+```
+cd hello
+```
+```
+cargo run
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
