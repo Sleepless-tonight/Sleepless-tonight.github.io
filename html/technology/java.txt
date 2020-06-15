@@ -54,12 +54,14 @@
         1.1、语言框架：
             netty、shrio、RabbitMQ、Quartz、dubbo、mybaitc、spring、springmvc、springboot、springcloud
     2、数据结构和算法、操作系统、计算机网络、设计模式
-    3、Java多线程
+    3、Java语言基础
+        1、关键字及其作用特性
+        2、面向对象的理解
+    4、Java多线程
         1、虚拟机的内存模型
         2、java.util.concurrent
-
-
-
+    5、jvm
+        1、《深入理解Java虚拟机》
 
 
 
