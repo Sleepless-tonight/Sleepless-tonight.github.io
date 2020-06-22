@@ -4435,17 +4435,330 @@ Java 1.1增添了一种有趣的特性，名为“对象序列化”（Object Se
 对象的序列化也是Java Beans必需的，后者由Java 1.1引入。使用一个Bean时，它的状态信息通常在设计期间配置好。程序启动以后，这种状态信息必须保存下来，以便程序启动以后恢复；具体工作由对象序列化完成。
 > 学习JSP，不可避免地你会接触到JavaBeans
 
+对象的序列化处理非常简单，只需对象实现了Serializable接口即可（该接口仅是一个标记，没有方法）。在Java 1.1中，许多标准库类都发生了改变，以便能够序列化——其中包括用于基本数据类型的全部封装器、所有集合类以及其他许多东西。甚至Class对象也可以序列化（第11章讲述了具体实现过程）。
+
+为序列化一个对象，首先要创建某些OutputStream对象，然后将其封装到ObjectOutputStream对象内。此时，只需调用writeObject()即可完成对象的序列化，并将其发送给OutputStream。相反的过程是将一个InputStream封装到ObjectInputStream内，然后调用 readObject()。和往常一样，我们最后获得的是指向一个上溯造型Object的句柄，所以必须下溯造型，以便能够直接设置。
+
+对象序列化特别“聪明”的一个地方是它不仅保存了对象的“全景图”，而且能追踪对象内包含的所有句柄并保存那些对象；接着又能对每个对象内包含的句柄进行追踪；以此类推。我们有时将这种情况称为“对象网”，单个对象可与之建立连接。而且它还包含了对象的句柄数组以及成员对象。若必须自行操纵一套对象序列化机制，那么在代码里追踪所有这些链接时可能会显得非常麻烦。在另一方面，由于Java对象的序列化似乎找不出什么缺点，所以请尽量不要自己动手，让它用优化的算法自动维护整个对象网。下面这个例子对序列化机制进行了测试。它建立了许多链接对象的一个“Worm”（蠕虫），每个对象都与Worm中的下一段链接，同时又与属于不同类（Data）的对象句柄数组链接：
+```
+//: Worm.java
+// Demonstrates object serialization in Java 1.1
+import java.io.*;
+
+class Data implements Serializable {
+  private int i;
+  Data(int x) { i = x; }
+  public String toString() {
+    return Integer.toString(i);
+  }
+}
+
+public class Worm implements Serializable {
+  // Generate a random int value:
+  private static int r() {
+    return (int)(Math.random() * 10);
+  }
+  private Data[] d = {
+    new Data(r()), new Data(r()), new Data(r())
+  };
+  private Worm next;
+  private char c;
+  // Value of i == number of segments
+  Worm(int i, char x) {
+    System.out.println(" Worm constructor: " + i);
+    c = x;
+    if(--i > 0)
+      next = new Worm(i, (char)(x + 1));
+  }
+  Worm() {
+    System.out.println("Default constructor");
+  }
+  public String toString() {
+    String s = ":" + c + "(";
+    for(int i = 0; i < d.length; i++)
+      s += d[i].toString();
+    s += ")";
+    if(next != null)
+      s += next.toString();
+    return s;
+  }
+  public static void main(String[] args) {
+    Worm w = new Worm(6, 'a');
+    System.out.println("w = " + w);
+    try {
+      ObjectOutputStream out =
+        new ObjectOutputStream(
+          new FileOutputStream("worm.out"));
+      out.writeObject("Worm storage");
+      out.writeObject(w);
+      out.close(); // Also flushes output
+      ObjectInputStream in =
+        new ObjectInputStream(
+          new FileInputStream("worm.out"));
+      String s = (String)in.readObject();
+      Worm w2 = (Worm)in.readObject();
+      System.out.println(s + ", w2 = " + w2);
+    } catch(Exception e) {
+      e.printStackTrace();
+    }
+    try {
+      ByteArrayOutputStream bout =
+        new ByteArrayOutputStream();
+      ObjectOutputStream out =
+        new ObjectOutputStream(bout);
+      out.writeObject("Worm storage");
+      out.writeObject(w);
+      out.flush();
+      ObjectInputStream in =
+        new ObjectInputStream(
+          new ByteArrayInputStream(
+            bout.toByteArray()));
+      String s = (String)in.readObject();
+      Worm w3 = (Worm)in.readObject();
+      System.out.println(s + ", w3 = " + w3);
+    } catch(Exception e) {
+      e.printStackTrace();
+    }
+  }
+} ///:~
+```
 
 
+真正的序列化过程却是非常简单的。一旦从另外某个流里创建了ObjectOutputStream，writeObject()就会序列化对象。注意也可以为一个String调用writeObject()。亦可使用与DataOutputStream相同的方法写入所有基本数据类型（它们有相同的接口）。
 
+有两个单独的try块看起来是类似的。第一个读写的是文件，而另一个读写的是一个ByteArray（字节数组）。可利用对任何DataInputStream或者DataOutputStream的序列化来读写特定的对象；正如在关于连网的那一章会讲到的那样，这些对象甚至包括网络。
 
+可以看出，装配回原状的对象确实包含了原来那个对象里包含的所有链接。
 
+注意在对一个Serializable（可序列化）对象进行重新装配的过程中，不会调用任何构建器（甚至默认构建器）。整个对象都是通过从InputStream中取得数据恢复的。
 
+作为Java 1.1特性的一种，我们注意到对象的序列化并不属于新的Reader和Writer层次结构的一部分，而是沿用老式的InputStream和OutputStream结构。所以在一些特殊的场合下，不得不混合使用两种类型的层次结构。
 
+#### 10.9.1 寻找类
 
+读者或许会奇怪为什么需要一个对象从它的序列化状态中恢复。举个例子来说，假定我们序列化一个对象，并通过网络将其作为文件传送给另一台机器。此时，位于另一台机器的程序可以只用文件目录来重新构造这个对象吗？ 回答这个问题的最好方法就是做一个实验。下面这个文件位于本章的子目录下：
+```
+//: Alien.java
+// A serializable class
+import java.io.*;
 
+public class Alien implements Serializable {
+} ///:~
+```
+用于创建和序列化一个Alien对象的文件位于相同的目录下：
+```
+//: FreezeAlien.java
+// Create a serialized output file
+import java.io.*;
 
+public class FreezeAlien {
+  public static void main(String[] args) 
+      throws Exception {
+    ObjectOutput out = 
+      new ObjectOutputStream(
+        new FileOutputStream("file.x"));
+    Alien zorcon = new Alien();
+    out.writeObject(zorcon); 
+  }
+} ///:~
+```
+该程序并不是捕获和控制违例，而是将违例简单、直接地传递到main()外部，这样便能在命令行报告它们。 程序编译并运行后，将结果产生的file.x复制到名为xfiles的子目录，代码如下：
+```
+//: ThawAlien.java
+// Try to recover a serialized file without the 
+// class of object that's stored in that file.
+package c10.xfiles;
+import java.io.*;
 
+public class ThawAlien {
+  public static void main(String[] args) 
+      throws Exception {
+    ObjectInputStream in =
+      new ObjectInputStream(
+        new FileInputStream("file.x"));
+    Object mystery = in.readObject();
+    System.out.println(
+      mystery.getClass().toString());
+  }
+} ///:~
+```
+该程序能打开文件，并成功读取mystery对象中的内容。然而，一旦尝试查找与对象有关的任何资料——这要求Alien的Class对象——Java虚拟机（JVM）便找不到Alien.class（除非它正好在类路径内，而本例理应相反）。这样就会得到一个名叫ClassNotFoundException的违例（同样地，若非能够校验Alien存在的证据，否则它等于消失）。
+
+恢复了一个序列化的对象后，如果想对其做更多的事情，必须保证JVM能在本地类路径或者因特网的其他什么地方找到相关的.class文件。
+
+>总结：
+>
+>这小节说啥了，是在说，通过序列化恢复产生的对象，在 JVM 中是没有.class 的，除非它正好在类路径内。
+
+#### 10.9.2 序列化的控制
+正如大家看到的那样，默认的序列化机制并不难操纵。然而，假若有特殊要求又该怎么办呢？我们可能有特殊的安全问题，不希望对象的某一部分序列化；或者某一个子对象完全不必序列化，因为对象恢复以后，那一部分需要重新创建。
+
+此时，通过实现Externalizable接口，用它代替Serializable接口，便可控制序列化的具体过程。这个Externalizable接口扩展了Serializable，并增添了两个方法：writeExternal()和readExternal()。在序列化和重新装配的过程中，会自动调用这两个方法，以便我们执行一些特殊操作。
+
+下面这个例子展示了Externalizable接口方法的简单应用。注意Blip1和Blip2几乎完全一致，除了极微小的差别（自己研究一下代码，看看是否能发现）：
+
+```java
+//: Blips.java
+// Simple use of Externalizable & a pitfall
+import java.io.*;
+import java.util.*;
+
+class Blip1 implements Externalizable {
+  public Blip1() {
+    System.out.println("Blip1 Constructor");
+  }
+  public void writeExternal(ObjectOutput out)
+      throws IOException {
+    System.out.println("Blip1.writeExternal");
+  }
+  public void readExternal(ObjectInput in)
+     throws IOException, ClassNotFoundException {
+    System.out.println("Blip1.readExternal");
+  }
+}
+
+class Blip2 implements Externalizable {
+  Blip2() {
+    System.out.println("Blip2 Constructor");
+  }
+  public void writeExternal(ObjectOutput out)
+      throws IOException {
+    System.out.println("Blip2.writeExternal");
+  }
+  public void readExternal(ObjectInput in)
+     throws IOException, ClassNotFoundException {
+    System.out.println("Blip2.readExternal");
+  }
+}
+
+public class Blips {
+  public static void main(String[] args) {
+    System.out.println("Constructing objects:");
+    Blip1 b1 = new Blip1();
+    Blip2 b2 = new Blip2();
+    try {
+      ObjectOutputStream o =
+        new ObjectOutputStream(
+          new FileOutputStream("Blips.out"));
+      System.out.println("Saving objects:");
+      o.writeObject(b1);
+      o.writeObject(b2);
+      o.close();
+      // Now get them back:
+      ObjectInputStream in =
+        new ObjectInputStream(
+          new FileInputStream("Blips.out"));
+      System.out.println("Recovering b1:");
+      b1 = (Blip1)in.readObject();
+      // OOPS! Throws an exception:
+//!   System.out.println("Recovering b2:");
+//!   b2 = (Blip2)in.readObject();
+    } catch(Exception e) {
+      e.printStackTrace();
+    }
+  }
+} ///:~
+```
+该程序输出如下：
+```
+Constructing objects:
+Blip1 Constructor
+Blip2 Constructor
+Saving objects:
+Blip1.writeExternal
+Blip2.writeExternal
+Recovering b1:
+Blip1 Constructor
+Blip1.readExternal
+```
+
+未恢复Blip2对象的原因是那样做会导致一个违例。你找出了Blip1和Blip2之间的区别吗？Blip1的构建器是“公共的”（public），Blip2的构建器则不然，这样便会在恢复时造成违例。试试将Blip2的构建器属性变成“public”，然后删除//!注释标记，看看是否能得到正确的结果。
+
+恢复b1后，会调用Blip1默认构建器。这与恢复一个Serializable（可序列化）对象不同。在后者的情况下，对象完全以它保存下来的二进制位为基础恢复，不存在构建器调用。而对一个Externalizable对象，所有普通的默认构建行为都会发生（包括在字段定义时的初始化），而且会调用readExternal()。必须注意这一事实——特别注意所有默认的构建行为都会进行——否则很难在自己的Externalizable对象中产生正确的行为。
+
+下面这个例子揭示了保存和恢复一个Externalizable对象必须做的全部事情：
+```java
+//: Blip3.java
+// Reconstructing an externalizable object
+import java.io.*;
+import java.util.*;
+
+class Blip3 implements Externalizable {
+  int i;
+  String s; // No initialization
+  public Blip3() {
+    System.out.println("Blip3 Constructor");
+    // s, i not initialized
+  }
+  public Blip3(String x, int a) {
+    System.out.println("Blip3(String x, int a)");
+    s = x;
+    i = a;
+    // s & i initialized only in non-default
+    // constructor.
+  }
+  public String toString() { return s + i; }
+  public void writeExternal(ObjectOutput out)
+      throws IOException {
+    System.out.println("Blip3.writeExternal");
+    // You must do this:
+    out.writeObject(s); out.writeInt(i);
+  }
+  public void readExternal(ObjectInput in)
+     throws IOException, ClassNotFoundException {
+    System.out.println("Blip3.readExternal");
+    // You must do this:
+    s = (String)in.readObject(); 
+    i =in.readInt();
+  }
+  public static void main(String[] args) {
+    System.out.println("Constructing objects:");
+    Blip3 b3 = new Blip3("A String ", 47);
+    System.out.println(b3.toString());
+    try {
+      ObjectOutputStream o =
+        new ObjectOutputStream(
+          new FileOutputStream("Blip3.out"));
+      System.out.println("Saving object:");
+      o.writeObject(b3);
+      o.close();
+      // Now get it back:
+      ObjectInputStream in =
+        new ObjectInputStream(
+          new FileInputStream("Blip3.out"));
+      System.out.println("Recovering b3:");
+      b3 = (Blip3)in.readObject();
+      System.out.println(b3.toString());
+    } catch(Exception e) {
+      e.printStackTrace();
+    }
+  }
+} ///:~
+```
+```
+Constructing objects:
+Blip3(String x, int a)
+A String 47
+Saving object:
+Blip3.writeExternal
+Recovering b3:
+Blip3 Constructor
+Blip3.readExternal
+A String 47
+```
+
+其中，字段s和i只在第二个构建器中初始化，不关默认构建器的事。这意味着假如不在readExternal中初始化s和i，它们就会成为null（因为在对象创建的第一步中已将对象的存储空间清除为1）。若注释掉跟随于“You must do this”后面的两行代码，并运行程序，就会发现当对象恢复以后，s是null，而i是零。
+
+若从一个Externalizable对象继承，通常需要调用writeExternal()和readExternal()的基础类版本，以便正确地保存和恢复基础类组件。
+
+所以为了让一切正常运作起来，千万不可仅在writeExternal()方法执行期间写入对象的重要数据（没有默认的行为可用来为一个Externalizable对象写入所有成员对象）的，而是必须在readExternal()方法中也恢复那些数据。初次操作时可能会有些不习惯，因为Externalizable对象的默认构建行为使其看起来似乎正在进行某种存储与恢复操作。但实情并非如此。
+>总结：
+>
+> 对象继承 Externalizable 实现序列化，需要注意 writeExternal()和readExternal() 方法，
+> 序列化时：在 writeExternal() 方法 写入对象的重要的想恢复的数据。
+> 反序列化时： 会先调用方法的 公开无参构造方法（不公开会报错），在readExternal()方法中恢复那些序列化时的out的数据。
+
+- transient（临时）关键字
 
 ### 10.10 总结
 ### 10.11 练习
