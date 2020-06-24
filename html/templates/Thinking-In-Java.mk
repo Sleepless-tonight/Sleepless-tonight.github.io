@@ -4588,7 +4588,7 @@ public class ThawAlien {
 
 >总结：
 >
->这小节说啥了，是在说，通过序列化恢复产生的对象，在 JVM 中是没有.class 的，除非它正好在类路径内。
+>这小节说啥了，是在说，通过序列化恢复产生的对象，在 JVM 中是没有.class 的，除非它正好在相同类路径内。
 
 #### 10.9.2 序列化的控制
 正如大家看到的那样，默认的序列化机制并不难操纵。然而，假若有特殊要求又该怎么办呢？我们可能有特殊的安全问题，不希望对象的某一部分序列化；或者某一个子对象完全不必序列化，因为对象恢复以后，那一部分需要重新创建。
@@ -4760,10 +4760,470 @@ A String 47
 
 - transient（临时）关键字
 
+控制序列化过程时，可能有一个特定的子对象不愿让Java的序列化机制自动保存与恢复。一般地，若那个子对象包含了不想序列化的敏感信息（如密码），就会面临这种情况。即使那种信息在对象中具有“private”（私有）属性，但一旦经序列化处理，人们就可以通过读取一个文件，或者拦截网络传输得到它。
+
+为防止对象的敏感部分被序列化，一个办法是将自己的类实现为Externalizable，就象前面展示的那样。这样一来，没有任何东西可以自动序列化，只能在writeExternal()明确序列化那些需要的部分。
+
+然而，若操作的是一个Serializable对象，所有序列化操作都会自动进行。为解决这个问题，可以用transient（临时）逐个字段地关闭序列化，它的意思是“不要麻烦你（指自动机制）保存或恢复它了——我会自己处理的”。
+
+例如，假设一个Login对象包含了与一个特定的登录会话有关的信息。校验登录的合法性时，一般都想将数据保存下来，但不包括密码。为做到这一点，最简单的办法是实现Serializable，并将password字段设为transient。
+
+可以看到，其中的date和username字段保持原始状态（未设成transient），所以会自动序列化。然而，password被设为transient，所以不会自动保存到磁盘；另外，自动序列化机制也不会作恢复它的尝试。输出如下：
+
+一旦对象恢复成原来的样子，password字段就会变成null。注意必须用toString()检查password是否为null，因为若用过载的“+”运算符来装配一个String对象，而且那个运算符遇到一个null句柄，就会造成一个名为NullPointerException的违例（新版Java可能会提供避免这个问题的代码）。
+
+我们也发现date字段被保存到磁盘，并从磁盘恢复，没有重新生成。
+
+由于Externalizable对象默认时不保存它的任何字段，所以transient关键字只能伴随Serializable使用。
+
+- Externalizable 的替代方法
+
+若不是特别在意要实现Externalizable接口，还有另一种方法可供选用。我们可以实现Serializable接口，并添加（注意是“添加”，而非“覆盖”或者“实现”）名为writeObject()和readObject()的方法。一旦对象被序列化或者重新装配，就会分别调用那两个方法。也就是说，只要提供了这两个方法，就会优先使用它们，而不考虑默认的序列化机制。 这些方法必须含有下列准确的签名：
+```
+private void 
+  writeObject(ObjectOutputStream stream)
+    throws IOException;
+
+private void 
+  readObject(ObjectInputStream stream)
+    throws IOException, ClassNotFoundException
+```
+从设计的角度出发，情况变得有些扑朔迷离。首先，大家可能认为这些方法不属于基础类或者Serializable接口的一部分，它们应该在自己的接口中得到定义。但请注意它们被定义成“private”，这意味着它们只能由这个类的其他成员调用。然而，我们实际并不从这个类的其他成员中调用它们，而是由ObjectOutputStream和ObjectInputStream的writeObject()及readObject()方法来调用我们对象的writeObject()和readObject()方法（注意我在这里用了很大的抑制力来避免使用相同的方法名——因为怕混淆）。大家可能奇怪ObjectOutputStream和ObjectInputStream如何有权访问我们的类的private方法——只能认为这是序列化机制玩的一个把戏。
+
+
+在任何情况下，接口中的定义的任何东西都会自动具有public属性，所以假若writeObject()和readObject()必须为private，那么它们不能成为接口（interface）的一部分。但由于我们准确地加上了签名，所以最终的效果实际与实现一个接口是相同的。
+
+看起来似乎我们调用ObjectOutputStream.writeObject()的时候，我们传递给它的Serializable对象似乎会被检查是否实现了自己的writeObject()。若答案是肯定的是，便会跳过常规的序列化过程，并调用writeObject()。readObject()也会遇到同样的情况。
+
+还存在另一个问题。在我们的writeObject()内部，可以调用defaultWriteObject()，从而决定采取默认的writeObject()行动。类似地，在readObject()内部，可以调用defaultReadObject()。下面这个简单的例子演示了如何对一个Serializable对象的存储与恢复进行控制：
+````
+//: SerialCtl.java
+// Controlling serialization by adding your own
+// writeObject() and readObject() methods.
+import java.io.*;
+
+public class SerialCtl implements Serializable {
+  String a;
+  transient String b;
+  public SerialCtl(String aa, String bb) {
+    a = "Not Transient: " + aa;
+    b = "Transient: " + bb;
+  }
+  public String toString() {
+    return a + "\n" + b;
+  }
+  private void 
+    writeObject(ObjectOutputStream stream)
+      throws IOException {
+    stream.defaultWriteObject();
+    stream.writeObject(b);
+  }
+  private void 
+    readObject(ObjectInputStream stream)
+      throws IOException, ClassNotFoundException {
+    stream.defaultReadObject();
+    b = (String)stream.readObject();
+  }
+  public static void main(String[] args) {
+    SerialCtl sc = 
+      new SerialCtl("Test1", "Test2");
+    System.out.println("Before:\n" + sc);
+    ByteArrayOutputStream buf = 
+      new ByteArrayOutputStream();
+    try {
+      ObjectOutputStream o =
+        new ObjectOutputStream(buf);
+      o.writeObject(sc);
+      // Now get it back:
+      ObjectInputStream in =
+        new ObjectInputStream(
+          new ByteArrayInputStream(
+            buf.toByteArray()));
+      SerialCtl sc2 = (SerialCtl)in.readObject();
+      System.out.println("After:\n" + sc2);
+    } catch(Exception e) {
+      e.printStackTrace();
+    }
+  }
+} ///:~
+````
+在这个例子中，一个String保持原始状态，其他设为transient（临时），以便证明非临时字段会被defaultWriteObject()方法自动保存，而transient字段必须在程序中明确保存和恢复。字段是在构建器内部初始化的，而不是在定义的时候，这证明了它们不会在重新装配的时候被某些自动化机制初始化。
+
+若准备通过默认机制写入对象的非transient部分，那么必须调用defaultWriteObject()，令其作为writeObject()中的第一个操作；并调用defaultReadObject()，令其作为readObject()的第一个操作。这些都是不常见的调用方法。举个例子来说，当我们为一个ObjectOutputStream调用defaultWriteObject()的时候，而且没有为其传递参数，就需要采取这种操作，使其知道对象的句柄以及如何写入所有非transient的部分。这种做法非常不便。
+
+transient对象的存储与恢复采用了我们更熟悉的代码。现在考虑一下会发生一些什么事情。在main()中会创建一个SerialCtl对象，随后会序列化到一个ObjectOutputStream里（注意这种情况下使用的是一个缓冲区，而非文件——与ObjectOutputStream完全一致）。正式的序列化操作是在下面这行代码里发生的：
+```
+o.writeObject(sc);
+```
+其中，writeObject()方法必须核查sc，判断它是否有自己的writeObject()方法（不是检查它的接口——它根本就没有，也不是检查类的类型，而是利用反射方法实际搜索方法）。若答案是肯定的，就使用那个方法。类似的情况也会在readObject()上发生。或许这是解决问题唯一实际的方法，但确实显得有些古怪。
+
+- 版本问题
+
+有时候可能想改变一个可序列化的类的版本（比如原始类的对象可能保存在数据库中）。尽管这种做法得到了支持，但一般只应在非常特殊的情况下才用它。此外，它要求操作者对背后的原理有一个比较深的认识，而我们在这里还不想达到这种深度。JDK 1.1的HTML文档对这一主题进行了非常全面的论述（可从Sun公司下载，但可能也成了Java开发包联机文档的一部分）。
+
+#### 10.9.3 利用“持久性”
+一个比较诱人的想法是用序列化技术保存程序的一些状态信息，从而将程序方便地恢复到以前的状态。但在具体实现以前，有些问题是必须解决的。如果两个对象都有指向第三个对象的句柄，该如何对这两个对象序列化呢？如果从两个对象序列化后的状态恢复它们，第三个对象的句柄只会出现在一个对象身上吗？如果将这两个对象序列化成独立的文件，然后在代码的不同部分重新装配它们，又会得到什么结果呢？
+
+下面这个例子对上述问题进行了很好的说明：
+```java
+//: MyWorld.java
+import java.io.*;
+import java.util.*;
+
+class House implements Serializable {}
+
+class Animal implements Serializable {
+  String name;
+  House preferredHouse;
+  Animal(String nm, House h) { 
+    name = nm; 
+    preferredHouse = h;
+  }
+  public String toString() {
+    return name + "[" + super.toString() + 
+      "], " + preferredHouse + "\n";
+  }
+}
+
+public class MyWorld {
+  public static void main(String[] args) {
+    House house = new House();
+    Vector  animals = new Vector();
+    animals.addElement(
+      new Animal("Bosco the dog", house));
+    animals.addElement(
+      new Animal("Ralph the hamster", house));
+    animals.addElement(
+      new Animal("Fronk the cat", house));
+    System.out.println("animals: " + animals);
+
+    try {
+      ByteArrayOutputStream buf1 = 
+        new ByteArrayOutputStream();
+      ObjectOutputStream o1 =
+        new ObjectOutputStream(buf1);
+      o1.writeObject(animals);
+      o1.writeObject(animals); // Write a 2nd set
+      // Write to a different stream:
+      ByteArrayOutputStream buf2 = 
+        new ByteArrayOutputStream();
+      ObjectOutputStream o2 =
+        new ObjectOutputStream(buf2);
+      o2.writeObject(animals);
+      // Now get them back:
+      ObjectInputStream in1 =
+        new ObjectInputStream(
+          new ByteArrayInputStream(
+            buf1.toByteArray()));
+      ObjectInputStream in2 =
+        new ObjectInputStream(
+          new ByteArrayInputStream(
+            buf2.toByteArray()));
+      Vector animals1 = (Vector)in1.readObject();
+      Vector animals2 = (Vector)in1.readObject();
+      Vector animals3 = (Vector)in2.readObject();
+      System.out.println("animals1: " + animals1);
+      System.out.println("animals2: " + animals2);
+      System.out.println("animals3: " + animals3);
+    } catch(Exception e) {
+      e.printStackTrace();
+    }
+  }
+} ///:~
+
+```
+```
+animals: [Bosco the dog[com.openjfx.test.io.Animal@44c8afef], com.openjfx.test.io.House@5891e32e
+, Ralph the hamster[com.openjfx.test.io.Animal@cb0ed20], com.openjfx.test.io.House@5891e32e
+, Fronk the cat[com.openjfx.test.io.Animal@8e24743], com.openjfx.test.io.House@5891e32e
+]
+animals1: [Bosco the dog[com.openjfx.test.io.Animal@48a242ce], com.openjfx.test.io.House@1e4a7dd4
+, Ralph the hamster[com.openjfx.test.io.Animal@4f51b3e0], com.openjfx.test.io.House@1e4a7dd4
+, Fronk the cat[com.openjfx.test.io.Animal@4b9e255], com.openjfx.test.io.House@1e4a7dd4
+]
+animals2: [Bosco the dog[com.openjfx.test.io.Animal@48a242ce], com.openjfx.test.io.House@1e4a7dd4
+, Ralph the hamster[com.openjfx.test.io.Animal@4f51b3e0], com.openjfx.test.io.House@1e4a7dd4
+, Fronk the cat[com.openjfx.test.io.Animal@4b9e255], com.openjfx.test.io.House@1e4a7dd4
+]
+animals3: [Bosco the dog[com.openjfx.test.io.Animal@5e57643e], com.openjfx.test.io.House@133e16fd
+, Ralph the hamster[com.openjfx.test.io.Animal@51b279c9], com.openjfx.test.io.House@133e16fd
+, Fronk the cat[com.openjfx.test.io.Animal@1ad282e0], com.openjfx.test.io.House@133e16fd
+]
+```
+
+这里一件有趣的事情是也许是能针对一个字节数组应用对象的序列化，从而实现对任何Serializable（可序列化）对象的一个“全面复制”（全面复制意味着复制的是整个对象网，而不仅是基本对象和它的句柄）。复制问题将在第12章进行全面讲述。
+
+Animal对象包含了类型为House的字段。在main()中，会创建这些Animal的一个Vector，并对其序列化两次，分别送入两个不同的数据流内。这些数据重新装配并打印出来后，可看到下面这样的结果（对象在每次运行时都会处在不同的内存位置，所以每次运行的结果有区别）：
+
+当然，我们希望装配好的对象有与原来不同的地址。但注意在animals1和animals2中出现了相同的地址，其中包括共享的、对House对象的引用。在另一方面，当animals3恢复以后，系统没有办法知道另一个流内的对象是第一个流内对象的化身，所以会产生一个完全不同的对象网。
+
+只要将所有东西都序列化到单独一个数据流里，就能恢复获得与以前写入时完全一样的对象网，不会不慎造成对象的重复。当然，在写第一个和最后一个对象的时间之间，可改变对象的状态，但那必须由我们明确采取操作——序列化时，对象会采用它们当时的任何状态（包括它们与其他对象的连接关系）写入。
+> 也就是说一个队形在数据流里系列化两次，会恢复为一个对象，不同的流里会复制对象
+
+若想保存系统状态，最安全的做法是当作一种“微观”操作序列化。如果序列化了某些东西，再去做其他一些工作，再来序列化更多的东西，以此类推，那么最终将无法安全地保存系统状态。相反，应将构成系统状态的所有对象都置入单个集合内，并在一次操作里完成那个集合的写入。这样一来，同样只需一次方法调用，即可成功恢复之。
+
+下面这个例子是一套假想的计算机辅助设计（CAD）系统，对这一方法进行了很好的演示。此外，它还为我们引入了static字段的问题——如留意联机文档，就会发现Class是“Serializable”（可序列化）的，所以只需简单地序列化Class对象，就能实现static字段的保存。这无论如何都是一种明智的做法。
+
+```java
+//: CADState.java
+// Saving and restoring the state of a 
+// pretend CAD system.
+import java.io.*;
+import java.util.*;
+
+abstract class Shape implements Serializable {
+  public static final int 
+    RED = 1, BLUE = 2, GREEN = 3;
+  private int xPos, yPos, dimension;
+  private static Random r = new Random();
+  private static int counter = 0;
+  abstract public void setColor(int newColor);
+  abstract public int getColor();
+  public Shape(int xVal, int yVal, int dim) {
+    xPos = xVal;
+    yPos = yVal;
+    dimension = dim;
+  }
+  public String toString() {
+    return getClass().toString() + 
+      " color[" + getColor() +
+      "] xPos[" + xPos +
+      "] yPos[" + yPos +
+      "] dim[" + dimension + "]\n";
+  }
+  public static Shape randomFactory() {
+    int xVal = r.nextInt() % 100;
+    int yVal = r.nextInt() % 100;
+    int dim = r.nextInt() % 100;
+    switch(counter++ % 3) {
+      default: 
+      case 0: return new Circle(xVal, yVal, dim);
+      case 1: return new Square(xVal, yVal, dim);
+      case 2: return new Line(xVal, yVal, dim);
+    }
+  }
+}
+
+class Circle extends Shape {
+  private static int color = RED;
+  public Circle(int xVal, int yVal, int dim) {
+    super(xVal, yVal, dim);
+  }
+  public void setColor(int newColor) { 
+    color = newColor;
+  }
+  public int getColor() { 
+    return color;
+  }
+}
+
+class Square extends Shape {
+  private static int color;
+  public Square(int xVal, int yVal, int dim) {
+    super(xVal, yVal, dim);
+    color = RED;
+  }
+  public void setColor(int newColor) { 
+    color = newColor;
+  }
+  public int getColor() { 
+    return color;
+  }
+}
+
+class Line extends Shape {
+  private static int color = RED;
+  public static void 
+  serializeStaticState(ObjectOutputStream os)
+      throws IOException {
+    os.writeInt(color);
+  }
+  public static void 
+  deserializeStaticState(ObjectInputStream os)
+      throws IOException {
+    color = os.readInt();
+  }
+  public Line(int xVal, int yVal, int dim) {
+    super(xVal, yVal, dim);
+  }
+  public void setColor(int newColor) { 
+    color = newColor;
+  }
+  public int getColor() { 
+    return color;
+  }
+}
+
+public class CADState {
+  public static void main(String[] args) 
+      throws Exception {
+    Vector shapeTypes, shapes;
+    if(args.length == 0) {
+      shapeTypes = new Vector();
+      shapes = new Vector();
+      // Add handles to the class objects:
+      shapeTypes.addElement(Circle.class);
+      shapeTypes.addElement(Square.class);
+      shapeTypes.addElement(Line.class);
+      // Make some shapes:
+      for(int i = 0; i < 10; i++)
+        shapes.addElement(Shape.randomFactory());
+      // Set all the static colors to GREEN:
+      for(int i = 0; i < 10; i++)
+        ((Shape)shapes.elementAt(i))
+          .setColor(Shape.GREEN);
+      // Save the state vector:
+      ObjectOutputStream out =
+        new ObjectOutputStream(
+          new FileOutputStream("CADState.out"));
+      out.writeObject(shapeTypes);
+      Line.serializeStaticState(out);
+      out.writeObject(shapes);
+    } else { // There's a command-line argument
+      ObjectInputStream in =
+        new ObjectInputStream(
+          new FileInputStream(args[0]));
+      // Read in the same order they were written:
+      shapeTypes = (Vector)in.readObject();
+      Line.deserializeStaticState(in);
+      shapes = (Vector)in.readObject();
+    }
+    // Display the shapes:
+    System.out.println(shapes);
+  }
+} ///:~
+```
+Shape（几何形状）类“实现了可序列化”（implements Serializable），所以从Shape继承的任何东西也都会自动“可序列化”。每个Shape都包含了数据，而且每个衍生的Shape类都包含了一个特殊的static字段，用于决定所有那些类型的Shape的颜色（如将一个static字段置入基础类，结果只会产生一个字段，因为static字段未在衍生类中复制）。可对基础类中的方法进行覆盖处理，以便为不同的类型设置颜色（static方法不会动态绑定，所以这些都是普通的方法）。每次调用 randomFactory()方法时，它都会创建一个不同的Shape（Shape值采用随机值）。
+
+Circle（圆）和Square（矩形）属于对Shape的直接扩展；唯一的差别是Circle在定义时会初始化颜色，而Square在构建器中初始化。Line（直线）的问题将留到以后讨论。
+
+在main()中，一个Vector用于容纳Class对象，而另一个用于容纳形状。若不提供相应的命令行参数，就会创建shapeTypes Vector，并添加Class对象。然后创建shapes Vector，并添加Shape对象。接下来，所有static color值都会设成GREEN，而且所有东西都会序列化到文件CADState.out。
+
+若提供了一个命令行参数（假设CADState.out），便会打开那个文件，并用它恢复程序的状态。无论在哪种情况下，结果产生的Shape的Vector都会打印出来。下面列出它某一次运行的结果：
+```
+>java CADState
+[class Circle color[3] xPos[-51] yPos[-99] dim[38]
+, class Square color[3] xPos[2] yPos[61] dim[-46]
+, class Line color[3] xPos[51] yPos[73] dim[64]
+, class Circle color[3] xPos[-70] yPos[1] dim[16]
+, class Square color[3] xPos[3] yPos[94] dim[-36]
+, class Line color[3] xPos[-84] yPos[-21] dim[-35]
+, class Circle color[3] xPos[-75] yPos[-43] dim[22]
+, class Square color[3] xPos[81] yPos[30] dim[-45]
+, class Line color[3] xPos[-29] yPos[92] dim[17]
+, class Circle color[3] xPos[17] yPos[90] dim[-76]
+]
+
+>java CADState CADState.out
+[class Circle color[1] xPos[-51] yPos[-99] dim[38]
+, class Square color[0] xPos[2] yPos[61] dim[-46]
+, class Line color[3] xPos[51] yPos[73] dim[64]
+, class Circle color[1] xPos[-70] yPos[1] dim[16]
+, class Square color[0] xPos[3] yPos[94] dim[-36]
+, class Line color[3] xPos[-84] yPos[-21] dim[-35]
+, class Circle color[1] xPos[-75] yPos[-43] dim[22]
+, class Square color[0] xPos[81] yPos[30] dim[-45]
+, class Line color[3] xPos[-29] yPos[92] dim[17]
+, class Circle color[1] xPos[17] yPos[90] dim[-76]
+]
+```
+从中可以看出，xPos，yPos以及dim的值都已成功保存和恢复出来。但在获取static信息时却出现了问题。所有“3”都已进入，但没有正常地出来。Circle有一个1值（定义为RED），而Square有一个0值（记住，它们是在构建器里初始化的）。看上去似乎static根本没有得到初始化！实情正是如此——尽管类Class是“可以序列化的”，但却不能按我们希望的工作。所以假如想序列化static值，必须亲自动手。
+
+这正是Line中的serializeStaticState()和deserializeStaticState()两个static方法的用途。可以看到，这两个方法都是作为存储和恢复进程的一部分明确调用的（注意写入序列化文件和从中读回的顺序不能改变）。所以为了使CADState.java正确运行起来，必须采用下述三种方法之一：
+- (1) 为几何形状添加一个serializeStaticState()和deserializeStaticState()。
+- (2) 删除Vector shapeTypes以及与之有关的所有代码
+- (3) 在几何形状内添加对新序列化和撤消序列化静态方法的调用
+
+要注意的另一个问题是安全，因为序列化处理也会将private数据保存下来。若有需要保密的字段，应将其标记成transient。但在这之后，必须设计一种安全的信息保存方法。这样一来，一旦需要恢复，就可以重设那些private变量。
+
+
 ### 10.10 总结
+Java IO流库能满足我们的许多基本要求：可以通过控制台、文件、内存块甚至因特网（参见第15章）进行读写。可以创建新的输入和输出对象类型（通过从InputStream和OutputStream继承）。向一个本来预期为收到字串的方法传递一个对象时，由于Java已限制了“自动类型转换”，所以会自动调用toString()方法。而我们可以重新定义这个toString()，扩展一个数据流能接纳的对象种类。
+
+在IO数据流库的联机文档和设计过程中，仍有些问题没有解决。比如当我们打开一个文件以便输出时，完全可以指定一旦有人试图覆盖该文件就“掷”出一个违例——有的编程系统允许我们自行指定想打开一个输出文件，但唯一的前提是它尚不存在。但在Java中，似乎必须用一个File对象来判断某个文件是否存在，因为假如将其作为FileOutputStream或者FileWriter打开，那么肯定会被覆盖。若同时指定文件和目录路径，File类设计上的一个缺陷就会暴露出来，因为它会说“不要试图在单个类里做太多的事情”！ IO流库易使我们混淆一些概念。它确实能做许多事情，而且也可以移植。但假如假如事先没有吃透装饰器方案的概念，那么所有的设计都多少带有一点盲目性质。所以不管学它还是教它，都要特别花一些功夫才行。而且它并不完整：没有提供对输出格式化的支持，而其他几乎所有语言的IO包都提供了这方面的支持（这一点没有在Java 1.1里得以纠正，它完全错失了改变库设计方案的机会，反而增添了更特殊的一些情况，使复杂程度进一步提高）。Java 1.1转到那些尚未替换的IO库，而不是增加新库。而且库的设计人员似乎没有很好地指出哪些特性是不赞成的，哪些是首选的，造成库设计中经常都会出现一些令人恼火的反对消息。
+
+然而，一旦掌握了装饰器方案，并开始在一些较为灵活的环境使用库，就会认识到这种设计的好处。到那个时候，为此多付出的代码行应该不至于使你觉得太生气。
+
+
 ### 10.11 练习
+(1) 打开一个文本文件，每次读取一行内容。将每行作为一个String读入，并将那个String对象置入一个Vector里。按相反的顺序打印出Vector中的所有行。
+
+(2) 修改练习1，使读取那个文件的名字作为一个命令行参数提供。
+
+(3) 修改练习2，又打开一个文本文件，以便将文字写入其中。将Vector中的行随同行号一起写入文件。
+
+(4) 修改练习2，强迫Vector中的所有行都变成大写形式，将结果发给System.out。
+
+(5) 修改练习2，在文件中查找指定的单词。打印出包含了欲找单词的所有文本行。
+
+(6) 在Blips.java中复制文件，将其重命名为BlipCheck.java。然后将类Blip2重命名为BlipCheck（在进程中将其标记为public）。删除文件中的//!记号，并执行程序。接下来，将BlipCheck的默认构建器变成注释信息。运行它，并解释为什么仍然能够工作。
+
+(7) 在Blip3.java中，将接在“You must do this:”字样后的两行变成注释，然后运行程序。解释得到的结果为什么会与执行了那两行代码不同。
+
+(8) 转换SortedWordCount.java程序，以便使用Java 1.1 IO流。
+
+(9) 根据本章正文的说明修改程序CADState.java。
+
+(10) 在第7章（中间部分）找到GreenhouseControls.java示例，它应该由三个文件构成。在GreenhouseControls.java中，Restart()内部类有一个硬编码的事件集。请修改这个程序，使其能从一个文本文件里动态读取事件以及它们的相关时间。
+
 ## 第11章 运行期类型鉴定
+运行期类型鉴定（RTTI）的概念初看非常简单——手上只有基础类型的一个句柄时，利用它判断一个对象的正确类型。 然而，对RTTI的需要暴露出了面向对象设计许多有趣（而且经常是令人困惑的）的问题，并把程序的构造问题正式摆上了桌面。 本章将讨论如何利用Java在运行期间查找对象和类信息。这主要采取两种形式：一种是“传统”RTTI，它假定我们已在编译和运行期拥有所有类型；另一种是Java1.1特有的“反射”机制，利用它可在运行期独立查找类信息。首先讨论“传统”的RTTI，再讨论反射问题。
+
+
 ### 11.1 对RTTI的需要
+请考虑下面这个熟悉的类结构例子，它利用了多形性。常规类型是Shape类，而特别衍生出来的类型是Circle，Square和Triangle。
+
+![image](https://nostyling-1256016577.cos.ap-beijing.myqcloud.com/11-1.gif)
+
+这是一个典型的类结构示意图，基础类位于顶部，衍生类向下延展。面向对象编程的基本目标是用大量代码控制基础类型（这里是Shape）的句柄，所以假如决定添加一个新类（比如Rhomboid，从Shape衍生），从而对程序进行扩展，那么不会影响到原来的代码。在这个例子中，Shape接口中的动态绑定方法是draw()，所以客户程序员要做的是通过一个普通Shape句柄调用draw()。draw()在所有衍生类里都会被覆盖。而且由于它是一个动态绑定方法，所以即使通过一个普通的Shape句柄调用它，也有表现出正确的行为。这正是多形性的作用。
+
+所以，我们一般创建一个特定的对象（Circle，Square，或者Triangle），把它上溯造型到一个Shape（忽略对象的特殊类型），以后便在程序的剩余部分使用匿名Shape句柄。
+
+作为对多形性和上溯造型的一个简要回顾，可以象下面这样为上述例子编码（若执行这个程序时出现困难，请参考第3章3.1.2小节“赋值”）：
+```java
+//: Shapes.java
+package c11;
+import java.util.*;
+
+interface Shape {
+  void draw();
+}
+
+class Circle implements Shape {
+  public void draw() {
+    System.out.println("Circle.draw()");
+  }
+}
+
+class Square implements Shape {
+  public void draw() {
+    System.out.println("Square.draw()");
+  }
+}
+
+class Triangle implements Shape {
+  public void draw() {
+    System.out.println("Triangle.draw()");
+  }
+}
+
+public class Shapes {
+  public static void main(String[] args) {
+    Vector s = new Vector();
+    s.addElement(new Circle());
+    s.addElement(new Square());
+    s.addElement(new Triangle());
+    Enumeration e = s.elements();
+    while(e.hasMoreElements())
+      ((Shape)e.nextElement()).draw();
+  }
+} ///:~
+```
+基础类可编码成一个interface（接口）、一个abstract（抽象）类或者一个普通类。由于Shape没有真正的成员（亦即有定义的成员），而且并不在意我们创建了一个纯粹的Shape对象，所以最适合和最灵活的表达方式便是用一个接口。而且由于不必设置所有那些abstract关键字，所以整个代码也显得更为清爽。
+
+每个衍生类都覆盖了基础类draw方法，所以具有不同的行为。在main()中创建了特定类型的Shape，然后将其添加到一个Vector。这里正是上溯造型发生的地方，因为Vector只容纳了对象。由于Java中的所有东西（除基本数据类型外）都是对象，所以Vector也能容纳Shape对象。但在上溯造型至Object的过程中，任何特殊的信息都会丢失，其中甚至包括对象是几何形状这一事实。对Vector来说，它们只是Object。
+
+
 ### 11.2 RTTI语法
 ### 11.3 反射：运行期类信息
 ### 11.4 总结
