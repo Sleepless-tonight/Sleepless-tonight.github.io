@@ -5167,6 +5167,17 @@ Java IO流库能满足我们的许多基本要求：可以通过控制台、文�
 (10) 在第7章（中间部分）找到GreenhouseControls.java示例，它应该由三个文件构成。在GreenhouseControls.java中，Restart()内部类有一个硬编码的事件集。请修改这个程序，使其能从一个文本文件里动态读取事件以及它们的相关时间。
 
 ## 第11章 运行期类型鉴定
+
+>总结
+>
+>其实 thinking in java 虽然将 RTTI 和 反射分开讲解，其实本质上我们看Java语言提供的功能：
+>1. 利用 instanceof 来在运行期检出 对象 的类型
+>2. 利用 Class.forName() 方法去获得一个未 import 对象的 Class 类
+>3. 利用 java.lang.reflect.* 来获得对象的 对象信息（接口、属性、方法、修饰符）
+>4. 本质上是在说明一件事：Java 提供了在运行期 完整且成系统的 创建和利用类和对象。能了解这一点并能利用使程序在运行的过程中能正确的动态的构建对象创建对象就可以了。
+>5. 另需要知道的一件事是：想在运行期搞这些事情，离不开 Class 对象。因为 Java 是用 Class 对象 表示 在运行期 的 类型信息
+>6. .class ==》 Class 对象 ==》 new()对象
+
 运行期类型鉴定（RTTI）的概念初看非常简单——手上只有基础类型的一个句柄时，利用它判断一个对象的正确类型。 然而，对RTTI的需要暴露出了面向对象设计许多有趣（而且经常是令人困惑的）的问题，并把程序的构造问题正式摆上了桌面。 本章将讨论如何利用Java在运行期间查找对象和类信息。这主要采取两种形式：一种是“传统”RTTI，它假定我们已在编译和运行期拥有所有类型；另一种是Java1.1特有的“反射”机制，利用它可在运行期独立查找类信息。首先讨论“传统”的RTTI，再讨论反射问题。
 
 
@@ -5662,15 +5673,474 @@ Class name: Toy is interface? [false]
 在Java 1.1中，Class类（本章前面已有详细论述）得到了扩展，可以支持“反射”的概念。针对Field，Method以及Constructor类（每个都实现了Memberinterface——成员接口），它们都新增了一个库：java.lang.reflect。这些类型的对象都是JVM在运行期创建的，用于代表未知类里对应的成员。这样便可用构建器创建新对象，用get()和set()方法读取和修改与Field对象关联的字段，以及用invoke()方法调用与Method对象关联的方法。此外，我们可调用方法getFields()，getMethods()，getConstructors()，分别返回用于表示字段、方法以及构建器的对象数组（在联机文档中，还可找到与Class类有关的更多的资料）。因此，匿名对象的类信息可在运行期被完整的揭露出来，而在编译期间不需要知道任何东西。 大家要认识的很重要的一点是“反射”并没有什么神奇的地方。通过“反射”同一个未知类型的对象打交道时，JVM只是简单地检查那个对象，并调查它从属于哪个特定的类（就象以前的RTTI那样）。但在这之后，在我们做其他任何事情之前，Class对象必须载入。因此，用于那种特定类型的.class文件必须能由JVM调用（要么在本地机器内，要么可以通过网络取得）。
 >所以RTTI和“反射”之间唯一的区别就是对RTTI来说，编译器会在编译期打开和检查.class文件。换句话说，我们可以用“普通”方式调用一个对象的所有方法；但对“反射”来说，.class文件在编译期间是不可使用的，而是由运行期环境打开和检查。
 
+#### 11.3.1 一个类方法提取器
 
+很少需要直接使用反射工具；之所以在语言中提供它们，仅仅是为了支持其他Java特性，比如对象序列化（第10章介绍）、Java Beans以及RMI（本章后面介绍）。但是，我们许多时候仍然需要动态提取与一个类有关的资料。其中特别有用的工具便是一个类方法提取器。正如前面指出的那样，若检视类定义源码或者联机文档，只能看到在那个类定义中被定义或覆盖的方法，基础类那里还有大量资料拿不到。幸运的是，“反射”做到了这一点，可用它写一个简单的工具，令其自动展示整个接口。下面便是具体的程序：
+```java
+//: ShowMethods.java
+// Using Java 1.1 reflection to show all the 
+// methods of a class, even if the methods are 
+// defined in the base class.
+import java.lang.reflect.*;
+
+public class ShowMethods {
+  static final String usage =
+    "usage: \n" +
+    "ShowMethods qualified.class.name\n" +
+    "To show all methods in class or: \n" +
+    "ShowMethods qualified.class.name word\n" +
+    "To search for methods involving 'word'";
+  public static void main(String[] args) {
+    if(args.length < 1) {
+      System.out.println(usage);
+      System.exit(0);
+    }
+    try {
+      Class c = Class.forName(args[0]);
+      Method[] m = c.getMethods();
+      Constructor[] ctor = c.getConstructors();
+      if(args.length == 1) {
+        for (int i = 0; i < m.length; i++)
+          System.out.println(m[i].toString());
+        for (int i = 0; i < ctor.length; i++)
+          System.out.println(ctor[i].toString());
+      } 
+      else {
+        for (int i = 0; i < m.length; i++)
+          if(m[i].toString()
+             .indexOf(args[1])!= -1)
+            System.out.println(m[i].toString());
+        for (int i = 0; i < ctor.length; i++)
+          if(ctor[i].toString()
+             .indexOf(args[1])!= -1)
+          System.out.println(ctor[i].toString());
+      }
+    } catch (ClassNotFoundException e) {
+      System.out.println("No such class: " + e);
+    }
+  }
+} ///:~
+```
+Class方法getMethods()和getConstructors()可以分别返回Method和Constructor的一个数组。每个类都提供了进一步的方法，可解析出它们所代表的方法的名字、参数以及返回值。但也可以象这样一样只使用toString()，生成一个含有完整方法签名的字串。代码剩余的部分只是用于提取命令行信息，判断特定的签名是否与我们的目标字串相符（使用indexOf()），并打印出结果。
+
+这里便用到了“反射”技术，因为由Class.forName()产生的结果不能在编译期间获知，所以所有方法签名信息都会在运行期间提取。若研究一下联机文档中关于“反射”（Reflection）的那部分文字，就会发现它已提供了足够多的支持，可对一个编译期完全未知的对象进行实际的设置以及发出方法调用。同样地，这也属于几乎完全不用我们操心的一个步骤——Java自己会利用这种支持，所以程序设计环境能够控制Java Beans——但它无论如何都是非常有趣的。
+
+一个有趣的试验是运行java ShowMehods ShowMethods。这样做可得到一个列表，其中包括一个public默认构建器，尽管我们在代码中看见并没有定义一个构建器。我们看到的是由编译器自动合成的那一个构建器。如果随之将ShowMethods设为一个非public类（即换成“友好”类），合成的默认构建器便不会在输出结果中出现。合成的默认构建器会自动获得与类一样的访问权限。 ShowMethods的输出仍然有些“不爽”。例如，下面是通过调用java ShowMethods java.lang.String得到的输出结果的一部分：
+```
+public boolean 
+  java.lang.String.startsWith(java.lang.String,int)
+public boolean 
+  java.lang.String.startsWith(java.lang.String)
+public boolean
+  java.lang.String.endsWith(java.lang.String)
+```
+若能去掉象java.lang这样的限定词，结果显然会更令人满意。有鉴于此，可引入上一章介绍的StreamTokenizer类，解决这个问题：
+```java
+//: ShowMethodsClean.java
+// ShowMethods with the qualifiers stripped
+// to make the results easier to read
+import java.lang.reflect.*;
+import java.io.*;
+
+public class ShowMethodsClean {
+  static final String usage =
+    "usage: \n" +
+    "ShowMethodsClean qualified.class.name\n" +
+    "To show all methods in class or: \n" +
+    "ShowMethodsClean qualif.class.name word\n" +
+    "To search for methods involving 'word'";
+  public static void main(String[] args) {
+    if(args.length < 1) {
+      System.out.println(usage);
+      System.exit(0);
+    }
+    try {
+      Class c = Class.forName(args[0]);
+      Method[] m = c.getMethods();
+      Constructor[] ctor = c.getConstructors();
+      // Convert to an array of cleaned Strings:
+      String[] n = 
+        new String[m.length + ctor.length];
+      for(int i = 0; i < m.length; i++) {
+        String s = m[i].toString();
+        n[i] = StripQualifiers.strip(s);
+      }
+      for(int i = 0; i < ctor.length; i++) {
+        String s = ctor[i].toString();
+        n[i + m.length] = 
+          StripQualifiers.strip(s);
+      }
+      if(args.length == 1)
+        for (int i = 0; i < n.length; i++)
+          System.out.println(n[i]);
+      else
+        for (int i = 0; i < n.length; i++)
+          if(n[i].indexOf(args[1])!= -1)
+            System.out.println(n[i]);
+    } catch (ClassNotFoundException e) {
+      System.out.println("No such class: " + e);
+    }
+  }
+}
+
+class StripQualifiers {
+  private StreamTokenizer st;
+  public StripQualifiers(String qualified) {
+      st = new StreamTokenizer(
+        new StringReader(qualified));
+      st.ordinaryChar(' '); // Keep the spaces
+  }
+  public String getNext() {
+    String s = null;
+    try {
+      if(st.nextToken() !=
+            StreamTokenizer.TT_EOF) {
+        switch(st.ttype) {
+          case StreamTokenizer.TT_EOL:
+            s = null;
+            break;
+          case StreamTokenizer.TT_NUMBER:
+            s = Double.toString(st.nval);
+            break;
+          case StreamTokenizer.TT_WORD:
+            s = new String(st.sval);
+            break;
+          default: // single character in ttype
+            s = String.valueOf((char)st.ttype);
+        }
+      }
+    } catch(IOException e) {
+      System.out.println(e);
+    }
+    return s;
+  }
+  public static String strip(String qualified) {
+    StripQualifiers sq = 
+      new StripQualifiers(qualified);
+    String s = "", si;
+    while((si = sq.getNext()) != null) {
+      int lastDot = si.lastIndexOf('.');
+      if(lastDot != -1)
+        si = si.substring(lastDot + 1);
+      s += si;
+    }
+    return s;
+  }
+} ///:~
+```
+ShowMethodsClean方法非常接近前一个ShowMethods，只是它取得了Method和Constructor数组，并将它们转换成单个String数组。随后，每个这样的String对象都在StripQualifiers.Strip()里“过”一遍，删除所有方法限定词。正如大家看到的那样，此时用到了StreamTokenizer和String来完成这个工作。
+
+假如记不得一个类是否有一个特定的方法，而且不想在联机文档里逐步检查类结构，或者不知道那个类是否能对某个对象（如Color对象）做某件事情，该工具便可节省大量编程时间。
+
+第17章提供了这个程序的一个GUI版本，可在自己写代码的时候运行它，以便快速查找需要的东西。
 
 ### 11.4 总结
+
+利用RTTI可根据一个匿名的基础类句柄调查出类型信息。但正是由于这个原因，新手们极易误用它，因为有些时候多形性方法便足够了。对那些以前习惯程序化编程的人来说，极易将他们的程序组织成一系列switch语句。他们可能用RTTI做到这一点，从而在代码开发和维护中损失多形性技术的重要价值。Java的要求是让我们尽可能地采用多形性，只有在极特别的情况下才使用RTTI。 但为了利用多形性，要求我们拥有对基础类定义的控制权，因为有些时候在程序范围之内，可能发现基础类并未包括我们想要的方法。若基础类来自一个库，或者由别的什么东西控制着，RTTI便是一种很好的解决方案：可继承一个新类型，然后添加自己的额外方法。在代码的其他地方，可以侦测自己的特定类型，并调用那个特殊的方法。这样做不会破坏多形性以及程序的扩展能力，因为新类型的添加不要求查找程序中的switch语句。但在需要新特性的主体中添加新代码时，就必须用RTTI侦测自己特定的类型。
+
+从某个特定类的利益的角度出发，在基础类里加入一个特性后，可能意味着从那个基础类衍生的其他所有类都必须获得一些无意义的“鸡肋”。这使得接口变得含义模糊。若有人从那个基础类继承，且必须覆盖抽象方法，这一现象便会使他们陷入困扰。比如现在用一个类结构来表示乐器（Instrument）。假定我们想清洁管弦乐队中所有适当乐器的通气音栓（Spit Valve），此时的一个办法是在基础类Instrument中置入一个ClearSpitValve()方法。但这样做会造成一个误区，因为它暗示着打击乐器和电子乐器中也有音栓。针对这种情况，RTTI提供了一个更合理的解决方案，可将方法置入特定的类中（此时是Wind，即“通气口”）——这样做是可行的。但事实上一种更合理的方案是将prepareInstrument()置入基础类中。初学者刚开始时往往看不到这一点，一般会认定自己必须使用RTTI。
+
+最后，RTTI有时能解决效率问题。若代码大量运用了多形性，但其中的一个对象在执行效率上很有问题，便可用RTTI找出那个类型，然后写一段适当的代码，改进其效率。
+
 ### 11.5 练习
+
 ## 第12章 传递和返回对象
+
+到目前为止，读者应对对象的“传递”有了一个较为深刻的认识，记住实际传递的只是一个句柄。
+
+在许多程序设计语言中，我们可用语言的“普通”方式到处传递对象，而且大多数时候都不会遇到问题。但有些时候却不得不采取一些非常做法，使得情况突然变得稍微复杂起来（在C++中则是变得非常复杂）。Java亦不例外，我们十分有必要准确认识在对象传递和赋值时所发生的一切。这正是本章的宗旨。
+
+若读者是从某些特殊的程序设计环境中转移过来的，那么一般都会问到：“Java有指针吗？”有些人认为指针的操作很困难，而且十分危险，所以一厢情愿地认为它没有好处。同时由于Java有如此好的口碑，所以应该很轻易地免除自己以前编程中的麻烦，其中不可能夹带有指针这样的“危险品”。然而准确地说，Java是有指针的！事实上，Java中每个对象（除基本数据类型以外）的标识符都属于指针的一种。但它们的使用受到了严格的限制和防范，不仅编译器对它们有“戒心”，运行期系统也不例外。或者换从另一个角度说，Java有指针，但没有传统指针的麻烦。我曾一度将这种指针叫做“句柄”，但你可以把它想像成“安全指针”。和预备学校为学生提供的安全剪刀类似——除非特别有意，否则不会伤着自己，只不过有时要慢慢来，要习惯一些沉闷的工作。
+
 ### 12.1 传递句柄
+
+将句柄传递进入一个方法时，指向的仍然是相同的对象。
+
+> 可以在调用方法前和在方法中打印对象，可以看出是一个对象。
+
+#### 12.1.1 别名问题
+ “别名”意味着多个句柄都试图指向同一个对象，就象前面的例子展示的那样。若有人向那个对象里写入一点什么东西，就会产生别名问题。若其他句柄的所有者不希望那个对象改变，恐怕就要失望了。
+
+此时最直接的一个解决办法就是干脆不这样做：不要有意将多个句柄指向同一个作用域内的同一个对象。这样做可使代码更易理解和调试。然而，一旦准备将句柄作为一个自变量或参数传递——这是Java设想的正常方法——别名问题就会自动出现，因为创建的本地句柄可能修改“外部对象”（在方法作用域之外创建的对象）。
+
+方法改变了自己的参数——外部对象。一旦遇到这种情况，必须判断它是否合理，用户是否愿意这样，以及是不是会造成问题。 通常，我们调用一个方法是为了产生返回值，或者用它改变为其调用方法的那个对象的状态（方法其实就是我们向那个对象“发一条消息”的方式）。很少需要调用一个方法来处理它的参数；这叫作利用方法的“副作用”（Side Effect）。所以倘若创建一个会修改自己参数的方法，必须向用户明确地指出这一情况，并警告使用那个方法可能会有的后果以及它的潜在威胁。由于存在这些混淆和缺陷，所以应该尽量避免改变参数。 若需在一个方法调用期间修改一个参数，且不打算修改外部参数，就应在自己的方法内部制作一个副本，从而保护那个参数。本章的大多数内容都是围绕这个问题展开的。
+
 ### 12.2 制作本地副本
+Java中的所有自变量或参数传递都是通过传递句柄进行的。也就是说，当我们传递“一个对象”时，实际传递的只是指向位于方法外部的那个对象的“一个句柄”。所以一旦要对那个句柄进行任何修改，便相当于修改外部对象。此外： 
+- ■参数传递过程中会自动产生别名问题 
+- ■不存在本地对象，只有本地句柄 
+- ■句柄有自己的作用域，而对象没有 
+- ■对象的“存在时间”在Java里不是个问题 
+- ■没有语言上的支持（如常量）可防止对象被修改（以避免别名的副作用） 若只是从对象中读取信息，而不修改它，传递句柄便是自变量传递中最有效的一种形式。
+
+这种做非常恰当；默认的方法一般也是最有效的方法。然而，有时仍需将对象当作“本地的”对待，使我们作出的改变只影响一个本地副本，不会对外面的对象造成影响。许多程序设计语言都支持在方法内自动生成外部对象的一个本地副本（注释①）。尽管Java不具备这种能力，但允许我们达到同样的效果。
+
+①：在C语言中，通常控制的是少量数据位，默认操作是按值传递。C++也必须遵照这一形式，但按值传递对象并非肯定是一种有效的方式。此外，在C++中用于支持按值传递的代码也较难编写，是件让人头痛的事情。
+
+#### 12.2.1 按值传递
+首先要解决术语的问题，最适合“按值传递”的看起来是自变量。“按值传递”以及它的含义取决于如何理解程序的运行方式。最常见的意思是获得要传递的任何东西的一个本地副本，但这里真正的问题是如何看待自己准备传递的东西。对于“按值传递”的含义，目前存在两种存在明显区别的见解： 
+- (1) Java按值传递任何东西。若将基本数据类型传递进入一个方法，会明确得到基本数据类型的一个副本。但若将一个句柄传递进入方法，得到的是句柄的副本。所以人们认为“一切”都按值传递。当然，这种说法也有一个前提：句柄肯定也会被传递。但Java的设计方案似乎有些超前，允许我们忽略（大多数时候）自己处理的是一个句柄。也就是说，它允许我们将句柄假想成“对象”，因为在发出方法调用时，系统会自动照管两者间的差异。 
+- (2) Java主要按值传递（无自变量），但对象却是按引用传递的。得到这个结论的前提是句柄只是对象的一个“别名”，所以不考虑传递句柄的问题，而是直接指出“我准备传递对象”。由于将其传递进入一个方法时没有获得对象的一个本地副本，所以对象显然不是按值传递的。Sun公司似乎在某种程度上支持这一见解，因为它“保留但未实现”的关键字之一便是byvalue（按值）。但没人知道那个关键字什么时候可以发挥作用。 尽管存在两种不同的见解，但其间的分歧归根到底是由于对“句柄”的不同解释造成的。我打算在本书剩下的部分里回避这个问题。大家不久就会知道，这个问题争论下去其实是没有意义的——最重要的是理解一个句柄的传递会使调用者的对象发生意外的改变。
+
+#### 12.2.2 克隆对象
+若需修改一个对象，同时不想改变调用者的对象，就要制作该对象的一个本地副本。这也是本地副本最常见的一种用途。若决定制作一个本地副本，只需简单地使用clone()方法即可。Clone是“克隆”的意思，即制作完全一模一样的副本。这个方法在基础类Object中定义成“protected”（受保护）模式。但在希望克隆的任何衍生类中，必须将其覆盖为“public”模式。例如，标准库类Vector覆盖了clone()，所以能为Vector调用clone()，
+
+clone()方法产生了一个Object，后者必须立即重新造型为正确类型。这个例子指出Vector的clone()方法不能自动尝试克隆Vector内包含的每个对象——由于别名问题，老的Vector和克隆的Vector都包含了相同的对象。我们通常把这种情况叫作“简单复制”或者“浅层复制”，因为它只复制了一个对象的“表面”部分。实际对象除包含这个“表面”以外，还包括句柄指向的所有对象，以及那些对象又指向的其他所有对象，由此类推。这便是“对象网”或“对象关系网”的由来。若能复制下所有这张网，便叫作“全面复制”或者“深层复制”。
+
+一般来说，由于不敢保证Vector里包含的对象是“可以克隆”（注释②）的，所以最好不要试图克隆那些对象。
+
+②：“可以克隆”用英语讲是cloneable，请留意Java库中专门保留了这样的一个关键字。
+
+#### 12.2.3 使类具有克隆能力
+尽管克隆方法是在所有类最基本的Object中定义的，但克隆仍然不会在每个类里自动进行。这似乎有些不可思议，因为基础类方法在衍生类里是肯定能用的。但Java确实有点儿反其道而行之；如果想在一个类里使用克隆方法，唯一的办法就是专门添加一些代码，以便保证克隆的正常进行。
+
+1. 使用protected时的技巧 为避免我们创建的每个类都默认具有克隆能力，clone()方法在基础类Object里得到了“保留”（设为protected）。这样造成的后果就是：对那些简单地使用一下这个类的客户程序员来说，他们不会默认地拥有这个方法；其次，我们不能利用指向基础类的一个句柄来调用clone()（尽管那样做在某些情况下特别有用，比如用多形性的方式克隆一系列对象）。在编译期的时候，这实际是通知我们对象不可克隆的一种方式——而且最奇怪的是，Java库中的大多数类都不能克隆。因此，假如我们执行下述代码： Integer x = new Integer(l); x = x.clone(); 那么在编译期，就有一条讨厌的错误消息弹出，告诉我们不可访问clone()——因为Integer并没有覆盖它，而且它对protected版本来说是默认的）。 但是，假若我们是在一个从Object衍生出来的类中（所有类都是从Object衍生的），就有权调用Object.clone()，因为它是“protected”，而且我们在一个继承器中。基础类clone()提供了一个有用的功能——它进行的是对衍生类对象的真正“按位”复制，所以相当于标准的克隆行动。然而，我们随后需要将自己的克隆操作设为public，否则无法访问。总之，克隆时要注意的两个关键问题是：几乎肯定要调用super.clone()，以及注意将克隆设为public。 有时还想在更深层的衍生类中覆盖clone()，否则就直接使用我们的clone()（现在已成为public），而那并不一定是我们所希望的（然而，由于Object.clone()已制作了实际对象的一个副本，所以也有可能允许这种情况）。protected的技巧在这里只能用一次：首次从一个不具备克隆能力的类继承，而且想使一个类变成“能够克隆”。而在从我们的类继承的任何场合，clone()方法都是可以使用的，因为Java不可能在衍生之后反而缩小方法的访问范围。换言之，一旦对象变得可以克隆，从它衍生的任何东西都是能够克隆的，除非使用特殊的机制（后面讨论）令其“关闭”克隆能力。
+
+2. 实现Cloneable接口 为使一个对象的克隆能力功成圆满，还需要做另一件事情：实现Cloneable接口。这个接口使人稍觉奇怪，因为它是空的！ interface Cloneable {} 之所以要实现这个空接口，显然不是因为我们准备上溯造型成一个Cloneable，以及调用它的某个方法。有些人认为在这里使用接口属于一种“欺骗”行为，因为它使用的特性打的是别的主意，而非原来的意思。Cloneable interface的实现扮演了一个标记的角色，封装到类的类型中。 两方面的原因促成了Cloneable interface的存在。首先，可能有一个上溯造型句柄指向一个基础类型，而且不知道它是否真的能克隆那个对象。在这种情况下，可用instanceof关键字（第11章有介绍）调查句柄是否确实同一个能克隆的对象连接： if(myHandle instanceof Cloneable) // ... 第二个原因是考虑到我们可能不愿所有对象类型都能克隆。所以Object.clone()会验证一个类是否真的是实现了Cloneable接口。若答案是否定的，则“掷”出一个CloneNotSupportedException违例。所以在一般情况下，我们必须将“implement Cloneable”作为对克隆能力提供支持的一部分。
+
+
+#### 12.2.4 成功的克隆 
+
+理解了实现clone()方法背后的所有细节后，便可创建出能方便复制的类，以便提供了一个本地副本:
+```java
+ //: LocalCopy.java 
+// Creating local copies with clone() 
+import java.util.*;
+
+class MyObject implements Cloneable { 
+int i; 
+MyObject(int ii) { 
+i = ii; 
+} 
+public Object clone() { 
+Object o = null; 
+try { 
+o = super.clone(); 
+} catch (CloneNotSupportedException e) { 
+System.out.println("MyObject can't clone"); 
+} 
+return o; 
+} 
+public String toString() { 
+return Integer.toString(i); 
+} 
+}
+public class LocalCopy { 
+static MyObject g(MyObject v) { 
+// Passing a handle, modifies outside object: 
+v.i++; 
+return v; 
+} 
+static MyObject f(MyObject v) { 
+v = (MyObject)v.clone(); // Local copy 
+v.i++; 
+return v; 
+} 
+public static void main(String[] args) { 
+MyObject a = new MyObject(11); 
+MyObject b = g(a); 
+// Testing handle equivalence, 
+// not object equivalence: 
+if(a == b) 
+System.out.println("a == b"); 
+else System.out.println("a != b"); 
+System.out.println("a = " + a); 
+System.out.println("b = " + b); 
+MyObject c = new MyObject(47); 
+MyObject d = f(c); 
+if(c == d) 
+System.out.println("c == d"); 
+else 
+System.out.println("c != d"); 
+System.out.println("c = " + c);
+ System.out.println("d = " + d); 
+} 
+} ///:~
+```
+不管怎样，clone()必须能够访问，所以必须将其设为public（公共的）。其次，作为clone()的初期行动，应调用clone()的基础类版本。这里调用的clone()是Object内部预先定义好的。之所以能调用它，是由于它具有protected（受到保护的）属性，所以能在衍生的类里访问。 Object.clone()会检查原先的对象有多大，再为新对象腾出足够多的内存，将所有二进制位从原来的对象复制到新对象。这叫作“按位复制”，而且按一般的想法，这个工作应该是由clone()方法来做的。但在Object.clone()正式开始操作前，首先会检查一个类是否Cloneable，即是否具有克隆能力——换言之，它是否实现了Cloneable接口。若未实现，Object.clone()就掷出一个CloneNotSupportedException违例，指出我们不能克隆它。因此，我们最好用一个try-catch块将对super.clone()的调用代码包围（或封装）起来，试图捕获一个应当永不出现的违例（因为这里确实已实现了Cloneable接口）。 在LocalCopy中，两个方法g()和f()揭示出两种参数传递方法间的差异。其中，g()演示的是按引用传递，它会修改外部对象，并返回对那个外部对象的一个引用。而f()是对自变量进行克隆，所以将其分离出来，并让原来的对象保持独立。随后，它继续做它希望的事情。甚至能返回指向这个新对象的一个句柄，而且不会对原来的对象产生任何副作用。注意下面这个多少有些古怪的语句： v = (MyObject)v.clone(); 它的作用正是创建一个本地副本。为避免被这样的一个语句搞混淆，记住这种相当奇怪的编码形式在Java中是完全允许的，因为有一个名字的所有东西实际都是一个句柄。所以句柄v用于克隆一个它所指向的副本，而且最终返回指向基础类型Object的一个句柄（因为它在Object.clone()中是那样被定义的），随后必须将其造型为正确的类型。 在main()中，两种不同参数传递方式的区别在于它们分别测试了一个不同的方法。输出结果如下： 
+```
+a == b a = 12 b = 12 c != d c = 47 d = 48
+```
+大家要记住这样一个事实：Java对“是否等价”的测试并不对所比较对象的内部进行检查，从而核实它们的值是否相同。==和!=运算符只是简单地对比句柄的内容。若句柄内的地址相同，就认为句柄指向同样的对象，所以认为它们是“等价”的。所以运算符真正检测的是“由于别名问题，句柄是否指向同一个对象？”
+
+#### 12.2.5 Object.clone()的效果 
+
+调用Object.clone()时，实际发生的是什么事情呢？当我们在自己的类里覆盖clone()时，什么东西对于super.clone()来说是最关键的呢？根类中的clone()方法负责建立正确的存储容量，并通过“按位复制”将二进制位从原始对象中复制到新对象的存储空间。也就是说，它并不只是预留存储空间以及复制一个对象——实际需要调查出欲复制之对象的准确大小，然后复制那个对象。由于所有这些工作都是在由根类定义之clone()方法的内部代码中进行的（根类并不知道要从自己这里继承出去什么），所以大家或许已经猜到，这个过程需要用RTTI判断欲克隆的对象的实际大小。采取这种方式，clone()方法便可建立起正确数量的存储空间，并对那个类型进行正确的按位复制。 不管我们要做什么，克隆过程的第一个部分通常都应该是调用super.clone()。通过进行一次准确的复制，这样做可为后续的克隆进程建立起一个良好的基础。随后，可采取另一些必要的操作，以完成最终的克隆。 为确切了解其他操作是什么，首先要正确理解Object.clone()为我们带来了什么。特别地，它会自动克隆所有句柄指向的目标吗？下面这个例子可完成这种形式的检测：
+```java
+//: Snake.java 
+// Tests cloning to see if destination of 
+// handles are also cloned.
+
+public class Snake implements Cloneable { 
+private Snake next; 
+private char c; // Value of i == number of segments 
+Snake(int i, char x) { 
+c = x; 
+if(--i > 0) 
+next = new Snake(i, (char)(x + 1)); 
+} 
+void increment() { 
+c++; 
+if(next != null) 
+next.increment(); 
+} 
+public String toString() { 
+String s = ":" + c; 
+if(next != null) 
+s += next.toString(); 
+return s; 
+} 
+public Object clone() { 
+Object o = null; 
+try { 
+o = super.clone(); 
+} catch (CloneNotSupportedException e) {
+} 
+return o; 
+} 
+public static void main(String[] args) { 
+Snake s = new Snake(5, 'a'); 
+System.out.println("s = " + s); 
+Snake s2 = (Snake)s.clone(); 
+System.out.println("s2 = " + s2); 
+s.increment(); 
+System.out.println( "after s.increment, s2 = " + s2); } 
+} ///:~
+```
+一条Snake（蛇）由数段构成，每一段的类型都是Snake。所以，这是一个一段段链接起来的列表。所有段都是以循环方式创建的，每做好一段，都会使第一个构建器参数的值递减，直至最终为零。而为给每段赋予一个独一无二的标记，第二个参数（一个Char）的值在每次循环构建器调用时都会递增。 increment()方法的作用是循环递增每个标记，使我们能看到发生的变化；而toString则循环打印出每个标记。输出如下： 
+```
+s = :a:b:c:d:e 
+s2 = :a:b:c:d:e 
+after s.increment, s2 = :a:c:d:e:f
+```
+这意味着只有第一段才是由Object.clone()复制的，所以此时进行的是一种“浅层复制”。若希望复制整条蛇——即进行“深层复制”——必须在被覆盖的clone()里采取附加的操作。 通常可在从一个能克隆的类里调用super.clone()，以确保所有基础类行动（包括Object.clone()）能够进行。随着是为对象内每个句柄都明确调用一个clone()；否则那些句柄会别名变成原始对象的句柄。构建器的调用也大致相同——首先构造基础类，然后是下一个衍生的构建器……以此类推，直到位于最深层的衍生构建器。区别在于clone()并不是个构建器，所以没有办法实现自动克隆。为了克隆，必须由自己明确进行。
+
+#### 12.2.6 克隆合成对象
+试图深层复制合成对象时会遇到一个问题。必须假定成员对象中的clone()方法也能依次对自己的句柄进行深层复制，以此类推。这使我们的操作变得复杂。为了能正常实现深层复制，必须对所有类中的代码进行控制，或者至少全面掌握深层复制中需要涉及的类，确保它们自己的深层复制能正确进行。 下面这个例子总结了面对一个合成对象进行深层复制时需要做哪些事情：
+```java
+ //: DeepCopy.java 
+// Cloning a composed object
+
+class DepthReading implements Cloneable { 
+private double depth; 
+public DepthReading(double depth) { 
+this.depth = depth; 
+} 
+public Object clone() { 
+Object o = null; 
+try { 
+o = super.clone(); 
+} catch (CloneNotSupportedException e) { 
+e.printStackTrace(); 
+} 
+return o; 
+} 
+}
+class TemperatureReading implements Cloneable { 
+private long time; 
+private double temperature; 
+public TemperatureReading(double temperature) { 
+time = System.currentTimeMillis(); 
+this.temperature = temperature; 
+} 
+public Object clone() { 
+Object o = null;
+try { 
+o = super.clone(); 
+} catch (CloneNotSupportedException e) { 
+e.printStackTrace(); 
+} 
+return o; 
+} 
+}
+class OceanReading implements Cloneable { 
+private DepthReading depth; 
+private TemperatureReading temperature; 
+public OceanReading(double tdata, double ddata){ 
+temperature = new TemperatureReading(tdata); 
+depth = new DepthReading(ddata); 
+} 
+public Object clone() { 
+OceanReading o = null; 
+try { 
+o = (OceanReading)super.clone(); 
+} catch (CloneNotSupportedException e) { 
+e.printStackTrace(); 
+} // Must clone handles: 
+o.depth = (DepthReading)o.depth.clone(); 
+o.temperature = (TemperatureReading)o.temperature.clone(); 
+return o; // Upcasts back to Object 
+} 
+}
+public class DeepCopy { 
+public static void main(String[] args) { 
+OceanReading reading = new OceanReading(33.9, 100.5); // Now clone it: 
+OceanReading r = (OceanReading)reading.clone(); 
+} 
+} ///:~
+
+```
+DepthReading和TemperatureReading非常相似；它们都只包含了基本数据类型。所以clone()方法能够非常简单：调用super.clone()并返回结果即可。注意两个类使用的clone()代码是完全一致的。 OceanReading是由DepthReading和TemperatureReading对象合并而成的。为了对其进行深层复制，clone()必须同时克隆OceanReading内的句柄。为达到这个目标，super.clone()的结果必须造型成一个OceanReading对象（以便访问depth和temperature句柄）。
+
+#### 12.2.7 用Vector进行深层复制 
+Int3自Int2继承而来，并添加了一个新的基本类型成员int j。大家也许认为自己需要再次覆盖clone()，以确保j得到复制，但实情并非如此。将Int2的clone()当作Int3的clone()调用时，它会调用Object.clone()，判断出当前操作的是Int3，并复制Int3内的所有二进制位。只要没有新增需要克隆的句柄，对Object.clone()的一个调用就能完成所有必要的复制——无论clone()是在层次结构多深的一级定义的。 至此，大家可以总结出对Vector进行深层复制的先决条件：在克隆了Vector后，必须在其中遍历，并克隆由Vector指向的每个对象。为了对Hashtable（散列表）进行深层复制，也必须采取类似的处理。 这个例子剩余的部分显示出克隆已实际进行——证据就是在克隆了对象以后，可以自由改变它，而原来那个对象不受任何影响。
+
+#### 12.2.8 通过序列化进行深层复制
+若研究一下第10章介绍的那个Java 1.1对象序列化示例，可能发现若在一个对象序列化以后再撤消对它的序列化，或者说进行装配，那么实际经历的正是一个“克隆”的过程。 那么为什么不用序列化进行深层复制呢？
+其中，Thing2和Thing4包含了成员对象，所以需要进行一些深层复制。一个有趣的地方是尽管Serializable类很容易设置，但在复制它们时却要做多得多的工作。克隆涉及到大量的类设置工作，但实际的对象复制是相当简单的。结果很好地说明了一切。下面是几次运行分别得到的结果： Duplication via serialization: 3400 Milliseconds Duplication via cloning: 110 Milliseconds
+Duplication via serialization: 3410 Milliseconds Duplication via cloning: 110 Milliseconds
+Duplication via serialization: 3520 Milliseconds Duplication via cloning: 110 Milliseconds
+除了序列化和克隆之间巨大的时间差异以外，我们也注意到序列化技术的运行结果并不稳定，而克隆每一次花费的时间都是相同的。
+
+#### 12.2.9 使克隆具有更大的深度
+若新建一个类，它的基础类会默认为Object，并默认为不具备克隆能力（就象在下一节会看到的那样）。只要不明确地添加克隆能力，这种能力便不会自动产生。但我们可以在任何层添加它，然后便可从那个层开始向下具有克隆能力。
+
+添加克隆能力之前，编译器会阻止我们的克隆尝试。一旦在Scientist里添加了克隆能力，那么Scientist以及它的所有“后裔”都可以克隆。
+
+#### 12.2.10 为什么有这个奇怪的设计
+之所以感觉这个方案的奇特，因为它事实上的确如此。也许大家会奇怪它为什么要象这样运行，而该方案背后的真正含义是什么呢？后面讲述的是一个未获证实的故事——大概是由于围绕Java的许多买卖使其成为一种设计优良的语言——但确实要花许多口舌才能讲清楚这背后发生的所有事情。 最初，Java只是作为一种用于控制硬件的语言而设计，与因特网并没有丝毫联系。象这样一类面向大众的语言一样，其意义在于程序员可以对任意一个对象进行克隆。这样一来，clone()就放置在根类Object里面，但因为它是一种公用方式，因而我们通常能够对任意一个对象进行克隆。看来这是最灵活的方式了，毕竟它不会带来任何害处。 正当Java看起来象一种终级因特网程序设计语言的时候，情况却发生了变化。突然地，人们提出了安全问题，而且理所当然，这些问题与使用对象有关，我们不愿望任何人克隆自己的保密对象。所以我们最后看到的是为原来那个简单、直观的方案添加的大量补丁：clone()在Object里被设置成“protected”。必须将其覆盖，并使用“implement Cloneable”，同时解决违例的问题。 只有在准备调用Object的clone()方法时，才没有必要使用Cloneable接口，因为那个方法会在运行期间得到检查，以确保我们的类实现了Cloneable。但为了保持连贯性（而且由于Cloneable无论如何都是空的），最好还是由自己实现Cloneable。
+
+
 ### 12.3 克隆的控制
+为消除克隆能力，大家也许认为只需将clone()方法简单地设为private（私有）即可，但这样是行不通的，因为不能采用一个基础类方法，并使其在衍生类中更“私有”。所以事情并没有这么简单。此外，我们有必要控制一个对象是否能够克隆。对于我们设计的一个类，实际有许多种方案都是可以采取的： 
+- (1) 保持中立，不为克隆做任何事情。也就是说，尽管不可对我们的类克隆，但从它继承的一个类却可根据实际情况决定克隆。只有Object.clone()要对类中的字段进行某些合理的操作时，才可以作这方面的决定。 
+- (2) 支持clone()，采用实现Cloneable（可克隆）能力的标准操作，并覆盖clone()。在被覆盖的clone()中，可调用super.clone()，并捕获所有违例（这样可使clone()不“掷”出任何违例）。 
+- (3) 有条件地支持克隆。若类容纳了其他对象的句柄，而那些对象也许能够克隆（集合类便是这样的一个例子），就可试着克隆拥有对方句柄的所有对象；如果它们“掷”出了违例，只需让这些违例通过即可。举个例子来说，假设有一个特殊的Vector，它试图克隆自己容纳的所有对象。编写这样的一个Vector时，并不知道客户程序员会把什么形式的对象置入这个Vector中，所以并不知道它们是否真的能够克隆。 
+- (4) 不实现Cloneable()，但是将clone()覆盖成protected，使任何字段都具有正确的复制行为。这样一来，从这个类继承的所有东西都能覆盖clone()，并调用super.clone()来产生正确的复制行为。注意在我们实现方案里，可以而且应该调用super.clone()——即使那个方法本来预期的是一个Cloneable对象（否则会掷出一个违例），因为没有人会在我们这种类型的对象上直接调用它。它只有通过一个衍生类调用；对那个衍生类来说，如果要保证它正常工作，需实现Cloneable。 
+- (5) 不实现Cloneable来试着防止克隆，并覆盖clone()，以产生一个违例。为使这一设想顺利实现，只有令从它衍生出来的任何类都调用重新定义后的clone()里的suepr.clone()。 
+- (6) 将类设为final，从而防止克隆。若clone()尚未被我们的任何一个上级类覆盖，这一设想便不会成功。若已被覆盖，那么再一次覆盖它，并“掷”出一个CloneNotSupportedException（克隆不支持）违例。为担保克隆被禁止，将类设为final是唯一的办法。除此以外，一旦涉及保密对象或者遇到想对创建的对象数量进行控制的其他情况，应该将所有构建器都设为private，并提供一个或更多的特殊方法来创建对象。采用这种方式，这些方法就可以限制创建的对象数量以及它们的创建条件——一种特殊情况是第16章要介绍的singleton（独子）方案。
+
+唯一安全的方法在ReallyNoMore中得到了演示，它设为final，所以不可继承。这意味着假如clone()在final类中掷出了一个违例，便不能通过继承来进行修改，并可有效地禁止克隆（不能从一个拥有任意继承级数的类中明确调用Object.clone()；只能调用super.clone()，它只可访问直接基础类）。因此，只要制作一些涉及安全问题的对象，就最好把那些类设为final。
+
+总之，如果希望一个类能够克隆，那么： 
+- (1) 实现Cloneable接口 
+- (2) 覆盖clone() 
+- (3) 在自己的clone()中调用super.clone() 
+- (4) 在自己的clone()中捕获违例 这一系列步骤能达到最理想的效果。
+
+
+#### 12.3.1 副本构建器 
+非常不幸，假如想制作对象的一个本地副本，Java中的副本构建器便不是特别适合我们。
+
 ### 12.4 只读类
+尽管在一些特定的场合，由clone()产生的本地副本能够获得我们希望的结果，但程序员（方法的作者）不得不亲自禁止别名处理的副作用。假如想制作一个库，令其具有常规用途，但却不能担保它肯定能在正确的类中得以克隆，这时又该怎么办呢？更有可能的一种情况是，假如我们想让别名发挥积极的作用——禁止不必要的对象复制——但却不希望看到由此造成的副作用，那么又该如何处理呢？ 一个办法是创建“不变对象”，令其从属于只读类。可定义一个特殊的类，使其中没有任何方法能造成对象内部状态的改变。在这样的一个类中，别名处理是没有问题的。因为我们只能读取内部状态，所以当多处代码都读取相同的对象时，不会出现任何副作用。 作为“不变对象”一个简单例子，Java的标准库包含了“封装器”（wrapper）类，可用于所有基本数据类型。大家可能已发现了这一点，如果想在一个象Vector（只采用Object句柄）这样的集合里保存一个int数值，可以将这个int封装到标准库的Integer类内部。
+
+Integer类（以及基本的“封装器”类）用简单的形式实现了“不变性”：它们没有提供可以修改对象的方法。 若确实需要一个容纳了基本数据类型的对象，并想对基本数据类型进行修改，就必须亲自创建它们。幸运的是，操作非常简单
+
+
+#### 12.4.1 创建只读类
+所有数据都设为private，没有任何public方法对数据作出修改。它能保证对象不被改动。
+
+
+#### 12.4.2 “一成不变”的弊端
+从表面看，不变类的建立似乎是一个好方案。但是，一旦真的需要那种新类型的一个修改的对象，就必须辛苦地进行新对象的创建工作，同时还有可能涉及更频繁的垃圾收集。对有些类来说，这个问题并不是很大。但对其他类来说（比如String类），这一方案的代价显得太高了。 为解决这个问题，我们可以创建一个“同志”类，并使其能够修改。以后只要涉及大量的修改工作，就可换为使用能修改的同志类。完事以后，再切换回不可变的类。 
+
+我们只创建了两个新对象（Mutable和Immutable2的结果），而不是四个。 这一方法特别适合在下述场合应用： (1) 需要不可变的对象，而且 (2) 经常需要进行大量修改，或者 (3) 创建新的不变对象代价太高
+
+
+
+
+
 ### 12.5 总结
 ### 12.6 练习
 ## 第13章 创建窗口和程序片
