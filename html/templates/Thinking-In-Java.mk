@@ -6137,15 +6137,389 @@ Integer类（以及基本的“封装器”类）用简单的形式实现了“�
 
 我们只创建了两个新对象（Mutable和Immutable2的结果），而不是四个。 这一方法特别适合在下述场合应用： (1) 需要不可变的对象，而且 (2) 经常需要进行大量修改，或者 (3) 创建新的不变对象代价太高
 
+> String 和 StringBuffer 类 
 
+#### 12.4.3 不变字串
+1. 隐式常数 若使用下述语句： String s = "asdf"; String x = Stringer.upcase(s); 那么真的希望upcase()方法改变自变量或者参数吗？我们通常是不愿意的，因为作为提供给方法的一种信息，自变量一般是拿给代码的读者看的，而不是让他们修改。这是一个相当重要的保证，因为它使代码更易编写和理解。 为了在C++中实现这一保证，需要一个特殊关键字的帮助：const。利用这个关键字，程序员可以保证一个句柄（C++叫“指针”或者“引用”）不会被用来修改原始的对象。但这样一来，C++程序员需要用心记住在所有地方都使用const。这显然易使人混淆，也不容易记住。
+2. 覆盖"+"和StringBuffer 利用前面提到的技术，String类的对象被设计成“不可变”。若查阅联机文档中关于String类的内容（本章稍后还要总结它），就会发现类中能够修改String的每个方法实际都创建和返回了一个崭新的String对象，新对象里包含了修改过的信息——原来的String是原封未动的。因此，Java里没有与C++的const对应的特性可用来让编译器支持对象的不可变能力。若想获得这一能力，可以自行设置，就象String那样。 由于String对象是不可变的，所以能够根据情况对一个特定的String进行多次别名处理。因为它是只读的，所以一个句柄不可能会改变一些会影响其他句柄的东西。因此，只读对象可以很好地解决别名问题。 通过修改产生对象的一个崭新版本，似乎可以解决修改对象时的所有问题，就象String那样。但对某些操作来讲，这种方法的效率并不高。一个典型的例子便是为String对象覆盖的运算符“+”。“覆盖”意味着在与一个特定的类使用时，它的含义已发生了变化（用于String的“+”和“+=”是Java中能被覆盖的唯一运算符，Java不允许程序员覆盖其他任何运算符——注释④）。
 
+④：C++允许程序员随意覆盖运算符。由于这通常是一个复杂的过程（参见《Thinking in C++》，Prentice-Hall于1995年出版），所以Java的设计者认定它是一种“糟糕”的特性，决定不在Java中采用。但具有讽剌意味的是，运算符的覆盖在Java中要比在C++中容易得多。
 
+针对String对象使用时，“+”允许我们将不同的字串连接起来： String s = "abc" + foo + "def" + Integer.toString(47);
+
+可以想象出它“可能”是如何工作的：字串"abc"可以有一个方法append()，它新建了一个字串，其中包含"abc"以及foo的内容；这个新字串然后再创建另一个新字串，在其中添加"def"；以此类推。 这一设想是行得通的，但它要求创建大量字串对象。尽管最终的目的只是获得包含了所有内容的一个新字串，但中间却要用到大量字串对象，而且要不断地进行垃圾收集。我怀疑Java的设计者是否先试过种方法（这是软件开发的一个教训——除非自己试试代码，并让某些东西运行起来，否则不可能真正了解系统）。我还怀疑他们是否早就发现这样做获得的性能是不能接受的。 解决的方法是象前面介绍的那样制作一个可变的同志类。对字串来说，这个同志类叫作StringBuffer，编译器可以自动创建一个StringBuffer，以便计算特定的表达式，特别是面向String对象应用覆盖过的运算符+和+=时。
+
+创建字串s时，编译器做的工作大致等价于后面使用sb的代码——创建一个StringBuffer，并用append()将新字符直接加入StringBuffer对象（而不是每次都产生新对象）。尽管这样做更有效，但不值得每次都创建象"abc"和"def"这样的引号字串，编译器会把它们都转换成String对象。所以尽管StringBuffer提供了更高的效率，但会产生比我们希望的多得多的对象。
+
+#### 12.4.4 String和StringBuffer类 
+
+这里总结一下同时适用于String和StringBuffer的方法，以便对它们相互间的沟通方式有一个印象。这些表格并未把每个单独的方法都包括进去，而是包含了与本次讨论有重要关系的方法。那些已被覆盖的方法用单独一行总结。 首先总结String类的各种方法：
+
+最常用的一个方法是append()。在计算包含了+和+=运算符的String表达式时，编译器便会用到这个方法。insert()方法采用类似的形式。这两个方法都能对缓冲区进行重要的操作，不需要另建新对象。
+
+#### 12.4.5 字串的特殊性 
+现在，大家已知道String类并非仅仅是Java提供的另一个类。String里含有大量特殊的类。通过编译器和特殊的覆盖或过载运算符+和+=，可将引号字符串转换成一个String。在本章中，大家已见识了剩下的一种特殊情况：用同志StringBuffer精心构造的“不可变”能力，以及编译器中出现的一些有趣现象。
 
 ### 12.5 总结
+
+由于Java中的所有东西都是句柄，而且由于每个对象都是在内存堆中创建的——只有不再需要的时候，才会当作垃圾收集掉，所以对象的操作方式发生了变化，特别是在传递和返回对象的时候。举个例子来说，在C和C++中，如果想在一个方法里初始化一些存储空间，可能需要请求用户将那片存储区域的地址传递进入方法。否则就必须考虑由谁负责清除那片区域。因此，这些方法的接口和对它们的理解就显得要复杂一些。但在Java中，根本不必关心由谁负责清除，也不必关心在需要一个对象的时候它是否仍然存在。因为系统会为我们照料一切。我们的程序可在需要的时候创建一个对象。而且更进一步地，根本不必担心那个对象的传输机制的细节：只需简单地传递句柄即可。有些时候，这种简化非常有价值，但另一些时候却显得有些多余。 可从两个方面认识这一机制的缺点：
+- (1) 肯定要为额外的内存管理付出效率上的损失（尽管损失不大），而且对于运行所需的时间，总是存在一丝不确定的因素（因为在内存不够时，垃圾收集器可能会被强制采取行动）。对大多数应用来说，优点显得比缺点重要，而且部分对时间要求非常苛刻的段落可以用native方法写成（参见附录A）。 
+- (2) 别名处理：有时会不慎获得指向同一个对象的两个句柄。只有在这两个句柄都假定指向一个“明确”的对象时，才有可能产生问题。对这个问题，必须加以足够的重视。而且应该尽可能地“克隆”一个对象，以防止另一个句柄被不希望的改动影响。除此以外，可考虑创建“不可变”对象，使它的操作能返回同种类型或不同种类型的一个新对象，从而提高程序的执行效率。但千万不要改变原始对象，使对那个对象别名的其他任何方面都感觉不出变化。
+
+有些人认为Java的克隆是一个笨拙的家伙，所以他们实现了自己的克隆方案（注释⑤），永远杜绝调用Object.clone()方法，从而消除了实现Cloneable和捕获CloneNotSupportException违例的需要。这一做法是合理的，而且由于clone()在Java标准库中很少得以支持，所以这显然也是一种“安全”的方法。只要不调用Object.clone()，就不必实现Cloneable或者捕获违例，所以那看起来也是能够接受的。
+
+⑤：Doug Lea特别重视这个问题，并把这个方法推荐给了我，他说只需为每个类都创建一个名为duplicate()的函数即可。
+
+Java中一个有趣的关键字是byvalue（按值），它属于那些“保留但未实现”的关键字之一。在理解了别名和克隆问题以后，大家可以想象byvalue最终有一天会在Java中用于实现一种自动化的本地副本。这样做可以解决更多复杂的克隆问题，并使这种情况下的编写的代码变得更加简单和健壮。
+
 ### 12.6 练习
 ## 第13章 创建窗口和程序片
 ## 第14章 多线程
+利用对象，可将一个程序分割成相互独立的区域。我们通常也需要将一个程序转换成多个独立运行的子任务。
+
+象这样的每个子任务都叫作一个“线程”（Thread）。编写程序时，可将每个线程都想象成独立运行，而且都有自己的专用CPU。一些基础机制实际会为我们自动分割CPU的时间。我们通常不必关心这些细节问题，所以多线程的代码编写是相当简便的。
+
+这时理解一些定义对以后的学习狠有帮助。“进程”是指一种“自包容”的运行程序，有自己的地址空间。“多任务”操作系统能同时运行多个进程（程序）——但实际是由于CPU分时机制的作用，使每个进程都能循环获得自己的CPU时间片。但由于轮换速度非常快，使得所有程序好象是在“同时”运行一样。“线程”是进程内部单一的一个顺序控制流。因此，一个进程可能容纳了多个同时执行的线程。
+
+多线程的应用范围很广。但在一般情况下，程序的一些部分同特定的事件或资源联系在一起，同时又不想为它而暂停程序其他部分的执行。这样一来，就可考虑创建一个线程，令其与那个事件或资源关联到一起，并让它独立于主程序运行。一个很好的例子便是“Quit”或“退出”按钮——我们并不希望在程序的每一部分代码中都轮询这个按钮，同时又希望该按钮能及时地作出响应（使程序看起来似乎经常都在轮询它）。事实上，多线程最主要的一个用途就是构建一个“反应灵敏”的用户界面。
+
 ### 14.1 反应灵敏的用户界面
+作为我们的起点，请思考一个需要执行某些CPU密集型计算的程序。由于CPU“全心全意”为那些计算服务，所以对用户的输入十分迟钝，几乎没有什么反应。在这里，我们用一个合成的applet/application（程序片／应用程序）来简单显示出一个计数器的结果：
+```java
+//: Counter1.java
+// A non-responsive user interface
+package c14;
+import java.awt.*;
+import java.awt.event.*;
+import java.applet.*;
+
+public class Counter1 extends Applet {
+  private int count = 0;
+  private Button 
+    onOff = new Button("Toggle"),
+    start = new Button("Start");
+  private TextField t = new TextField(10);
+  private boolean runFlag = true;
+  public void init() {
+    add(t);
+    start.addActionListener(new StartL());
+    add(start);
+    onOff.addActionListener(new OnOffL());
+    add(onOff);
+  }
+  public void go() {
+    while (true) {
+      try {
+        Thread.currentThread().sleep(100);
+      } catch (InterruptedException e){}
+      if(runFlag) 
+        t.setText(Integer.toString(count++));
+    }
+  }
+  class StartL implements ActionListener {
+    public void actionPerformed(ActionEvent e) {
+      go();
+    }
+  }
+  class OnOffL implements ActionListener {
+    public void actionPerformed(ActionEvent e) {
+      runFlag = !runFlag;
+    }
+  }
+  public static void main(String[] args) {
+    Counter1 applet = new Counter1();
+    Frame aFrame = new Frame("Counter1");
+    aFrame.addWindowListener(
+      new WindowAdapter() {
+        public void windowClosing(WindowEvent e) {
+          System.exit(0);
+        }
+      });
+    aFrame.add(applet, BorderLayout.CENTER);
+    aFrame.setSize(300,200);
+    applet.init();
+    applet.start();
+    aFrame.setVisible(true);
+  }
+} ///:~
+```
+在这个程序中，AWT和程序片代码都应是大家熟悉的，第13章对此已有很详细的交待。go()方法正是程序全心全意服务的对待：将当前的count（计数）值置入TextField（文本字段）t，然后使count增值。
+
+go()内的部分无限循环是调用sleep()。sleep()必须同一个Thread（线程）对象关联到一起，而且似乎每个应用程序都有部分线程同它关联（事实上，Java本身就是建立在线程基础上的，肯定有一些线程会伴随我们写的应用一起运行）。所以无论我们是否明确使用了线程，都可利用Thread.currentThread()产生由程序使用的当前线程，然后为那个线程调用sleep()。注意，Thread.currentThread()是Thread类的一个静态方法。
+
+注意sleep()可能“掷”出一个InterruptException（中断违例）——尽管产生这样的违例被认为是中止线程的一种“恶意”手段，而且应该尽可能地杜绝这一做法。再次提醒大家，违例是为异常情况而产生的，而不是为了正常的控制流。在这里包含了对一个“睡眠”线程的中断，以支持未来的一种语言特性。
+
+一旦按下start按钮，就会调用go()。研究一下go()，你可能会很自然地（就象我一样）认为它该支持多线程，因为它会进入“睡眠”状态。也就是说，尽管方法本身“睡着”了，CPU仍然应该忙于监视其他按钮“按下”事件。但有一个问题，那就是go()是永远不会返回的，因为它被设计成一个无限循环。这意味着actionPerformed()根本不会返回。由于在第一个按键以后便陷入actionPerformed()中，所以程序不能再对其他任何事件进行控制（如果想出来，必须以某种方式“杀死”进程——最简便的方式就是在控制台窗口按Ctrl＋C键）。
+
+这里最基本的问题是go()需要继续执行自己的操作，而与此同时，它也需要返回，以便actionPerformed()能够完成，而且用户界面也能继续响应用户的操作。但对象go()这样的传统方法来说，它却不能在继续的同时将控制权返回给程序的其他部分。这听起来似乎是一件不可能做到的事情，就象CPU必须同时位于两个地方一样，但线程可以解决一切。“线程模型”（以及Java中的编程支持）是一种程序编写规范，可在单独一个程序里实现几个操作的同时进行。根据这一机制，CPU可为每个线程都分配自己的一部分时间。每个线程都“感觉”自己好象拥有整个CPU，但CPU的计算时间实际却是在所有线程间分摊的。
+线程机制多少降低了一些计算效率，但无论程序的设计，资源的均衡，还是用户操作的方便性，都从中获得了巨大的利益。综合考虑，这一机制是非常有价值的。当然，如果本来就安装了多块CPU，那么操作系统能够自行决定为不同的CPU分配哪些线程，程序的总体运行速度也会变得更快（所有这些都要求操作系统以及应用程序的支持）。多线程和多任务是充分发挥多处理机系统能力的一种最有效的方式。
+
+
+#### 14.1.1 从线程继承
+为创建一个线程，最简单的方法就是从Thread类继承。这个类包含了创建和运行线程所需的一切东西。Thread最重要的方法是run()。但为了使用run()，必须对其进行过载或者覆盖，使其能充分按自己的吩咐行事。因此，run()属于那些会与程序中的其他线程“并发”或“同时”执行的代码。
+
+下面这个例子可创建任意数量的线程，并通过为每个线程分配一个独一无二的编号（由一个静态变量产生），从而对不同的线程进行跟踪。Thread的run()方法在这里得到了覆盖，每通过一次循环，计数就减1——计数为0时则完成循环（此时一旦返回run()，线程就中止运行）。
+```java
+//: SimpleThread.java
+// Very simple Threading example
+
+public class SimpleThread extends Thread {
+  private int countDown = 5;
+  private int threadNumber;
+  private static int threadCount = 0;
+  public SimpleThread() {
+    threadNumber = ++threadCount;
+    System.out.println("Making " + threadNumber);
+  }
+  public void run() {
+    while(true) {
+      System.out.println("Thread " + 
+        threadNumber + "(" + countDown + ")");
+      if(--countDown == 0) return;
+    }
+  }
+  public static void main(String[] args) {
+    for(int i = 0; i < 5; i++)
+      new SimpleThread().start();
+    System.out.println("All Threads Started");
+  }
+} ///:~
+```
+run()方法几乎肯定含有某种形式的循环——它们会一直持续到线程不再需要为止。因此，我们必须规定特定的条件，以便中断并退出这个循环（或者在上述的例子中，简单地从run()返回即可）。run()通常采用一种无限循环的形式。也就是说，通过阻止外部发出对线程的stop()或者destroy()调用，它会永远运行下去（直到程序完成）。
+
+在main()中，可看到创建并运行了大量线程。Thread包含了一个特殊的方法，叫作start()，它的作用是对线程进行特殊的初始化，然后调用run()。所以整个步骤包括：调用构建器来构建对象，然后用start()配置线程，再调用run()。如果不调用start()——如果适当的话，可在构建器那样做——线程便永远不会启动。
+
+下面是该程序某一次运行的输出（注意每次运行都会不同）：
+
+可注意到这个例子中到处都调用了sleep()，然而输出结果指出每个线程都获得了属于自己的那一部分CPU执行时间。从中可以看出，尽管sleep()依赖一个线程的存在来执行，但却与允许或禁止线程无关。它只不过是另一个不同的方法而已。
+
+
+亦可看出线程并不是按它们创建时的顺序运行的。事实上，CPU处理一个现有线程集的顺序是不确定的——除非我们亲自介入，并用Thread的setPriority()方法调整它们的优先级。
+
+main()创建Thread对象时，它并未捕获任何一个对象的句柄。普通对象对于垃圾收集来说是一种“公平竞赛”，但线程却并非如此。每个线程都会“注册”自己，所以某处实际存在着对它的一个引用。这样一来，垃圾收集器便只好对它“瞠目以对”了。
+
+
+#### 14.1.2 针对用户界面的多线程
+现在，我们也许能用一个线程解决在Counter1.java中出现的问题。采用的一个技巧便是在一个线程的run()方法中放置“子任务”——亦即位于go()内的循环。一旦用户按下Start按钮，线程就会启动，但马上结束线程的创建。这样一来，尽管线程仍在运行，但程序的主要工作却能得以继续（等候并响应用户界面的事件）。下面是具体的代码：
+```java
+//: Counter2.java
+// A responsive user interface with threads
+import java.awt.*;
+import java.awt.event.*;
+import java.applet.*;
+
+class SeparateSubTask extends Thread {
+  private int count = 0;
+  private Counter2 c2;
+  private boolean runFlag = true;
+  public SeparateSubTask(Counter2 c2) {
+    this.c2 = c2;
+    start();
+  }
+  public void invertFlag() { runFlag = !runFlag;}
+  public void run() {
+    while (true) {
+     try {
+      sleep(100);
+     } catch (InterruptedException e){}
+     if(runFlag) 
+       c2.t.setText(Integer.toString(count++));
+    }
+  }
+} 
+
+public class Counter2 extends Applet {
+  TextField t = new TextField(10);
+  private SeparateSubTask sp = null;
+  private Button 
+    onOff = new Button("Toggle"),
+    start = new Button("Start");
+  public void init() {
+    add(t);
+    start.addActionListener(new StartL());
+    add(start);
+    onOff.addActionListener(new OnOffL());
+    add(onOff);
+  }
+  class StartL implements ActionListener {
+    public void actionPerformed(ActionEvent e) {
+      if(sp == null)
+        sp = new SeparateSubTask(Counter2.this);
+    }
+  }
+  class OnOffL implements ActionListener {
+    public void actionPerformed(ActionEvent e) {
+      if(sp != null)
+        sp.invertFlag();
+    }
+  }
+  public static void main(String[] args) {
+    Counter2 applet = new Counter2();
+    Frame aFrame = new Frame("Counter2");
+    aFrame.addWindowListener(
+      new WindowAdapter() {
+        public void windowClosing(WindowEvent e) {
+          System.exit(0);
+        }
+      });
+    aFrame.add(applet, BorderLayout.CENTER);
+    aFrame.setSize(300,200);
+    applet.init();
+    applet.start();
+    aFrame.setVisible(true);
+  }
+} ///:~
+```
+现在，Counter2变成了一个相当直接的程序，它的唯一任务就是设置并管理用户界面。但假若用户现在按下Start按钮，却不会真正调用一个方法。此时不是创建类的一个线程，而是创建SeparateSubTask，然后继续Counter2事件循环。注意此时会保存SeparateSubTask的句柄，以便我们按下onOff按钮的时候，能正常地切换位于SeparateSubTask内部的runFlag（运行标志）。随后那个线程便可启动（当它看到标志的时候），然后将自己中止（亦可将SeparateSubTask设为一个内部类来达到这一目的）。
+
+SeparateSubTask类是对Thread的一个简单扩展，它带有一个构建器（其中保存了Counter2句柄，然后通过调用start()来运行线程）以及一个run()——本质上包含了Counter1.java的go()内的代码。由于SeparateSubTask知道自己容纳了指向一个Counter2的句柄，所以能够在需要的时候介入，并访问Counter2的TestField（文本字段）。
+按下onOff按钮，几乎立即能得到正确的响应。当然，这个响应其实并不是“立即”发生的，它毕竟和那种由“中断”驱动的系统不同。只有线程拥有CPU的执行时间，并注意到标记已发生改变，计数器才会停止。
+
+- 用内部类改善代码
+
+下面说说题外话，请大家注意一下SeparateSubTask和Counter2类之间发生的结合行为。SeparateSubTask同Counter2“亲密”地结合到了一起——它必须持有指向自己“父”Counter2对象的一个句柄，以便自己能回调和操纵它。但两个类并不是真的合并为单独一个类（尽管在下一节中，我们会讲到Java确实提供了合并它们的方法），因为它们各自做的是不同的事情，而且是在不同的时间创建的。但不管怎样，它们依然紧密地结合到一起（更准确地说，应该叫“联合”），所以使程序代码多少显得有些笨拙。在这种情况下，一个内部类可以显著改善代码的“可读性”和执行效率：
+
+```java
+//: Counter2i.java
+// Counter2 using an inner class for the thread
+import java.awt.*;
+import java.awt.event.*;
+import java.applet.*;
+
+public class Counter2i extends Applet {
+  private class SeparateSubTask extends Thread {
+    int count = 0;
+    boolean runFlag = true;
+    SeparateSubTask() { start(); }
+    public void run() {
+      while (true) {
+       try {
+        sleep(100);
+       } catch (InterruptedException e){}
+       if(runFlag) 
+         t.setText(Integer.toString(count++));
+      }
+    }
+  } 
+  private SeparateSubTask sp = null;
+  private TextField t = new TextField(10);
+  private Button 
+    onOff = new Button("Toggle"),
+    start = new Button("Start");
+  public void init() {
+    add(t);
+    start.addActionListener(new StartL());
+    add(start);
+    onOff.addActionListener(new OnOffL());
+    add(onOff);
+  }
+  class StartL implements ActionListener {
+    public void actionPerformed(ActionEvent e) {
+      if(sp == null)
+        sp = new SeparateSubTask();
+    }
+  }
+  class OnOffL implements ActionListener {
+    public void actionPerformed(ActionEvent e) {
+      if(sp != null)
+        sp.runFlag = !sp.runFlag; // invertFlag();
+    }
+  }
+  public static void main(String[] args) {
+    Counter2i applet = new Counter2i();
+    Frame aFrame = new Frame("Counter2i");
+    aFrame.addWindowListener(
+      new WindowAdapter() {
+        public void windowClosing(WindowEvent e) {
+          System.exit(0);
+        }
+      });
+    aFrame.add(applet, BorderLayout.CENTER);
+    aFrame.setSize(300,200);
+    applet.init();
+    applet.start();
+    aFrame.setVisible(true);
+  }
+} ///:~
+```
+这个SeparateSubTask名字不会与前例中的SeparateSubTask冲突——即使它们都在相同的目录里——因为它已作为一个内部类隐藏起来。大家亦可看到内部类被设为private（私有）属性，这意味着它的字段和方法都可获得默认的访问权限（run()除外，它必须设为public，因为它在基础类中是公开的）。除Counter2i之外，其他任何方面都不可访问private内部类。而且由于两个类紧密结合在一起，所以很容易放宽它们之间的访问限制。在SeparateSubTask中，我们可看到invertFlag()方法已被删去，因为Counter2i现在可以直接访问runFlag。
+
+此外，注意SeparateSubTask的构建器已得到了简化——它现在唯一的用外就是启动线程。Counter2i对象的句柄仍象以前那样得以捕获，但不再是通过人工传递和引用外部对象来达到这一目的，此时的内部类机制可以自动照料它。在run()中，可看到对t的访问是直接进行的，似乎它是SeparateSubTask的一个字段。父类中的t字段现在可以变成private，因为SeparateSubTask能在未获任何特殊许可的前提下自由地访问它——而且无论如何都该尽可能地把字段变成“私有”属性，以防来自类外的某种力量不慎地改变它们。
+
+无论在什么时候，只要注意到类相互之间结合得比较紧密，就可考虑利用内部类来改善代码的编写与维护。
+
+> 内部类这玩意与对应类有点像线粒体与细胞的关系，处于类内部单不仅仅是方法能代替的。以对象分类，对象与对象关系结合紧密，就可考虑利用内部类来改善代码的编写与维护。
+
+#### 14.1.3 用主类合并线程
+在上面的例子中，我们看到线程类（Thread）与程序的主类（Main）是分隔开的。这样做非常合理，而且易于理解。然而，还有另一种方式也是经常要用到的。尽管它不十分明确，但一般都要更简洁一些（这也解释了它为什么十分流行）。通过将主程序类变成一个线程，这种形式可将主程序类与线程类合并到一起。由于对一个GUI程序来说，主程序类必须从Frame或Applet继承，所以必须用一个接口加入额外的功能。这个接口叫作Runnable，其中包含了与Thread一致的基本方法。事实上，Thread也实现了Runnable，它只指出有一个run()方法。
+
+对合并后的程序／线程来说，它的用法不是十分明确。当我们启动程序时，会创建一个Runnable（可运行的）对象，但不会自行启动线程。线程的启动必须明确进行。下面这个程序向我们演示了这一点，它再现了Counter2的功能：
+```java
+//: Counter3.java
+// Using the Runnable interface to turn the 
+// main class into a thread.
+import java.awt.*;
+import java.awt.event.*;
+import java.applet.*;
+
+public class Counter3 
+    extends Applet implements Runnable {
+  private int count = 0;
+  private boolean runFlag = true;
+  private Thread selfThread = null;
+  private Button 
+    onOff = new Button("Toggle"),
+    start = new Button("Start");
+  private TextField t = new TextField(10);
+  public void init() {
+    add(t);
+    start.addActionListener(new StartL());
+    add(start);
+    onOff.addActionListener(new OnOffL());
+    add(onOff);
+  }
+  public void run() {
+    while (true) {
+      try {
+        selfThread.sleep(100);
+      } catch (InterruptedException e){}
+      if(runFlag) 
+        t.setText(Integer.toString(count++));
+    }
+  }
+  class StartL implements ActionListener {
+    public void actionPerformed(ActionEvent e) {
+      if(selfThread == null) {
+        selfThread = new Thread(Counter3.this);
+        selfThread.start();
+      }
+    }
+  }
+  class OnOffL implements ActionListener {
+    public void actionPerformed(ActionEvent e) {
+      runFlag = !runFlag;
+    }
+  }
+  public static void main(String[] args) {
+    Counter3 applet = new Counter3();
+    Frame aFrame = new Frame("Counter3");
+    aFrame.addWindowListener(
+      new WindowAdapter() {
+        public void windowClosing(WindowEvent e) {
+          System.exit(0);
+        }
+      });
+    aFrame.add(applet, BorderLayout.CENTER);
+    aFrame.setSize(300,200);
+    applet.init();
+    applet.start();
+    aFrame.setVisible(true);
+  }
+} ///:~
+```
+
+
+
 ### 14.2 共享有限的资源
 ### 14.3 堵塞
 ### 14.4 优先级
