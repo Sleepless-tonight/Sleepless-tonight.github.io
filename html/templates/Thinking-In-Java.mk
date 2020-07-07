@@ -6517,10 +6517,399 @@ public class Counter3
   }
 } ///:~
 ```
+现在run()位于类内，但它在init()结束以后仍处在“睡眠”状态。若按下启动按钮，线程便会用多少有些暧昧的表达方式创建（若线程尚不存在）：
+```
+new Thread(Counter3.this);
+```
+若某样东西有一个Runnable接口，实际只是意味着它有一个run()方法，但不存在与之相关的任何特殊东西——它不具有任何天生的线程处理能力，这与那些从Thread继承的类是不同的。所以为了从一个Runnable对象产生线程，必须单独创建一个线程，并为其传递Runnable对象；可为其使用一个特殊的构建器，并令其采用一个Runnable作为自己的参数使用。随后便可为那个线程调用start()，如下所示：
+```
+selfThread.start();
+```
+它的作用是执行常规初始化操作，然后调用run()。
 
+Runnable接口最大的一个优点是所有东西都从属于相同的类。若需访问什么东西，只需简单地访问它即可，不需要涉及一个独立的对象。但为这种便利也是要付出代价的——只可为那个特定的对象运行单独一个线程（尽管可创建那种类型的多个对象，或者在不同的类里创建其他对象）。
 
+注意Runnable接口本身并不是造成这一限制的罪魁祸首。它是由于Runnable与我们的主类合并造成的，因为每个应用只能主类的一个对象。
+
+> 这说的什么玩应。。。
+
+#### 14.1.4 制作多个线程
+现在考虑一下创建多个不同的线程的问题。我们不可用前面的例子来做到这一点，所以必须倒退回去，利用从Thread继承的多个独立类来封装run()。但这是一种更常规的方案，而且更易理解，所以尽管前例揭示了我们经常都能看到的编码样式，但并不推荐在大多数情况下都那样做，因为它只是稍微复杂一些，而且灵活性稍低一些。
+
+下面这个例子用计数器和切换按钮再现了前面的编码样式。但这一次，一个特定计数器的所有信息（按钮和文本字段）都位于它自己的、从Thread继承的对象内。Ticker 中的所有字段都具有private（私有）属性，这意味着Ticker的具体实现方案可根据实际情况任意修改，其中包括修改用于获取和显示信息的数据组件的数量及类型。创建好一个 Ticker 对象以后，构建器便请求一个AWT容器（Container）的句柄—— Ticker 用自己的可视组件填充那个容器。采用这种方式，以后一旦改变了可视组件，使用 Ticker 的代码便不需要另行修改一道。
+
+```java
+//: Counter4.java
+// If you separate your thread from the main
+// class, you can have as many threads as you
+// want.
+import java.awt.*;
+import java.awt.event.*;
+import java.applet.*;
+
+class Ticker extends Thread {
+  private Button b = new Button("Toggle");
+  private TextField t = new TextField(10);
+  private int count = 0;
+  private boolean runFlag = true;
+  public Ticker(Container c) {
+    b.addActionListener(new ToggleL());
+    Panel p = new Panel();
+    p.add(t);
+    p.add(b);
+    c.add(p);
+  }
+  class ToggleL implements ActionListener {
+    public void actionPerformed(ActionEvent e) {
+      runFlag = !runFlag;
+    }
+  }
+  public void run() {
+    while (true) {
+      if(runFlag)
+        t.setText(Integer.toString(count++));
+       try {
+        sleep(100);
+      } catch (InterruptedException e){}
+    }
+  }
+}
+
+public class Counter4 extends Applet {
+  private Button start = new Button("Start");
+  private boolean started = false;
+  private Ticker[] s;
+  private boolean isApplet = true;
+  private int size;
+  public void init() {
+    // Get parameter "size" from Web page:
+    if(isApplet)
+      size = 
+        Integer.parseInt(getParameter("size"));
+    s = new Ticker[size];
+    for(int i = 0; i < s.length; i++)
+      s[i] = new Ticker(this);
+    start.addActionListener(new StartL());
+    add(start);
+  }
+  class StartL implements ActionListener {
+    public void actionPerformed(ActionEvent e) {
+      if(!started) {
+        started = true;
+        for(int i = 0; i < s.length; i++)
+          s[i].start();
+      }
+    }
+  }
+  public static void main(String[] args) {
+    Counter4 applet = new Counter4();
+    // This isn't an applet, so set the flag and
+    // produce the parameter values from args:
+    applet.isApplet = false;
+    applet.size = 
+      (args.length == 0 ? 5 :
+        Integer.parseInt(args[0]));
+    Frame aFrame = new Frame("Counter4");
+    aFrame.addWindowListener(
+      new WindowAdapter() {
+        public void windowClosing(WindowEvent e) {
+          System.exit(0);
+        }
+      });
+    aFrame.add(applet, BorderLayout.CENTER);
+    aFrame.setSize(200, applet.size * 50);
+    applet.init();
+    applet.start();
+    aFrame.setVisible(true);
+  }
+} ///:~
+```
+Ticker不仅包括了自己的线程处理机制，也提供了控制与显示线程的工具。可按自己的意愿创建任意数量的线程，毋需明确地创建窗口化组件。
+
+在Counter4中，有一个名为s的Ticker对象的数组。为获得最大的灵活性，这个数组的长度是用程序片参数接触Web页而初始化的。下面是网页中长度参数大致的样子，它们嵌于对程序片（applet）的描述内容中：
+```
+<applet code=Counter4 width=600 height=600>
+<param name=size value="20">
+</applet>
+```
+其中，param，name和value是所有Web页都适用的关键字。name是指程序中对参数的一种引用称谓，value可以是任何字串（并不仅仅是解析成一个数字的东西）。
+
+我们注意到对数组s长度的判断是在init()内部完成的，它没有作为s的内嵌定义的一部分提供。换言之，不可将下述代码作为类定义的一部分使用（应该位于任何方法的外部）：
+```
+inst size = Integer.parseInt(getParameter("Size"));
+Ticker[] s = new Ticker[size]
+```
+可把它编译出来，但会在运行期得到一个空指针违例。但若将getParameter()初始化移入init()，则可正常工作。程序片框架会进行必要的启动工作，以便在进入init()前收集好一些参数。
+
+此外，上述代码被同时设置成一个程序片和一个应用（程序）。在它是应用程序的情况下，size参数可从命令行里提取出来（否则就提供一个默认的值）。
+
+数组的长度建好以后，就可以创建新的Ticker对象；作为Ticker构建器的一部分，用于每个Ticker的按钮和文本字段就会加入程序片。
+
+按下Start按钮后，会在整个Ticker数组里遍历，并为每个Ticker调用start()。记住，start()会进行必要的线程初始化工作，然后为那个线程调用run()。
+
+ToggleL监视器只是简单地切换Ticker中的标记，一旦对应线程以后需要修改这个标记，它会作出相应的反应。
+
+这个例子的一个好处是它使我们能够方便地创建由单独子任务构成的大型集合，并以监视它们的行为。在这种情况下，我们会发现随着子任务数量的增多，机器显示出来的数字可能会出现更大的分歧，这是由于为线程提供服务的方式造成的。
+
+亦可试着体验一下sleep(100)在Ticker.run()中的重要作用。若删除sleep()，那么在按下一个切换按钮前，情况仍然会进展良好。按下按钮以后，那个特定的线程就会出现一个失败的runFlag，而且run()会深深地陷入一个无限循环——很难在多任务处理期间中止退出。因此，程序对用户操作的反应灵敏度会大幅度降低。
+
+#### 14.1.5 Daemon线程(守护线程)
+“Daemon”线程的作用是在程序的运行期间于后台提供一种“常规”服务，但它并不属于程序的一个基本部分。因此，一旦所有非 Daemon 线程完成，程序也会中止运行。相反，假若有任何非Daemon线程仍在运行（比如还有一个正在运行main()的线程），则程序的运行不会中止。
+
+通过调用isDaemon()，可调查一个线程是不是一个Daemon，而且能用setDaemon()打开或者关闭一个线程的Daemon状态。如果是一个Daemon线程，那么它创建的任何线程也会自动具备Daemon属性。
+下面这个例子演示了Daemon线程的用法：
+>Java线程中的Thread.yield( )方法，
+>
+>译为线程让步。
+>
+>顾名思义，就是说当一个线程使用了这个方法之后，它就会把自己CPU执行的时间让掉，让自己或者其它的线程运行，注意是让自己或者其他线程运行，并不是单纯的让给其他线程。yield()的作用是让步。它能让当前线程由“运行状态”进入到“就绪状态”，从而让其它具有相同优先级的等待线程获取执行权；但是，并不能保证在当前线程调用yield()之后，其它具有相同优先级的线程就一定能获得执行权；也有可能是当前线程又进入到“运行状态”继续运行！
+```java
+//: Daemons.java
+// Daemonic behavior
+import java.io.*;
+
+class Daemon extends Thread {
+  private static final int SIZE = 10;
+  private Thread[] t = new Thread[SIZE];
+  public Daemon() { 
+    setDaemon(true);
+    start();
+  }
+  public void run() {
+    for(int i = 0; i < SIZE; i++)
+      t[i] = new DaemonSpawn(i);
+    for(int i = 0; i < SIZE; i++)
+      System.out.println(
+        "t[" + i + "].isDaemon() = " 
+        + t[i].isDaemon());
+    while(true) 
+      yield();
+  }
+}
+
+class DaemonSpawn extends Thread {
+  public DaemonSpawn(int i) {
+    System.out.println(
+      "DaemonSpawn " + i + " started");
+    start();
+  }
+  public void run() {
+    while(true) 
+      yield();
+  }
+}
+
+public class Daemons {
+  public static void main(String[] args) {
+    Thread d = new Daemon();
+    System.out.println(
+      "d.isDaemon() = " + d.isDaemon());
+    // Allow the daemon threads to finish
+    // their startup processes:
+    BufferedReader stdin =
+      new BufferedReader(
+        new InputStreamReader(System.in));
+    System.out.println("Waiting for CR");
+    try {
+      stdin.readLine();
+    } catch(IOException e) {}
+  }
+} ///:~
+```
+Daemon线程可将自己的Daemon标记设置成“真”，然后产生一系列其他线程，而且认为它们也具有Daemon属性。随后，它进入一个无限循环，在其中调用yield()，放弃对其他进程的控制。在这个程序早期的一个版本中，无限循环会使int计数器增值，但会使整个程序都好象陷入停顿状态。换用yield()后，却可使程序充满“活力”，不会使人产生停滞或反应迟钝的感觉。
+
+一旦main()完成自己的工作，便没有什么能阻止程序中断运行，因为这里运行的只有Daemon线程。所以能看到启动所有Daemon线程后显示出来的结果，System.in也进行了相应的设置，使程序中断前能等待一个回车。如果不进行这样的设置，就只能看到创建Daemon线程的一部分结果（试试将readLine()代码换成不同长度的sleep()调用，看看会有什么表现）。
 
 ### 14.2 共享有限的资源
+可将单线程程序想象成一种孤立的实体，它能遍历我们的问题空间，而且一次只能做一件事情。由于只有一个实体，所以永远不必担心会有两个实体同时试图使用相同的资源，就象两个人同时都想停到一个车位，同时都想通过一扇门，甚至同时发话。
+
+进入多线程环境后，它们则再也不是孤立的。可能会有两个甚至更多的线程试图同时同一个有限的资源。必须对这种潜在资源冲突进行预防，否则就可能发生两个线程同时访问一个银行帐号，打印到同一台计算机，以及对同一个值进行调整等等。
+
+#### 14.2.1 资源访问的错误方法
+现在考虑换成另一种方式来使用本章频繁见到的计数器。在下面的例子中，每个线程都包含了两个计数器，它们在run()里增值以及显示。除此以外，我们使用了Watcher类的另一个线程。它的作用是监视计数器，检查它们是否保持相等。这表面是一项无意义的行动，因为如果查看代码，就会发现计数器肯定是相同的。但实际情况却不一定如此。下面是程序的第一个版本：
+```java
+//: Sharing1.java
+// Problems with resource sharing while threading
+import java.awt.*;
+import java.awt.event.*;
+import java.applet.*;
+
+class TwoCounter extends Thread {
+  private boolean started = false;
+  private TextField 
+    t1 = new TextField(5),
+    t2 = new TextField(5);
+  private Label l = 
+    new Label("count1 == count2");
+  private int count1 = 0, count2 = 0;
+  // Add the display components as a panel
+  // to the given container:
+  public TwoCounter(Container c) {
+    Panel p = new Panel();
+    p.add(t1);
+    p.add(t2);
+    p.add(l);
+    c.add(p);
+  }
+  public void start() {
+    if(!started) {
+      started = true;
+      super.start();
+    }
+  }
+  public void run() {
+    while (true) {
+      t1.setText(Integer.toString(count1++));
+      t2.setText(Integer.toString(count2++));
+      try {
+        sleep(500);
+      } catch (InterruptedException e){}
+    }
+  }
+  public void synchTest() {
+    Sharing1.incrementAccess();
+    if(count1 != count2)
+      l.setText("Unsynched");
+  }
+}
+
+class Watcher extends Thread {
+  private Sharing1 p;
+  public Watcher(Sharing1 p) { 
+    this.p = p;
+    start();
+  }
+  public void run() {
+    while(true) {
+      for(int i = 0; i < p.s.length; i++)
+        p.s[i].synchTest();
+      try {
+        sleep(500);
+      } catch (InterruptedException e){}
+    }
+  }
+}
+
+public class Sharing1 extends Applet {
+  TwoCounter[] s;
+  private static int accessCount = 0;
+  private static TextField aCount = 
+    new TextField("0", 10);
+  public static void incrementAccess() {
+    accessCount++;
+    aCount.setText(Integer.toString(accessCount));
+  }
+  private Button 
+    start = new Button("Start"),
+    observer = new Button("Observe");
+  private boolean isApplet = true;
+  private int numCounters = 0;
+  private int numObservers = 0;
+  public void init() {
+    if(isApplet) {
+      numCounters = 
+        Integer.parseInt(getParameter("size"));
+      numObservers = 
+        Integer.parseInt(
+          getParameter("observers"));
+    }
+    s = new TwoCounter[numCounters];
+    for(int i = 0; i < s.length; i++)
+      s[i] = new TwoCounter(this);
+    Panel p = new Panel();
+    start.addActionListener(new StartL());
+    p.add(start);
+    observer.addActionListener(new ObserverL());
+    p.add(observer);
+    p.add(new Label("Access Count"));
+    p.add(aCount);
+    add(p);
+  }
+  class StartL implements ActionListener {
+    public void actionPerformed(ActionEvent e) {
+      for(int i = 0; i < s.length; i++)
+        s[i].start();
+    }
+  }
+  class ObserverL implements ActionListener {
+    public void actionPerformed(ActionEvent e) {
+      for(int i = 0; i < numObservers; i++)
+        new Watcher(Sharing1.this);
+    }
+  }
+  public static void main(String[] args) {
+    Sharing1 applet = new Sharing1();
+    // This isn't an applet, so set the flag and
+    // produce the parameter values from args:
+    applet.isApplet = false;
+    applet.numCounters = 
+      (args.length == 0 ? 5 :
+        Integer.parseInt(args[0]));
+    applet.numObservers =
+      (args.length < 2 ? 5 :
+        Integer.parseInt(args[1]));
+    Frame aFrame = new Frame("Sharing1");
+    aFrame.addWindowListener(
+      new WindowAdapter() {
+        public void windowClosing(WindowEvent e){
+          System.exit(0);
+        }
+      });
+    aFrame.add(applet, BorderLayout.CENTER);
+    aFrame.setSize(350, applet.numCounters *100);
+    applet.init();
+    applet.start();
+    aFrame.setVisible(true);
+  }
+} ///:~
+```
+和往常一样，每个计数器都包含了自己的显示组件：两个文本字段以及一个标签。根据它们的初始值，可知道计数是相同的。这些组件在TwoCounter构建器加入Container。由于这个线程是通过用户的一个“按下按钮”操作启动的，所以start()可能被多次调用。但对一个线程来说，对Thread.start()的多次调用是非法的（会产生违例）。在started标记和过载的start()方法中，大家可看到针对这一情况采取的防范措施。
+
+在run()中，count1和count2的增值与显示方式表面上似乎能保持它们完全一致。随后会调用sleep()；若没有这个调用，程序便会出错，因为那会造成CPU难于交换任务。
+
+synchTest()方法采取的似乎是没有意义的行动，它检查count1是否等于count2；如果不等，就把标签设为“Unsynched”（不同步）。但是首先，它调用的是类Sharing1的一个静态成员，以便增值和显示一个访问计数器，指出这种检查已成功进行了多少次（这样做的理由会在本例的其他版本中变得非常明显）。
+
+Watcher类是一个线程，它的作用是为处于活动状态的所有TwoCounter对象都调用synchTest()。其间，它会对Sharing1对象中容纳的数组进行遍历。可将Watcher想象成它掠过TwoCounter对象的肩膀不断地“偷看”。
+
+Sharing1包含了TwoCounter对象的一个数组，它通过init()进行初始化，并在我们按下“start”按钮后作为线程启动。以后若按下“Observe”（观察）按钮，就会创建一个或者多个观察器，并对毫不设防的TwoCounter进行调查。
+注意为了让它作为一个程序片在浏览器中运行，Web页需要包含下面这几行：
+```
+<applet code=Sharing1 width=650 height=500>
+<param name=size value="20">
+<param name=observers value="1">
+</applet>
+```
+可自行改变宽度、高度以及参数，根据自己的意愿进行试验。若改变了size和observers，程序的行为也会发生变化。我们也注意到，通过从命令行接受参数（或者使用默认值），它被设计成作为一个独立的应用程序运行。
+
+下面才是最让人“不可思议”的。在TwoCounter.run()中，无限循环只是不断地重复相邻的行:
+```
+t1.setText(Integer.toString(count1++));
+t2.setText(Integer.toString(count2++));
+```
+（和“睡眠”一样，不过在这里并不重要）。但在程序运行的时候，你会发现count1和count2被“观察”（用Watcher观察）的次数是不相等的！这是由线程的本质造成的——它们可在任何时候挂起（暂停）。所以在上述两行的执行时刻之间，有时会出现执行暂停现象。同时，Watcher线程也正好跟随着进来，并正好在这个时候进行比较，造成计数器出现不相等的情况。
+
+本例揭示了使用线程时一个非常基本的问题。我们跟无从知道一个线程什么时候运行。想象自己坐在一张桌子前面，桌上放有一把叉子，准备叉起自己的最后一块食物。当叉子要碰到食物时，食物却突然消失了（因为这个线程已被挂起，同时另一个线程进来“偷”走了食物）。这便是我们要解决的问题。
+有的时候，我们并不介意一个资源在尝试使用它的时候是否正被访问（食物在另一些盘子里）。但为了让多线程机制能够正常运转，需要采取一些措施来防止两个线程访问相同的资源——至少在关键的时期。
+为防止出现这样的冲突，只需在线程使用一个资源时为其加锁即可。访问资源的第一个线程会其加上锁以后，其他线程便不能再使用那个资源，除非被解锁。如果车子的前座是有限的资源，高喊“这是我的！”的孩子会主张把它锁起来。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ### 14.3 堵塞
 ### 14.4 优先级
 ### 14.5 回顾runnable
