@@ -6889,28 +6889,368 @@ t2.setText(Integer.toString(count2++));
 （和“睡眠”一样，不过在这里并不重要）。但在程序运行的时候，你会发现count1和count2被“观察”（用Watcher观察）的次数是不相等的！这是由线程的本质造成的——它们可在任何时候挂起（暂停）。所以在上述两行的执行时刻之间，有时会出现执行暂停现象。同时，Watcher线程也正好跟随着进来，并正好在这个时候进行比较，造成计数器出现不相等的情况。
 
 本例揭示了使用线程时一个非常基本的问题。我们跟无从知道一个线程什么时候运行。想象自己坐在一张桌子前面，桌上放有一把叉子，准备叉起自己的最后一块食物。当叉子要碰到食物时，食物却突然消失了（因为这个线程已被挂起，同时另一个线程进来“偷”走了食物）。这便是我们要解决的问题。
+
 有的时候，我们并不介意一个资源在尝试使用它的时候是否正被访问（食物在另一些盘子里）。但为了让多线程机制能够正常运转，需要采取一些措施来防止两个线程访问相同的资源——至少在关键的时期。
+
 为防止出现这样的冲突，只需在线程使用一个资源时为其加锁即可。访问资源的第一个线程会其加上锁以后，其他线程便不能再使用那个资源，除非被解锁。如果车子的前座是有限的资源，高喊“这是我的！”的孩子会主张把它锁起来。
 
+#### 14.2.2 Java如何共享资源
 
+对一种特殊的资源——对象中的内存——Java提供了内建的机制来防止它们的冲突。由于我们通常将数据元素设为从属于private（私有）类，然后只通过方法访问那些内存，所以只需将一个特定的方法设为synchronized（同步的），便可有效地防止冲突。在任何时刻，只可有一个线程调用特定对象的一个synchronized方法（尽管那个线程可以调用多个对象的同步方法）。下面列出简单的synchronized方法
+```
+synchronized void f() { /* ... */ }
+synchronized void g() { /* ... */ }
+```
+每个对象都包含了一把锁（也叫作“监视器”），它自动成为对象的一部分（不必为此写任何特殊的代码）。调用任何synchronized方法时，对象就会被锁定，不可再调用那个对象的其他任何synchronized方法，除非第一个方法完成了自己的工作，并解除锁定。在上面的例子中，如果为一个对象调用f()，便不能再为同样的对象调用g()，除非f()完成并解除锁定。因此，一个特定对象的所有synchronized方法都共享着一把锁，而且这把锁能防止多个方法对通用内存同时进行写操作（比如同时有多个线程）。
 
+>一个特定对象的所有synchronized方法都共享着一把锁
 
+每个类也有自己的一把锁（作为类的Class对象的一部分），所以synchronized static方法可在一个类的范围内被相互间锁定起来，防止与static数据的接触。
 
+>一个类所有synchronized static 方法都共享着一把锁
 
+注意如果想保护其他某些资源不被多个线程同时访问，可以强制通过 synchronized 方访问那些资源。
 
+1. 计数器的同步
 
+装备了这个新关键字后，我们能够采取的方案就更灵活了：可以只为TwoCounter中的方法简单地使用synchronized关键字。下面这个例子是对前例的改版，其中加入了新的关键字：
+```java
+//: Sharing2.java
+// Using the synchronized keyword to prevent
+// multiple access to a particular resource.
+import java.awt.*;
+import java.awt.event.*;
+import java.applet.*;
 
+class TwoCounter2 extends Thread {
+  private boolean started = false;
+  private TextField 
+    t1 = new TextField(5),
+    t2 = new TextField(5);
+  private Label l = 
+    new Label("count1 == count2");
+  private int count1 = 0, count2 = 0;
+  public TwoCounter2(Container c) {
+    Panel p = new Panel();
+    p.add(t1);
+    p.add(t2);
+    p.add(l);
+    c.add(p);
+  }    
+  public void start() {
+    if(!started) {
+      started = true;
+      super.start();
+    }
+  }
+  public synchronized void run() {
+    while (true) {
+      t1.setText(Integer.toString(count1++));
+      t2.setText(Integer.toString(count2++));
+      try {
+        sleep(500);
+      } catch (InterruptedException e){}
+    }
+  }
+  public synchronized void synchTest() {
+    Sharing2.incrementAccess();
+    if(count1 != count2)
+      l.setText("Unsynched");
+  }
+}
 
+class Watcher2 extends Thread {
+  private Sharing2 p;
+  public Watcher2(Sharing2 p) { 
+    this.p = p;
+    start();
+  }
+  public void run() {
+    while(true) {
+      for(int i = 0; i < p.s.length; i++)
+        p.s[i].synchTest();
+      try {
+        sleep(500);
+      } catch (InterruptedException e){}
+    }
+  }
+}
 
+public class Sharing2 extends Applet {
+  TwoCounter2[] s;
+  private static int accessCount = 0;
+  private static TextField aCount = 
+    new TextField("0", 10);
+  public static void incrementAccess() {
+    accessCount++;
+    aCount.setText(Integer.toString(accessCount));
+  }
+  private Button 
+    start = new Button("Start"),
+    observer = new Button("Observe");
+  private boolean isApplet = true;
+  private int numCounters = 0;
+  private int numObservers = 0;
+  public void init() {
+    if(isApplet) {
+      numCounters = 
+        Integer.parseInt(getParameter("size"));
+      numObservers = 
+        Integer.parseInt(
+          getParameter("observers"));
+    }
+    s = new TwoCounter2[numCounters];
+    for(int i = 0; i < s.length; i++)
+      s[i] = new TwoCounter2(this);
+    Panel p = new Panel();
+    start.addActionListener(new StartL());
+    p.add(start);
+    observer.addActionListener(new ObserverL());
+    p.add(observer);
+    p.add(new Label("Access Count"));
+    p.add(aCount);
+    add(p);
+  }
+  class StartL implements ActionListener {
+    public void actionPerformed(ActionEvent e) {
+      for(int i = 0; i < s.length; i++)
+        s[i].start();
+    }
+  }
+  class ObserverL implements ActionListener {
+    public void actionPerformed(ActionEvent e) {
+      for(int i = 0; i < numObservers; i++)
+        new Watcher2(Sharing2.this);
+    }
+  }
+  public static void main(String[] args) {
+    Sharing2 applet = new Sharing2();
+    // This isn't an applet, so set the flag and
+    // produce the parameter values from args:
+    applet.isApplet = false;
+    applet.numCounters = 
+      (args.length == 0 ? 5 :
+        Integer.parseInt(args[0]));
+    applet.numObservers =
+      (args.length < 2 ? 5 :
+        Integer.parseInt(args[1]));
+    Frame aFrame = new Frame("Sharing2");
+    aFrame.addWindowListener(
+      new WindowAdapter() {
+        public void windowClosing(WindowEvent e){
+          System.exit(0);
+        }
+      });
+    aFrame.add(applet, BorderLayout.CENTER);
+    aFrame.setSize(350, applet.numCounters *100);
+    applet.init();
+    applet.start();
+    aFrame.setVisible(true);
+  }
+} ///:~
+```
+我们注意到无论run()还是synchTest()都是“同步的”。如果只同步其中的一个方法，那么另一个就可以自由忽视对象的锁定，并可无碍地调用。所以必须记住一个重要的规则：对于访问某个关键共享资源的所有方法，都必须把它们设为synchronized，否则就不能正常地工作。
 
+现在又遇到了一个新问题。Watcher2永远都不能看到正在进行的事情，因为整个run()方法已设为“同步”。而且由于肯定要为每个对象运行run()，所以锁永远不能打开，而synchTest()永远不会得到调用。之所以能看到这一结果，是因为accessCount根本没有变化。
 
+为解决这个问题，我们能采取的一个办法是只将run()中的一部分代码隔离出来。想用这个办法隔离出来的那部分代码叫作“关键区域”，而且要用不同的方式来使用synchronized关键字，以设置一个关键区域。Java通过“同步块”提供对关键区域的支持；这一次，我们用synchronized关键字指出对象的锁用于对其中封闭的代码进行同步。
 
+在能进入同步块之前，必须在synchObject上取得锁。如果已有其他线程取得了这把锁，块便不能进入，必须等候那把锁被释放。 可从整个run()中删除synchronized关键字，换成用一个同步块包围两个关键行，从而完成对Sharing2例子的修改。但什么对象应作为锁来使用呢？那个对象已由synchTest()标记出来了——也就是当前对象（this）！所以修改过的run()方法象下面这个样子：
+```
+  public void run() {
+    while (true) {
+      synchronized(this) {
+        t1.setText(Integer.toString(count1++));
+        t2.setText(Integer.toString(count2++));
+      }
+      try {
+        sleep(500);
+      } catch (InterruptedException e){}
+    }
+  }
+```
+这是必须对Sharing2.java作出的唯一修改，我们会看到尽管两个计数器永远不会脱离同步（取决于允许Watcher什么时候检查它们），但在run()执行期间，仍然向Watcher提供了足够的访问权限。
 
+当然，所有同步都取决于程序员是否勤奋：要访问共享资源的每一部分代码都必须封装到一个适当的同步块里。
 
+1. 同步的效率
 
+由于要为同样的数据编写两个方法，所以无论如何都不会给人留下效率很高的印象。看来似乎更好的一种做法是将所有方法都设为自动同步，并完全消除synchronized关键字（当然，含有synchronized run()的例子显示出这样做是很不通的）。但它也揭示出获取一把锁并非一种“廉价”方案——为一次方法调用付出的代价（进入和退出方法，不执行方法主体）至少要累加到四倍，而且根据我们的具体现方案，这一代价还有可能变得更高。所以假如已知一个方法不会造成冲突，最明智的做法便是撤消其中的synchronized关键字。
 
+#### 14.2.3 回顾 Java Beans
+
+我们现在已理解了同步，接着可换从另一个角度来考察Java Beans。无论什么时候创建了一个Bean，就必须假定它要在一个多线程的环境中运行。这意味着：
+
+(1) 只要可行，Bean的所有公共方法都应同步。当然，这也带来了“同步”在运行期间的开销。若特别在意这个问题，在关键区域中不会造成问题的方法就可保留为“不同步”，但注意这通常都不是十分容易判断。有资格的方法倾向于规模很小（如下例的getCircleSize()）以及／或者“微小”。也就是说，这个方法调用在如此少的代码片里执行，以至于在执行期间对象不能改变。如果将这种方法设为“不同步”，可能对程序的执行速度不会有明显的影响。可能也将一个Bean的所有public方法都设为synchronized，并只有在保证特别必要、而且会造成一个差异的情况下，才将synchronized关键字删去。
+> 并只有在保证特别必要、而且会造成一个差异的情况下，才将synchronized关键字删去。
+
+(2) 如果将一个多造型事件送给一系列对那个事件感兴趣的“听众”，必须假在列表中移动的时候可以添加或者删除。
+
+第一点很容易处理，但第二点需要考虑更多的东西。让我们以前一章提供的BangBean.java为例。在那个例子中，我们忽略了synchronized关键字（那时还没有引入呢），并将造型设为单造型，从而回避了多线程的问题。在下面这个修改过的版本中，我们使其能在多线程环境中工作，并为事件采用了多造型技术：
+```java
+//: BangBean2.java
+// You should write your Beans this way so they 
+// can run in a multithreaded environment.
+import java.awt.*;
+import java.awt.event.*;
+import java.util.*;
+import java.io.*;
+
+public class BangBean2 extends Canvas 
+    implements Serializable {
+  private int xm, ym;
+  private int cSize = 20; // Circle size
+  private String text = "Bang!";
+  private int fontSize = 48;
+  private Color tColor = Color.red;
+  private Vector actionListeners = new Vector();
+  public BangBean2() {
+    addMouseListener(new ML());
+    addMouseMotionListener(new MM());
+  }
+  public synchronized int getCircleSize() { 
+    return cSize; 
+  }
+  public synchronized void 
+  setCircleSize(int newSize) {
+    cSize = newSize;
+  }
+  public synchronized String getBangText() { 
+    return text; 
+  }
+  public synchronized void 
+  setBangText(String newText) {
+    text = newText;
+  }
+  public synchronized int getFontSize() { 
+    return fontSize; 
+  }
+  public synchronized void 
+  setFontSize(int newSize) {
+    fontSize = newSize;
+  }
+  public synchronized Color getTextColor() {
+    return tColor; 
+  }
+  public synchronized void 
+  setTextColor(Color newColor) {
+    tColor = newColor;
+  }
+  public void paint(Graphics g) {
+    g.setColor(Color.black);
+    g.drawOval(xm - cSize/2, ym - cSize/2, 
+      cSize, cSize);
+  }
+  // This is a multicast listener, which is
+  // more typically used than the unicast
+  // approach taken in BangBean.java:
+  public synchronized void addActionListener (
+      ActionListener l) {
+    actionListeners.addElement(l);
+  }
+  public synchronized void removeActionListener(
+      ActionListener l) {
+    actionListeners.removeElement(l);
+  }
+  // Notice this isn't synchronized:
+  public void notifyListeners() {
+    ActionEvent a =
+      new ActionEvent(BangBean2.this,
+        ActionEvent.ACTION_PERFORMED, null);
+    Vector lv = null;
+    // Make a copy of the vector in case someone
+    // adds a listener while we're 
+    // calling listeners:
+    synchronized(this) {
+      lv = (Vector)actionListeners.clone();
+    }
+    // Call all the listener methods:
+    for(int i = 0; i < lv.size(); i++) {
+      ActionListener al = 
+        (ActionListener)lv.elementAt(i);
+      al.actionPerformed(a);
+    }
+  }
+  class ML extends MouseAdapter {
+    public void mousePressed(MouseEvent e) {
+      Graphics g = getGraphics();
+      g.setColor(tColor);
+      g.setFont(
+        new Font(
+          "TimesRoman", Font.BOLD, fontSize));
+      int width = 
+        g.getFontMetrics().stringWidth(text);
+      g.drawString(text, 
+        (getSize().width - width) /2,
+        getSize().height/2);
+      g.dispose();
+      notifyListeners();
+    }
+  }
+  class MM extends MouseMotionAdapter {
+    public void mouseMoved(MouseEvent e) {
+      xm = e.getX();
+      ym = e.getY();
+      repaint();
+    }
+  }
+  // Testing the BangBean2:
+  public static void main(String[] args) {
+    BangBean2 bb = new BangBean2();
+    bb.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e){
+        System.out.println("ActionEvent" + e);
+      }
+    });
+    bb.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e){
+        System.out.println("BangBean2 action");
+      }
+    });
+    bb.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e){
+        System.out.println("More action");
+      }
+    });
+    Frame aFrame = new Frame("BangBean2 Test");
+    aFrame.addWindowListener(new WindowAdapter(){
+      public void windowClosing(WindowEvent e) {
+        System.exit(0);
+      }
+    });
+    aFrame.add(bb, BorderLayout.CENTER);
+    aFrame.setSize(300,300);
+    aFrame.setVisible(true);
+  }
+} ///:~
+```
+很容易就可以为方法添加synchronized。但注意在addActionListener()和removeActionListener()中，现在添加了ActionListener，并从一个Vector中移去，所以能够根据自己愿望使用任意多个。
+
+我们注意到，notifyListeners()方法并未设为“同步”。可从多个线程中发出对这个方法的调用。另外，在对notifyListeners()调用的中途，也可能发出对addActionListener()和removeActionListener()的调用。这显然会造成问题，因为它否定了Vector actionListeners。为缓解这个问题，我们在一个synchronized从句中“克隆”了Vector，并对克隆进行了否定。这样便可在不影响notifyListeners()的前提下，对Vector进行操纵。
+
+paint()方法也没有设为“同步”。与单纯地添加自己的方法相比，决定是否对过载的方法进行同步要困难得多。在这个例子中，无论paint()是否“同步”，它似乎都能正常地工作。但必须考虑的问题包括：
+
+(1) 方法会在对象内部修改“关键”变量的状态吗？为判断一个变量是否“关键”，必须知道它是否会被程序中的其他线程读取或设置（就目前的情况看，读取或设置几乎肯定是通过“同步”方法进行的，所以可以只对它们进行检查）。对paint()的情况来说，不会发生任何修改。
+
+(2) 方法要以这些“关键”变量的状态为基础吗？如果一个“同步”方法修改了一个变量，而我们的方法要用到这个变量，那么一般都愿意把自己的方法也设为“同步”。基于这一前提，大家可观察到cSize由“同步”方法进行了修改，所以paint()应当是“同步”的。但在这里，我们可以问：“假如cSize在paint()执行期间发生了变化，会发生的最糟糕的事情是什么呢？”如果发现情况不算太坏，而且仅仅是暂时的效果，那么最好保持paint()的“不同步”状态，以避免同步方法调用带来的额外开销。
+
+(3) 要留意的第三条线索是paint()基础类版本是否“同步”，在这里它不是同步的。这并不是一个非常严格的参数，仅仅是一条“线索”。比如在目前的情况下，通过同步方法（好cSize）改变的一个字段已合成到paint()公式里，而且可能已改变了情况。但请注意，synchronized不能继承——也就是说，假如一个方法在基础类中是“同步”的，那么在衍生类过载版本中，它不会自动进入“同步”状态。
+
+> synchronized不能继承——也就是说，假如一个方法在基础类中是“同步”的，那么在衍生类过载版本中，它不会自动进入“同步”状态。
+
+TestBangBean2中的测试代码已在前一章的基础上进行了修改，已在其中加入了额外的“听众”，从而演示了BangBean2的多造型能力。
 
 ### 14.3 堵塞
+(1) 新（New）：线程对象已经创建，但尚未启动，所以不可运行。
+
+(2) 可运行（Runnable）：意味着一旦时间分片机制有空闲的CPU周期提供给一个线程，那个线程便可立即开始运行。因此，线程可能在、也可能不在运行当中，但一旦条件许可，没有什么能阻止它的运行——它既没有“死”掉，也未被“堵塞”。
+
+(3) 死（Dead）：从自己的run()方法中返回后，一个线程便已“死”掉。亦可调用stop()令其死掉，但会产生一个违例——属于 Error的一个子类（也就是说，我们通常不捕获它）。记住一个违例的“掷”出应当是一个特殊事件，而不是正常程序运行的一部分。所以不建议你使用stop()（在Java 1.2则是坚决反对）。另外还有一个destroy()方法（它永远不会实现），应该尽可能地避免调用它，因为它非常武断，根本不会解除对象的锁定。
+
+(4) 堵塞（Blocked）：线程可以运行，但有某种东西阻碍了它。若线程处于堵塞状态，调度机制可以简单地跳过它，不给它分配任何CPU时间。除非线程再次进入“可运行”状态，否则不会采取任何操作。
+
+
+
 ### 14.4 优先级
 ### 14.5 回顾runnable
 ### 14.6 总结
