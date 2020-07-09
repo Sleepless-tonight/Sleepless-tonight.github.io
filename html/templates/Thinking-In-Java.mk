@@ -7249,9 +7249,668 @@ TestBangBean2中的测试代码已在前一章的基础上进行了修改，已�
 
 (4) 堵塞（Blocked）：线程可以运行，但有某种东西阻碍了它。若线程处于堵塞状态，调度机制可以简单地跳过它，不给它分配任何CPU时间。除非线程再次进入“可运行”状态，否则不会采取任何操作。
 
+#### 14.3.1 为何会堵塞
+
+堵塞状态是前述四种状态中最有趣的，值得我们作进一步的探讨。线程被堵塞可能是由下述五方面的原因造成的：
+
+(1) 调用sleep(毫秒数)，使线程进入“睡眠”状态。在规定的时间内，这个线程是不会运行的。
+
+(2) 用suspend()暂停了线程的执行。除非线程收到resume()消息，否则不会返回“可运行”状态。
+
+(3) 用wait()暂停了线程的执行。除非线程收到nofify()或者notifyAll()消息，否则不会变成“可运行”（是的，这看起来同原因2非常相象，但有一个明显的区别是我们马上要揭示的）。
+
+(4) 线程正在等候一些IO（输入输出）操作完成。
+
+(5) 线程试图调用另一个对象的“同步”方法，但那个对象处于锁定状态，暂时无法使用。
+
+亦可调用yield()（Thread类的一个方法）自动放弃CPU，以便其他线程能够运行。然而，假如调度机制觉得我们的线程已拥有足够的时间，并跳转到另一个线程，就会发生同样的事情。也就是说，没有什么能防止调度机制重新启动我们的线程。线程被堵塞后，便有一些原因造成它不能继续运行。
+
+下面这个例子展示了进入堵塞状态的全部五种途径。它们全都存在于名为Blocking.java的一个文件中，但在这儿采用散落的片断进行解释（大家可注意到片断前后的“Continued”以及“Continuing”标志。利用第17章介绍的工具，可将这些片断连结到一起）。首先让我们看看基本的框架：
+```java
+//: Blocking.java
+// Demonstrates the various ways a thread
+// can be blocked.
+import java.awt.*;
+import java.awt.event.*;
+import java.applet.*;
+import java.io.*;
+
+//////////// The basic framework ///////////
+class Blockable extends Thread {
+  private Peeker peeker;
+  protected TextField state = new TextField(40);
+  protected int i;
+  public Blockable(Container c) {
+    c.add(state);
+    peeker = new Peeker(this, c);
+  }
+  public synchronized int read() { return i; }
+  protected synchronized void update() {
+    state.setText(getClass().getName()
+      + " state: i = " + i);
+  }
+  public void stopPeeker() { 
+    // peeker.stop(); Deprecated in Java 1.2
+    peeker.terminate(); // The preferred approach
+  }
+}
+
+class Peeker extends Thread {
+  private Blockable b;
+  private int session;
+  private TextField status = new TextField(40);
+  private boolean stop = false;
+  public Peeker(Blockable b, Container c) {
+    c.add(status);
+    this.b = b;
+    start();
+  }
+  public void terminate() { stop = true; }
+  public void run() {
+    while (!stop) {
+      status.setText(b.getClass().getName()
+        + " Peeker " + (++session)
+        + "; value = " + b.read());
+       try {
+        sleep(100);
+      } catch (InterruptedException e){}
+    }
+  }
+} ///:Continued
+```
+Blockable类打算成为本例所有类的一个基础类。一个Blockable对象包含了一个名为state的TextField（文本字段），用于显示出对象有关的信息。用于显示这些信息的方法叫作update()。我们发现它用getClass.getName()来产生类名，而不是仅仅把它打印出来；这是由于update(0不知道自己为其调用的那个类的准确名字，因为那个类是从Blockable衍生出来的。 在Blockable中，变动指示符是一个int i；衍生类的run()方法会为其增值。
+
+针对每个Bloackable对象，都会启动Peeker类的一个线程。Peeker的任务是调用read()方法，检查与自己关联的Blockable对象，看看i是否发生了变化，最后用它的status文本字段报告检查结果。注意read()和update()都是同步的，要求对象的锁定能自由解除，这一点非常重要。
+
+- 睡眠
+
+这个程序的第一项测试是用sleep()作出的：
+```java
+///:Continuing
+///////////// Blocking via sleep() ///////////
+class Sleeper1 extends Blockable {
+  public Sleeper1(Container c) { super(c); }
+  public synchronized void run() {
+    while(true) {
+      i++;
+      update();
+       try {
+        sleep(1000);
+      } catch (InterruptedException e){}
+    }
+  }
+}
+
+class Sleeper2 extends Blockable {
+  public Sleeper2(Container c) { super(c); }
+  public void run() {
+    while(true) {
+      change();
+       try {
+        sleep(1000);
+      } catch (InterruptedException e){}
+    }
+  }
+  public synchronized void change() {
+      i++;
+      update();
+  }
+} ///:Continued
+```
+在Sleeper1中，整个run()方法都是同步的。我们可看到与这个对象关联在一起的Peeker可以正常运行，直到我们启动线程为止，随后Peeker便会完全停止。这正是“堵塞”的一种形式：因为Sleeper1.run()是同步的，而且一旦线程启动，它就肯定在run()内部，方法永远不会放弃对象锁定，造成Peeker线程的堵塞。
+
+Sleeper2通过设置不同步的运行，提供了一种解决方案。只有change()方法才是同步的，所以尽管run()位于sleep()内部，Peeker仍然能访问自己需要的同步方法——read()。在这里，我们可看到在启动了Sleeper2线程以后，Peeker会持续运行下去。
+
+- 暂停和恢复
+
+这个例子接下来的一部分引入了“挂起”或者“暂停”（Suspend）的概述。Thread类提供了一个名为suspend()的方法，可临时中止线程；以及一个名为resume()的方法，用于从暂停处开始恢复线程的执行。显然，我们可以推断出resume()是由暂停线程外部的某个线程调用的。在这种情况下，需要用到一个名为Resumer（恢复器）的独立类。演示暂停／恢复过程的每个类都有一个相关的恢复器。如下所示：
+```java
+///:Continuing
+/////////// Blocking via suspend() ///////////
+class SuspendResume extends Blockable {
+  public SuspendResume(Container c) {
+    super(c);    
+    new Resumer(this); 
+  }
+}
+
+class SuspendResume1 extends SuspendResume {
+  public SuspendResume1(Container c) { super(c);}
+  public synchronized void run() {
+    while(true) {
+      i++;
+      update();
+      suspend(); // Deprecated in Java 1.2
+    }
+  }
+}
+
+class SuspendResume2 extends SuspendResume {
+  public SuspendResume2(Container c) { super(c);}
+  public void run() {
+    while(true) {
+      change();
+      suspend(); // Deprecated in Java 1.2
+    }
+  }
+  public synchronized void change() {
+      i++;
+      update();
+  }
+}
+
+class Resumer extends Thread {
+  private SuspendResume sr;
+  public Resumer(SuspendResume sr) {
+    this.sr = sr;
+    start();
+  }
+  public void run() {
+    while(true) {
+       try {
+        sleep(1000);
+      } catch (InterruptedException e){}
+      sr.resume(); // Deprecated in Java 1.2
+    }
+  }
+} ///:Continued
+```
+SuspendResume1也提供了一个同步的run()方法。同样地，当我们启动这个线程以后，就会发现与它关联的Peeker进入“堵塞”状态，等候对象锁被释放，但那永远不会发生。和往常一样，这个问题在SuspendResume2里得到了解决，它并不同步整个run()方法，而是采用了一个单独的同步change()方法。
+
+对于Java 1.2，大家应注意suspend()和resume()已获得强烈反对，因为suspend()包含了对象锁，所以极易出现“死锁”现象。换言之，很容易就会看到许多被锁住的对象在傻乎乎地等待对方。这会造成整个应用程序的“凝固”。尽管在一些老程序中还能看到它们的踪迹，但在你写自己的程序时，无论如何都应避免。本章稍后就会讲述正确的方案是什么。
+
+- 等待和通知
+
+通过前两个例子的实践，我们知道无论sleep()还是suspend()都不会在自己被调用的时候解除锁定。需要用到对象锁时，请务必注意这个问题。在另一方面，wait()方法在被调用时却会解除锁定，这意味着可在执行wait()期间调用线程对象中的其他同步方法。但在接着的两个类中，我们看到run()方法都是“同步”的。在wait()期间，Peeker仍然拥有对同步方法的完全访问权限。这是由于wait()在挂起内部调用的方法时，会解除对象的锁定。
+
+我们也可以看到wait()的两种形式。第一种形式采用一个以毫秒为单位的参数，它具有与sleep()中相同的含义：暂停这一段规定时间。区别在于在wait()中，对象锁已被解除，而且能够自由地退出wait()，因为一个notify()可强行使时间流逝。
+
+第二种形式不采用任何参数，这意味着wait()会持续执行，直到notify()介入为止。而且在一段时间以后，不会自行中止。 wait()和notify()比较特别的一个地方是这两个方法都属于基础类Object的一部分，不象sleep()，suspend()以及resume()那样属于Thread的一部分。尽管这表面看有点儿奇怪——居然让专门进行线程处理的东西成为通用基础类的一部分——但仔细想想又会释然，因为它们操纵的对象锁也属于每个对象的一部分。因此，我们可将一个wait()置入任何同步方法内部，无论在那个类里是否准备进行涉及线程的处理。事实上，我们能调用wait()的唯一地方是在一个同步的方法或代码块内部。若在一个不同步的方法内调用wait()或者notify()，尽管程序仍然会编译，但在运行它的时候，就会得到一个IllegalMonitorStateException（非法监视器状态违例），而且会出现多少有点莫名其妙的一条消息：“current thread not owner”（当前线程不是所有人”。注意sleep()，suspend()以及resume()都能在不同步的方法内调用，因为它们不需要对锁定进行操作。
+
+只能为自己的锁定调用wait()和notify()。同样地，仍然可以编译那些试图使用错误锁定的代码，但和往常一样会产生同样的IllegalMonitorStateException违例。我们没办法用其他人的对象锁来愚弄系统，但可要求另一个对象执行相应的操作，对它自己的锁进行操作。所以一种做法是创建一个同步方法，令其为自己的对象调用notify()。但在Notifier中，我们会看到一个同步方法内部的notify()：
+```
+synchronized(wn2) {
+  wn2.notify();
+}
+```
+其中，wn2是类型为WaitNotify2的对象。尽管并不属于WaitNotify2的一部分，这个方法仍然获得了wn2对象的锁定。在这个时候，它为wn2调用notify()是合法的，不会得到IllegalMonitorStateException违例。
+```java
+///:Continuing
+/////////// Blocking via wait() ///////////
+class WaitNotify1 extends Blockable {
+  public WaitNotify1(Container c) { super(c); }
+  public synchronized void run() {
+    while(true) {
+      i++;
+      update();
+       try {
+        wait(1000);
+      } catch (InterruptedException e){}
+    }
+  }
+}
+
+class WaitNotify2 extends Blockable {
+  public WaitNotify2(Container c) {
+    super(c);
+    new Notifier(this); 
+  }
+  public synchronized void run() {
+    while(true) {
+      i++;
+      update();
+       try {
+        wait();
+      } catch (InterruptedException e){}
+    }
+  }
+}
+
+class Notifier extends Thread {
+  private WaitNotify2 wn2;
+  public Notifier(WaitNotify2 wn2) {
+    this.wn2 = wn2;
+    start();
+  }
+  public void run() {
+    while(true) {
+       try {
+        sleep(2000);
+      } catch (InterruptedException e){}
+      synchronized(wn2) {
+        wn2.notify();
+      }
+    }
+  }
+} ///:Continued
+```
+若必须等候其他某些条件（从线程外部加以控制）发生变化，同时又不想在线程内一直傻乎乎地等下去，一般就需要用到wait()。wait()允许我们将线程置入“睡眠”状态，同时又“积极”地等待条件发生改变。而且只有在一个notify()或notifyAll()发生变化的时候，线程才会被唤醒，并检查条件是否有变。因此，我们认为它提供了在线程间进行同步的一种手段。
+
+- IO堵塞
+
+若一个数据流必须等候一些IO活动，便会自动进入“堵塞”状态。在本例下面列出的部分中，有两个类协同通用的Reader以及Writer对象工作（使用Java 1.1的流）。但在测试模型中，会设置一个管道化的数据流，使两个线程相互间能安全地传递数据（这正是使用管道流的目的）。
+
+Sender将数据置入Writer，并“睡眠”随机长短的时间。然而，Receiver本身并没有包括sleep()，suspend()或者wait()方法。但在执行read()的时候，如果没有数据存在，它会自动进入“堵塞”状态。如下所示：
+```java
+///:Continuing
+class Sender extends Blockable { // send
+  private Writer out;
+  public Sender(Container c, Writer out) { 
+    super(c);
+    this.out = out; 
+  }
+  public void run() {
+    while(true) {
+      for(char c = 'A'; c <= 'z'; c++) {
+         try {
+          i++;
+          out.write(c);
+          state.setText("Sender sent: " 
+            + (char)c);
+          sleep((int)(3000 * Math.random()));
+        } catch (InterruptedException e){}
+          catch (IOException e) {}
+      }
+    }
+  }
+}
+
+class Receiver extends Blockable {
+  private Reader in;
+  public Receiver(Container c, Reader in) { 
+    super(c);
+    this.in = in; 
+  }
+  public void run() {
+    try {
+      while(true) {
+        i++; // Show peeker it's alive
+        // Blocks until characters are there:
+        state.setText("Receiver read: "
+          + (char)in.read());
+      }
+    } catch(IOException e) { e.printStackTrace();}
+  }
+} ///:Continued
+```
+这两个类也将信息送入自己的state字段，并修改i值，使Peeker知道线程仍在运行。
+
+- 测试
+
+令人惊讶的是，主要的程序片（Applet）类非常简单，这是大多数工作都已置入Blockable框架的缘故。大概地说，我们创建了一个由Blockable对象构成的数组。而且由于每个对象都是一个线程，所以在按下“start”按钮后，它们会采取自己的行动。还有另一个按钮和actionPerformed()从句，用于中止所有Peeker对象。由于Java 1.2“反对”使用Thread的stop()方法，所以可考虑采用这种折衷形式的中止方式。
+
+为了在Sender和Receiver之间建立一个连接，我们创建了一个PipedWriter和一个PipedReader。注意PipedReader in必须通过一个构建器参数同PipedWriterout连接起来。在那以后，我们在out内放进去的所有东西都可从in中提取出来——似乎那些东西是通过一个“管道”传输过去的。随后将in和out对象分别传递给Receiver和Sender构建器；后者将它们当作任意类型的Reader和Writer看待（也就是说，它们被“上溯”造型了）。
+Blockable句柄b的数组在定义之初并未得到初始化，因为管道化的数据流是不可在定义前设置好的（对try块的需要将成为障碍）：
+```java
+///:Continuing
+/////////// Testing Everything ///////////
+public class Blocking extends Applet {
+  private Button 
+    start = new Button("Start"),
+    stopPeekers = new Button("Stop Peekers");
+  private boolean started = false;
+  private Blockable[] b;
+  private PipedWriter out;
+  private PipedReader in;
+  public void init() {
+     out = new PipedWriter();
+    try {
+      in = new PipedReader(out);
+    } catch(IOException e) {}
+    b = new Blockable[] {
+      new Sleeper1(this),
+      new Sleeper2(this),
+      new SuspendResume1(this),
+      new SuspendResume2(this),
+      new WaitNotify1(this),
+      new WaitNotify2(this),
+      new Sender(this, out),
+      new Receiver(this, in)
+    };
+    start.addActionListener(new StartL());
+    add(start);
+    stopPeekers.addActionListener(
+      new StopPeekersL());
+    add(stopPeekers);
+  }
+  class StartL implements ActionListener {
+    public void actionPerformed(ActionEvent e) {
+      if(!started) {
+        started = true;
+        for(int i = 0; i < b.length; i++)
+          b[i].start();
+      }
+    }
+  }
+  class StopPeekersL implements ActionListener {
+    public void actionPerformed(ActionEvent e) {
+      // Demonstration of the preferred 
+      // alternative to Thread.stop():
+      for(int i = 0; i < b.length; i++)
+        b[i].stopPeeker();
+    }
+  }
+  public static void main(String[] args) {
+    Blocking applet = new Blocking();
+    Frame aFrame = new Frame("Blocking");
+    aFrame.addWindowListener(
+      new WindowAdapter() {
+        public void windowClosing(WindowEvent e) {
+          System.exit(0);
+        }
+      });
+    aFrame.add(applet, BorderLayout.CENTER);
+    aFrame.setSize(350,550);
+    applet.init();
+    applet.start();
+    aFrame.setVisible(true);
+  }
+} ///:~
+```
+在init()中，注意循环会遍历整个数组，并为页添加state和peeker.status文本字段。
+
+首次创建好Blockable线程以后，每个这样的线程都会自动创建并启动自己的Peeker。所以我们会看到各个Peeker都在Blockable线程启动之前运行起来。这一点非常重要，因为在Blockable线程启动的时候，部分Peeker会被堵塞，并停止运行。弄懂这一点，将有助于我们加深对“堵塞”这一概念的认识。
+
+#### 14.3.2 死锁
+
+由于线程可能进入堵塞状态，而且由于对象可能拥有“同步”方法——除非同步锁定被解除，否则线程不能访问那个对象——所以一个线程完全可能等候另一个对象，而另一个对象又在等候下一个对象，以此类推。这个“等候”链最可怕的情形就是进入封闭状态——最后那个对象等候的是第一个对象！此时，所有线程都会陷入无休止的相互等待状态，大家都动弹不得。我们将这种情况称为“死锁”。尽管这种情况并非经常出现，但一旦碰到，程序的调试将变得异常艰难。 就语言本身来说，尚未直接提供防止死锁的帮助措施，需要我们通过谨慎的设计来避免。如果有谁需要调试一个死锁的程序，他是没有任何窍门可用的。
+
+- Java 1.2对stop()，suspend()，resume()以及destroy()的反对
+
+为减少出现死锁的可能，Java 1.2作出的一项贡献是“反对”使用Thread的stop()，suspend()，resume()以及destroy()方法。
+
+之所以反对使用stop()，是因为它不安全。它会解除由线程获取的所有锁定，而且如果对象处于一种不连贯状态（“被破坏”），那么其他线程能在那种状态下检查和修改它们。结果便造成了一种微妙的局面，我们很难检查出真正的问题所在。所以应尽量避免使用stop()，应该采用Blocking.java那样的方法，用一个标志告诉线程什么时候通过退出自己的run()方法来中止自己的执行。
+
+如果一个线程被堵塞，比如在它等候输入的时候，那么一般都不能象在Blocking.java中那样轮询一个标志。但在这些情况下，我们仍然不该使用stop()，而应换用由Thread提供的interrupt()方法，以便中止并退出堵塞的代码。
+```java
+//: Interrupt.java
+// The alternative approach to using stop()
+// when a thread is blocked
+import java.awt.*;
+import java.awt.event.*;
+import java.applet.*;
+
+class Blocked extends Thread {
+  public synchronized void run() {
+    try {
+      wait(); // Blocks
+    } catch(InterruptedException e) {
+      System.out.println("InterruptedException");
+    }
+    System.out.println("Exiting run()");
+  }
+}
+
+public class Interrupt extends Applet {
+  private Button 
+    interrupt = new Button("Interrupt");
+  private Blocked blocked = new Blocked();
+  public void init() {
+    add(interrupt);
+    interrupt.addActionListener(
+      new ActionListener() {
+        public 
+        void actionPerformed(ActionEvent e) {
+          System.out.println("Button pressed");
+          if(blocked == null) return;
+          Thread remove = blocked;
+          blocked = null; // to release it
+          remove.interrupt();
+        }
+      });
+    blocked.start();
+  }
+  public static void main(String[] args) {
+    Interrupt applet = new Interrupt();
+    Frame aFrame = new Frame("Interrupt");
+    aFrame.addWindowListener(
+      new WindowAdapter() {
+        public void windowClosing(WindowEvent e) {
+          System.exit(0);
+        }
+      });
+    aFrame.add(applet, BorderLayout.CENTER);
+    aFrame.setSize(200,100);
+    applet.init();
+    applet.start();
+    aFrame.setVisible(true);
+  }
+} ///:~
+```
+Blocked.run()内部的wait()会产生堵塞的线程。当我们按下按钮以后，blocked（堵塞）的句柄就会设为null，使垃圾收集器能够将其清除，然后调用对象的interrupt()方法。如果是首次按下按钮，我们会看到线程正常退出。但在没有可供“杀死”的线程以后，看到的便只是按钮被按下而已。
+
+suspend()和resume()方法天生容易发生死锁。调用suspend()的时候，目标线程会停下来，但却仍然持有在这之前获得的锁定。此时，其他任何线程都不能访问锁定的资源，除非被“挂起”的线程恢复运行。对任何线程来说，如果它们想恢复目标线程，同时又试图使用任何一个锁定的资源，就会造成令人难堪的死锁。所以我们不应该使用suspend()和resume()，而应在自己的Thread类中置入一个标志，指出线程应该活动还是挂起。若标志指出线程应该挂起，便用wait()命其进入等待状态。若标志指出线程应当恢复，则用一个notify()重新启动线程。我们可以修改前面的Counter2.java来实际体验一番。尽管两个版本的效果是差不多的，但大家会注意到代码的组织结构发生了很大的变化——为所有“听众”都使用了匿名的内部类，而且Thread是一个内部类。这使得程序的编写稍微方便一些，因为它取消了Counter2.java中一些额外的记录工作。
+```java
+//: Suspend.java
+// The alternative approach to using suspend()
+// and resume(), which have been deprecated
+// in Java 1.2.
+import java.awt.*;
+import java.awt.event.*;
+import java.applet.*;
+
+public class Suspend extends Applet {
+  private TextField t = new TextField(10);
+  private Button 
+    suspend = new Button("Suspend"),
+    resume = new Button("Resume");
+  class Suspendable extends Thread {
+    private int count = 0;
+    private boolean suspended = false;
+    public Suspendable() { start(); }
+    public void fauxSuspend() { 
+      suspended = true;
+    }
+    public synchronized void fauxResume() {
+      suspended = false;
+      notify();
+    }
+    public void run() {
+      while (true) {
+        try {
+          sleep(100);
+          synchronized(this) {
+            while(suspended)
+              wait();
+          }
+        } catch (InterruptedException e){}
+        t.setText(Integer.toString(count++));
+      }
+    }
+  } 
+  private Suspendable ss = new Suspendable();
+  public void init() {
+    add(t);
+    suspend.addActionListener(
+      new ActionListener() {
+        public 
+        void actionPerformed(ActionEvent e) {
+          ss.fauxSuspend();
+        }
+      });
+    add(suspend);
+    resume.addActionListener(
+      new ActionListener() {
+        public 
+        void actionPerformed(ActionEvent e) {
+          ss.fauxResume();
+        }
+      });
+    add(resume);
+  }
+  public static void main(String[] args) {
+    Suspend applet = new Suspend();
+    Frame aFrame = new Frame("Suspend");
+    aFrame.addWindowListener(
+      new WindowAdapter() {
+        public void windowClosing(WindowEvent e){
+          System.exit(0);
+        }
+      });
+    aFrame.add(applet, BorderLayout.CENTER);
+    aFrame.setSize(300,100);
+    applet.init();
+    applet.start();
+    aFrame.setVisible(true);
+  }
+} ///:~
+```
+Suspendable中的suspended（已挂起）标志用于开关“挂起”或者“暂停”状态。为挂起一个线程，只需调用fauxSuspend()将标志设为true（真）即可。对标志状态的侦测是在run()内进行的。就象本章早些时候提到的那样，wait()必须设为“同步”（synchronized），使其能够使用对象锁。在fauxResume()中，suspended标志被设为false（假），并调用notify()——由于这会在一个“同步”从句中唤醒wait()，所以fauxResume()方法也必须同步，使其能在调用notify()之前取得对象锁（这样一来，对象锁可由要唤醍的那个wait()使用）。如果遵照本程序展示的样式，可以避免使用wait()和notify()。 Thread的destroy()方法根本没有实现；它类似一个根本不能恢复的suspend()，所以会发生与suspend()一样的死锁问题。然而，这一方法没有得到明确的“反对”，也许会在Java以后的版本（1.2版以后）实现，用于一些可以承受死锁危险的特殊场合。 大家可能会奇怪当初为什么要实现这些现在又被“反对”的方法。之所以会出现这种情况，大概是由于Sun公司主要让技术人员来决定对语言的改动，而不是那些市场销售人员。通常，技术人员比搞销售的更能理解语言的实质。当初犯下了错误以后，也能较为理智地正视它们。这意味着Java能够继续进步，即便这使Java程序员多少感到有些不便。就我自己来说，宁愿面对这些不便之处，也不愿看到语言停滞不前。
 
 
 ### 14.4 优先级
+
+线程的优先级（Priority）告诉调试程序该线程的重要程度有多大。如果有大量线程都被堵塞，都在等候运行，调试程序会首先运行具有最高优先级的那个线程。然而，这并不表示优先级较低的线程不会运行（换言之，不会因为存在优先级而导致死锁）。若线程的优先级较低，只不过表示它被准许运行的机会小一些而已。
+
+可用getPriority()方法读取一个线程的优先级，并用setPriority()改变它。在下面这个程序片中，大家会发现计数器的计数速度慢了下来，因为它们关联的线程分配了较低的优先级：
+```java
+//: Counter5.java
+// Adjusting the priorities of threads
+import java.awt.*;
+import java.awt.event.*;
+import java.applet.*;
+
+class Ticker2 extends Thread {
+  private Button 
+    b = new Button("Toggle"),
+    incPriority = new Button("up"),
+    decPriority = new Button("down");
+  private TextField 
+    t = new TextField(10),
+    pr = new TextField(3); // Display priority
+  private int count = 0;
+  private boolean runFlag = true;
+  public Ticker2(Container c) {
+    b.addActionListener(new ToggleL());
+    incPriority.addActionListener(new UpL());
+    decPriority.addActionListener(new DownL());
+    Panel p = new Panel();
+    p.add(t);
+    p.add(pr);
+    p.add(b);
+    p.add(incPriority);
+    p.add(decPriority);
+    c.add(p);
+  }
+  class ToggleL implements ActionListener {
+    public void actionPerformed(ActionEvent e) {
+      runFlag = !runFlag;
+    }
+  }
+  class UpL implements ActionListener {
+    public void actionPerformed(ActionEvent e) {
+      int newPriority = getPriority() + 1;
+      if(newPriority > Thread.MAX_PRIORITY)
+        newPriority = Thread.MAX_PRIORITY;
+      setPriority(newPriority);
+    }
+  }
+  class DownL implements ActionListener {
+    public void actionPerformed(ActionEvent e) {
+      int newPriority = getPriority() - 1;
+      if(newPriority < Thread.MIN_PRIORITY)
+        newPriority = Thread.MIN_PRIORITY;
+      setPriority(newPriority);
+    }
+  }
+  public void run() {
+    while (true) {
+      if(runFlag) {
+        t.setText(Integer.toString(count++));
+        pr.setText(
+          Integer.toString(getPriority()));
+      }
+      yield();
+    }
+  }
+}
+
+public class Counter5 extends Applet {
+  private Button 
+    start = new Button("Start"),
+    upMax = new Button("Inc Max Priority"),
+    downMax = new Button("Dec Max Priority");
+  private boolean started = false;
+  private static final int SIZE = 10;
+  private Ticker2[] s = new Ticker2[SIZE];
+  private TextField mp = new TextField(3);
+  public void init() {
+    for(int i = 0; i < s.length; i++)
+      s[i] = new Ticker2(this);
+    add(new Label("MAX_PRIORITY = "
+      + Thread.MAX_PRIORITY));
+    add(new Label("MIN_PRIORITY = "
+      + Thread.MIN_PRIORITY));
+    add(new Label("Group Max Priority = "));
+    add(mp); 
+    add(start);
+    add(upMax); add(downMax);
+    start.addActionListener(new StartL());
+    upMax.addActionListener(new UpMaxL());
+    downMax.addActionListener(new DownMaxL());
+    showMaxPriority();
+    // Recursively display parent thread groups:
+    ThreadGroup parent = 
+      s[0].getThreadGroup().getParent();
+    while(parent != null) {
+      add(new Label(
+        "Parent threadgroup max priority = "
+        + parent.getMaxPriority()));
+      parent = parent.getParent();
+    }
+  }
+  public void showMaxPriority() {
+    mp.setText(Integer.toString(
+      s[0].getThreadGroup().getMaxPriority()));
+  }
+  class StartL implements ActionListener {
+    public void actionPerformed(ActionEvent e) {
+      if(!started) {
+        started = true;
+        for(int i = 0; i < s.length; i++)
+          s[i].start();
+      }
+    }
+  }
+  class UpMaxL implements ActionListener {
+    public void actionPerformed(ActionEvent e) {
+      int maxp = 
+        s[0].getThreadGroup().getMaxPriority();
+      if(++maxp > Thread.MAX_PRIORITY)
+        maxp = Thread.MAX_PRIORITY;
+      s[0].getThreadGroup().setMaxPriority(maxp);
+      showMaxPriority();
+    }
+  }
+  class DownMaxL implements ActionListener {
+    public void actionPerformed(ActionEvent e) {
+      int maxp = 
+        s[0].getThreadGroup().getMaxPriority();
+      if(--maxp < Thread.MIN_PRIORITY)
+        maxp = Thread.MIN_PRIORITY;
+      s[0].getThreadGroup().setMaxPriority(maxp);
+      showMaxPriority();
+    }
+  }
+  public static void main(String[] args) {
+    Counter5 applet = new Counter5();
+    Frame aFrame = new Frame("Counter5");
+    aFrame.addWindowListener(
+      new WindowAdapter() {
+        public void windowClosing(WindowEvent e) {
+          System.exit(0);
+        }
+      });
+    aFrame.add(applet, BorderLayout.CENTER);
+    aFrame.setSize(300, 600);
+    applet.init();
+    applet.start();
+    aFrame.setVisible(true);
+  }
+} ///:~
+```
+
+
 ### 14.5 回顾runnable
 ### 14.6 总结
 ### 14.7 练习
