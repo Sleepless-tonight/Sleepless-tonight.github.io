@@ -5168,7 +5168,7 @@ Java IO流库能满足我们的许多基本要求：可以通过控制台、文�
 
 ## 第11章 运行期类型鉴定
 
->总结
+>总结:
 >
 >其实 thinking in java 虽然将 RTTI 和 反射分开讲解，其实本质上我们看Java语言提供的功能：
 >1. 利用 instanceof 来在运行期检出 对象 的类型
@@ -5176,7 +5176,7 @@ Java IO流库能满足我们的许多基本要求：可以通过控制台、文�
 >3. 利用 java.lang.reflect.* 来获得对象的 对象信息（接口、属性、方法、修饰符）
 >4. 本质上是在说明一件事：Java 提供了在运行期 完整且成系统的 创建和利用类和对象。能了解这一点并能利用使程序在运行的过程中能正确的动态的构建对象创建对象就可以了。
 >5. 另需要知道的一件事是：想在运行期搞这些事情，离不开 Class 对象。因为 Java 是用 Class 对象 表示 在运行期 的 类型信息
->6. .class ==》 Class 对象 ==》 new()对象
+>6. .class 文件 ==》 JVM Class 对象 ==》 JVM new()对象
 
 运行期类型鉴定（RTTI）的概念初看非常简单——手上只有基础类型的一个句柄时，利用它判断一个对象的正确类型。 然而，对RTTI的需要暴露出了面向对象设计许多有趣（而且经常是令人困惑的）的问题，并把程序的构造问题正式摆上了桌面。 本章将讨论如何利用Java在运行期间查找对象和类信息。这主要采取两种形式：一种是“传统”RTTI，它假定我们已在编译和运行期拥有所有类型；另一种是Java1.1特有的“反射”机制，利用它可在运行期独立查找类信息。首先讨论“传统”的RTTI，再讨论反射问题。
 
@@ -7910,12 +7910,549 @@ public class Counter5 extends Applet {
 } ///:~
 ```
 
+Ticker采用本章前面构造好的形式，但有一个额外的TextField（文本字段），用于显示线程的优先级；以及两个额外的按钮，用于人为提高及降低优先级。
+
+也要注意yield()的用法，它将控制权自动返回给调试程序（机制）。若不进行这样的处理，多线程机制仍会工作，但我们会发现它的运行速度慢了下来（试试删去对yield()的调用）。亦可调用sleep()，但假若那样做，计数频率就会改由sleep()的持续时间控制，而不是优先级。
+
+Counter5中的init()创建了由10个Ticker2构成的一个数组；它们的按钮以及输入字段（文本字段）由Ticker2构建器置入窗体。Counter5增加了新的按钮，用于启动一切，以及用于提高和降低线程组的最大优先级。除此以外，还有一些标签用于显示一个线程可以采用的最大及最小优先级；以及一个特殊的文本字段，用于显示线程组的最大优先级（在下一节里，我们将全面讨论线程组的问题）。最后，父线程组的优先级也作为标签显示出来。
+
+按下“up”（上）或“down”（下）按钮的时候，会先取得Ticker2当前的优先级，然后相应地提高或者降低。 运行该程序时，我们可注意到几件事情。首先，线程组的默认优先级是5。即使在启动线程之前（或者在创建线程之前，这要求对代码进行适当的修改）将最大优先级降到5以下，每个线程都会有一个5的默认优先级。
+
+最简单的测试是获取一个计数器，将它的优先级降低至1，此时应观察到它的计数频率显著放慢。现在试着再次提高优先级，可以升高回线程组的优先级，但不能再高了。现在将线程组的优先级降低两次。线程的优先级不会改变，但假若试图提高或者降低它，就会发现这个优先级自动变成线程组的优先级。此外，新线程仍然具有一个默认优先级，即使它比组的优先级还要高（换句话说，不要指望利用组优先级来防止新线程拥有比现有的更高的优先级）。
+
+最后，试着提高组的最大优先级。可以发现，这样做是没有效果的。我们只能减少线程组的最大优先级，而不能增大它。
+
+#### 14.4.1 线程组
+所有线程都隶属于一个线程组。那可以是一个默认线程组，亦可是一个创建线程时明确指定的组。在创建之初，线程被限制到一个组里，而且不能改变到一个不同的组。每个应用都至少有一个线程从属于系统线程组。若创建多个线程而不指定一个组，它们就会自动归属于系统线程组。
+
+线程组也必须从属于其他线程组。必须在构建器里指定新线程组从属于哪个线程组。若在创建一个线程组的时候没有指定它的归属，则同样会自动成为系统线程组的一名属下。因此，一个应用程序中的所有线程组最终都会将系统线程组作为自己的“父”。 之所以要提出“线程组”的概念，很难从字面上找到原因。这多少为我们讨论的主题带来了一些混乱。一般地说，我们认为是由于“安全”或者“保密”方面的理由才使用线程组的。根据Arnold和Gosling的说法：“线程组中的线程可以修改组内的其他线程，包括那些位于分层结构最深处的。一个线程不能修改位于自己所在组或者下属组之外的任何线程”（注释①）。然而，我们很难判断“修改”在这儿的具体含义是什么。下面这个例子展示了位于一个“叶子组”内的线程能修改它所在线程组树的所有线程的优先级，同时还能为这个“树”内的所有线程都调用一个方法。
+
+```java
+①：《The Java Programming Language》第179页。该书由Arnold和Jams Gosling编著，Addison-Wesley于1996年出版
+//: TestAccess.java
+// How threads can access other threads
+// in a parent thread group
+
+public class TestAccess {
+  public static void main(String[] args) {
+    ThreadGroup 
+      x = new ThreadGroup("x"),
+      y = new ThreadGroup(x, "y"),
+      z = new ThreadGroup(y, "z");
+    Thread
+      one = new TestThread1(x, "one"),
+      two = new TestThread2(z, "two");
+  }
+}
+
+class TestThread1 extends Thread {
+  private int i;
+  TestThread1(ThreadGroup g, String name) {
+    super(g, name);
+  }
+  void f() {
+    i++; // modify this thread
+    System.out.println(getName() + " f()");
+  }
+}
+
+class TestThread2 extends TestThread1 {
+  TestThread2(ThreadGroup g, String name) {
+    super(g, name);
+    start();
+  }
+  public void run() {
+    ThreadGroup g =
+      getThreadGroup().getParent().getParent();
+    g.list();
+    Thread[] gAll = new Thread[g.activeCount()];
+    g.enumerate(gAll);
+    for(int i = 0; i < gAll.length; i++) {
+      gAll[i].setPriority(Thread.MIN_PRIORITY);
+      ((TestThread1)gAll[i]).f();
+    }
+    g.list();
+  }
+} ///:~
+```
+
+在main()中，我们创建了几个ThreadGroup（线程组），每个都位于不同的“叶”上：x没有参数，只有它的名字（一个String），所以会自动进入“system”（系统）线程组；y位于x下方，而z位于y下方。注意初始化是按照文字顺序进行的，所以代码合法。
+
+有两个线程创建之后进入了不同的线程组。其中，TestThread1没有一个run()方法，但有一个f()，用于通知线程以及打印出一些东西，以便我们知道它已被调用。而TestThread2属于TestThread1的一个子类，它的run()非常详尽，要做许多事情。首先，它获得当前线程所在的线程组，然后利用getParent()在继承树中向上移动两级（这样做是有道理的，因为我想把TestThread2在分级结构中向下移动两级）。随后，我们调用方法activeCount()，查询这个线程组以及所有子线程组内有多少个线程，从而创建由指向Thread的句柄构成的一个数组。enumerate()方法将指向所有这些线程的句柄置入数组gAll里。然后在整个数组里遍历，为每个线程都调用f()方法，同时修改优先级。这样一来，位于一个“叶子”线程组里的线程就修改了位于父线程组的线程。
+
+调试方法list()打印出与一个线程组有关的所有信息，把它们作为标准输出。在我们对线程组的行为进行调查的时候，这样做是相当有好处的。下面是程序的输出：
+
+```
+java.lang.ThreadGroup[name=x,maxpri=10]
+    Thread[one,5,x]
+    java.lang.ThreadGroup[name=y,maxpri=10]
+        java.lang.ThreadGroup[name=z,maxpri=10]
+            Thread[two,5,z]
+one f()
+two f()
+java.lang.ThreadGroup[name=x,maxpri=10]
+    Thread[one,1,x]
+    java.lang.ThreadGroup[name=y,maxpri=10]
+        java.lang.ThreadGroup[name=z,maxpri=10]
+            Thread[two,1,z]
+```
+list()不仅打印出ThreadGroup或者Thread的类名，也打印出了线程组的名字以及它的最高优先级。对于线程，则打印出它们的名字，并接上线程优先级以及所属的线程组。注意list()会对线程和线程组进行缩排处理，指出它们是未缩排的线程组的“子”。 大家可看到f()是由TestThread2的run()方法调用的，所以很明显，组内的所有线程都是相当脆弱的。然而，我们只能访问那些从自己的system线程组树分支出来的线程，而且或许这就是所谓“安全”的意思。我们不能访问其他任何人的系统线程树。
+
+- 线程组的控制
+
+抛开安全问题不谈，线程组最有用的一个地方就是控制：只需用单个命令即可完成对整个线程组的操作。下面这个例子演示了这一点，并对线程组内优先级的限制进行了说明。括号内的注释数字便于大家比较输出结果：
+```java
+//: ThreadGroup1.java
+// How thread groups control priorities
+// of the threads inside them.
+
+public class ThreadGroup1 {
+  public static void main(String[] args) {
+    // Get the system thread & print its Info:
+    ThreadGroup sys = 
+      Thread.currentThread().getThreadGroup();
+    sys.list(); // (1)
+    // Reduce the system thread group priority:
+    sys.setMaxPriority(Thread.MAX_PRIORITY - 1);
+    // Increase the main thread priority:
+    Thread curr = Thread.currentThread();
+    curr.setPriority(curr.getPriority() + 1);
+    sys.list(); // (2)
+    // Attempt to set a new group to the max:
+    ThreadGroup g1 = new ThreadGroup("g1");
+    g1.setMaxPriority(Thread.MAX_PRIORITY);
+    // Attempt to set a new thread to the max:
+    Thread t = new Thread(g1, "A");
+    t.setPriority(Thread.MAX_PRIORITY);
+    g1.list(); // (3)
+    // Reduce g1's max priority, then attempt
+    // to increase it:
+    g1.setMaxPriority(Thread.MAX_PRIORITY - 2);
+    g1.setMaxPriority(Thread.MAX_PRIORITY);
+    g1.list(); // (4)
+    // Attempt to set a new thread to the max:
+    t = new Thread(g1, "B");
+    t.setPriority(Thread.MAX_PRIORITY);
+    g1.list(); // (5)
+    // Lower the max priority below the default
+    // thread priority:
+    g1.setMaxPriority(Thread.MIN_PRIORITY + 2);
+    // Look at a new thread's priority before
+    // and after changing it:
+    t = new Thread(g1, "C");
+    g1.list(); // (6)
+    t.setPriority(t.getPriority() -1);
+    g1.list(); // (7)
+    // Make g2 a child Threadgroup of g1 and
+    // try to increase its priority:
+    ThreadGroup g2 = new ThreadGroup(g1, "g2");
+    g2.list(); // (8)
+    g2.setMaxPriority(Thread.MAX_PRIORITY);
+    g2.list(); // (9)
+    // Add a bunch of new threads to g2:
+    for (int i = 0; i < 5; i++)
+      new Thread(g2, Integer.toString(i));
+    // Show information about all threadgroups
+    // and threads:
+    sys.list(); // (10)
+    System.out.println("Starting all threads:");
+    Thread[] all = new Thread[sys.activeCount()];
+    sys.enumerate(all);
+    for(int i = 0; i < all.length; i++)
+      if(!all[i].isAlive())
+        all[i].start();
+    // Suspends & Stops all threads in 
+    // this group and its subgroups:
+    System.out.println("All threads started");
+    sys.suspend(); // Deprecated in Java 1.2
+    // Never gets here...
+    System.out.println("All threads suspended");
+    sys.stop(); // Deprecated in Java 1.2
+    System.out.println("All threads stopped");
+  }
+} ///:~
+```
+下面的输出结果已进行了适当的编辑，以便用一页能够装下（java.lang.已被删去），而且添加了适当的数字，与前面程序列表中括号里的数字对应：
+
+```
+(1) ThreadGroup[name=system,maxpri=10]
+      Thread[main,5,system]
+(2) ThreadGroup[name=system,maxpri=9]
+      Thread[main,6,system]
+(3) ThreadGroup[name=g1,maxpri=9]
+      Thread[A,9,g1]
+(4) ThreadGroup[name=g1,maxpri=8]
+      Thread[A,9,g1]
+(5) ThreadGroup[name=g1,maxpri=8]
+      Thread[A,9,g1]
+      Thread[B,8,g1]
+(6) ThreadGroup[name=g1,maxpri=3]
+      Thread[A,9,g1]
+      Thread[B,8,g1]
+      Thread[C,6,g1]
+(7) ThreadGroup[name=g1,maxpri=3]
+      Thread[A,9,g1]
+      Thread[B,8,g1]
+      Thread[C,3,g1]
+(8) ThreadGroup[name=g2,maxpri=3]
+(9) ThreadGroup[name=g2,maxpri=3]
+(10)ThreadGroup[name=system,maxpri=9]
+      Thread[main,6,system]
+      ThreadGroup[name=g1,maxpri=3]
+        Thread[A,9,g1]
+        Thread[B,8,g1]
+        Thread[C,3,g1]
+        ThreadGroup[name=g2,maxpri=3]
+          Thread[0,6,g2]
+          Thread[1,6,g2]
+          Thread[2,6,g2]
+          Thread[3,6,g2]
+          Thread[4,6,g2]
+Starting all threads:
+All threads started
+```
+所有程序都至少有一个线程在运行，而且main()采取的第一项行动便是调用Thread的一个static（静态）方法，名为currentThread()。从这个线程开始，线程组将被创建，而且会为结果调用list()。输出如下：
+```
+(1) ThreadGroup[name=system,maxpri=10]
+      Thread[main,5,system]
+```
+我们可以看到，主线程组的名字是system，而主线程的名字是main，而且它从属于system线程组。 第二个练习显示出system组的最高优先级可以减少，而且main线程可以增大自己的优先级：
+```
+(2) ThreadGroup[name=system,maxpri=9]
+      Thread[main,6,system]
+```
+第三个练习创建一个新的线程组，名为g1；它自动从属于system线程组，因为并没有明确指定它的归属关系。我们在g1内部放置了一个新线程，名为A。随后，我们试着将这个组的最大优先级设到最高的级别，并将A的优先级也设到最高一级。结果如下：
+```
+(3) ThreadGroup[name=g1,maxpri=9]
+      Thread[A,9,g1]
+```
+可以看出，不可能将线程组的最大优先级设为高于它的父线程组。 第四个练习将g1的最大优先级降低两级，然后试着把它升至Thread.MAX_PRIORITY。结果如下：
+```
+(4) ThreadGroup[name=g1,maxpri=8]
+      Thread[A,9,g1]
+```
+同样可以看出，提高最大优先级的企图是失败的。我们只能降低一个线程组的最大优先级，而不能提高它。此外，注意线程A的优先级并未改变，而且它现在高于线程组的最大优先级。也就是说，线程组最大优先级的变化并不能对现有线程造成影响。 第五个练习试着将一个新线程设为最大优先级。如下所示：
+```
+(5) ThreadGroup[name=g1,maxpri=8]
+      Thread[A,9,g1]
+      Thread[B,8,g1]
+```
+因此，新线程不能变到比最大线程组优先级还要高的一级。 这个程序的默认线程优先级是6；若新建一个线程，那就是它的默认优先级，而且不会发生变化，除非对优先级进行了特别的处理。练习六将把线程组的最大优先级降至默认线程优先级以下，看看在这种情况下新建一个线程会发生什么事情：
+```
+(6) ThreadGroup[name=g1,maxpri=3]
+      Thread[A,9,g1]
+      Thread[B,8,g1]
+      Thread[C,6,g1]
+```
+尽管线程组现在的最大优先级是3，但仍然用默认优先级6来创建新线程。所以，线程组的最大优先级不会影响默认优先级（事实上，似乎没有办法可以设置新线程的默认优先级）。 改变了优先级后，接下来试试将其降低一级，结果如下：
+```
+(7) ThreadGroup[name=g1,maxpri=3]
+      Thread[A,9,g1]
+      Thread[B,8,g1]
+      Thread[C,3,g1]
+```
+因此，只有在试图改变优先级的时候，才会强迫遵守线程组最大优先级的限制。 我们在(8)和(9)中进行了类似的试验。在这里，我们创建了一个新的线程组，名为g2，将其作为g1的一个子组，并改变了它的最大优先级。大家可以看到，g2的优先级无论如何都不可能高于g1：
+```
+(8) ThreadGroup[name=g2,maxpri=3]
+(9) ThreadGroup[name=g2,maxpri=3]
+```
+也要注意在g2创建的时候，它会被自动设为g1的线程组最大优先级。 经过所有这些实验以后，整个线程组和线程系统都会被打印出来，如下所示：
+```
+(10)ThreadGroup[name=system,maxpri=9]
+      Thread[main,6,system]
+      ThreadGroup[name=g1,maxpri=3]
+        Thread[A,9,g1]
+        Thread[B,8,g1]
+        Thread[C,3,g1]
+        ThreadGroup[name=g2,maxpri=3]
+          Thread[0,6,g2]
+          Thread[1,6,g2]
+          Thread[2,6,g2]
+          Thread[3,6,g2]
+          Thread[4,6,g2]
+```
+所以由线程组的规则所限，一个子组的最大优先级在任何时候都只能低于或等于它的父组的最大优先级。
+
+本程序的最后一个部分演示了用于整组线程的方法。程序首先遍历整个线程树，并启动每一个尚未启动的线程。例如，system组随后会被挂起（暂停），最后被中止（尽管用suspend()和stop()对整个线程组进行操作看起来似乎很有趣，但应注意这些方法在Java 1.2里都是被“反对”的）。但在挂起system组的同时，也挂起了main线程，而且整个程序都会关闭。所以永远不会达到让线程中止的那一步。实际上，假如真的中止了main线程，它会“掷”出一个ThreadDeath违例，所以我们通常不这样做。由于ThreadGroup是从Object继承的，其中包含了wait()方法，所以也能调用wait(秒数×1000)，令程序暂停运行任意秒数的时间。当然，事前必须在一个同步块里取得对象锁。
+
+ThreadGroup类也提供了suspend()和resume()方法，所以能中止和启动整个线程组和它的所有线程，也能中止和启动它的子组，所有这些只需一个命令即可（再次提醒，suspend()和resume()都是Java 1.2所“反对”的）。 从表面看，线程组似乎有些让人摸不着头脑，但请注意我们很少需要直接使用它们。
+
 
 ### 14.5 回顾runnable
+在本章早些时候，我曾建议大家在将一个程序片或主Frame当作Runnable的实现形式之前，一定要好好地想一想。若采用那种方式，就只能在自己的程序中使用其中的一个线程。这便限制了灵活性，一旦需要用到属于那种类型的多个线程，就会遇到不必要的麻烦。
+
+当然，如果必须从一个类继承，而且想使类具有线程处理能力，则Runnable是一种正确的方案。本章最后一个例子对这一点进行了剖析，制作了一个RunnableCanvas类，用于为自己描绘不同的颜色（Canvas是“画布”的意思）。这个应用被设计成从命令行获得参数值，以决定颜色网格有多大，以及颜色发生变化之间的sleep()有多长。通过运用这些值，大家能体验到线程一些有趣而且可能令人费解的特性：
+```java
+//: ColorBoxes.java
+// Using the Runnable interface
+import java.awt.*;
+import java.awt.event.*;
+
+class CBox extends Canvas implements Runnable {
+  private Thread t;
+  private int pause;
+  private static final Color[] colors = { 
+    Color.black, Color.blue, Color.cyan, 
+    Color.darkGray, Color.gray, Color.green,
+    Color.lightGray, Color.magenta, 
+    Color.orange, Color.pink, Color.red, 
+    Color.white, Color.yellow 
+  };
+  private Color cColor = newColor();
+  private static final Color newColor() {
+    return colors[
+      (int)(Math.random() * colors.length)
+    ];
+  }
+  public void paint(Graphics  g) {
+    g.setColor(cColor);
+    Dimension s = getSize();
+    g.fillRect(0, 0, s.width, s.height);
+  }
+  public CBox(int pause) {
+    this.pause = pause;
+    t = new Thread(this);
+    t.start(); 
+  }
+  public void run() {
+    while(true) {
+      cColor = newColor();
+      repaint();
+      try {
+        t.sleep(pause);
+      } catch(InterruptedException e) {}
+    } 
+  }
+} 
+
+public class ColorBoxes extends Frame {
+  public ColorBoxes(int pause, int grid) {
+    setTitle("ColorBoxes");
+    setLayout(new GridLayout(grid, grid));
+    for (int i = 0; i < grid * grid; i++)
+      add(new CBox(pause));
+    addWindowListener(new WindowAdapter() {
+      public void windowClosing(WindowEvent e) {
+        System.exit(0);
+      }
+    });
+  }   
+  public static void main(String[] args) {
+    int pause = 50;
+    int grid = 8;
+    if(args.length > 0) 
+      pause = Integer.parseInt(args[0]);
+    if(args.length > 1)
+      grid = Integer.parseInt(args[1]);
+    Frame f = new ColorBoxes(pause, grid);
+    f.setSize(500, 400);
+    f.setVisible(true);  
+  }
+} ///:~
+```
+ColorBoxes是一个典型的应用（程序），有一个构建器用于设置GUI。这个构建器采用int grid的一个参数，用它设置GridLayout（网格布局），使每一维里都有一个grid单元。随后，它添加适当数量的CBox对象，用它们填充网格，并为每一个都传递pause值。在main()中，我们可看到如何对pause和grid的默认值进行修改（如果用命令行参数传递）。 CBox是进行正式工作的地方。它是从Canvas继承的，并实现了Runnable接口，使每个Canvas也能是一个Thread。记住在实现Runnable的时候，并没有实际产生一个Thread对象，只是一个拥有run()方法的类。因此，我们必须明确地创建一个Thread对象，并将Runnable对象传递给构建器，随后调用start()（在构建器里进行）。在CBox里，这个线程的名字叫作t。 请留意数组colors，它对Color类中的所有颜色进行了列举（枚举）。它在newColor()中用于产生一种随机选择的颜色。当前的单元（格）颜色是cColor。
+
+paint()则相当简单——只是将颜色设为cColor，然后用那种颜色填充整张画布（Canvas）。
+
+在run()中，我们看到一个无限循环，它将cColor设为一种随机颜色，然后调用repaint()把它显示出来。随后，对线程执行sleep()，使其“休眠”由命令行指定的时间长度。
+
+由于这种设计方案非常灵活，而且线程处理同每个Canvas元素都紧密结合在一起，所以在理论上可以生成任意多的线程（但在实际应用中，这要受到JVM能够从容对付的线程数量的限制）。
+
+这个程序也为我们提供了一个有趣的评测基准，因为它揭示了不同JVM机制在速度上造成的戏剧性的差异。
+
+#### 14.5.1 过多的线程
+有些时候，我们会发现ColorBoxes几乎陷于停顿状态。在我自己的机器上，这一情况在产生了10×10的网格之后发生了。为什么会这样呢？自然地，我们有理由怀疑AWT对它做了什么事情。所以这里有一个例子能够测试那个猜测，它产生了较少的线程。代码经过了重新组织，使一个Vector实现了Runnable，而且那个Vector容纳了数量众多的色块，并随机挑选一些进行更新。随后，我们创建大量这些Vector对象，数量大致取决于我们挑选的网格维数。结果便是我们得到比色块少得多的线程。所以假如有一个速度的加快，我们就能立即知道，因为前例的线程数量太多了。如下所示：
+
+```java
+//: ColorBoxes2.java
+// Balancing thread use
+import java.awt.*;
+import java.awt.event.*;
+import java.util.*;
+
+class CBox2 extends Canvas {
+  private static final Color[] colors = { 
+    Color.black, Color.blue, Color.cyan, 
+    Color.darkGray, Color.gray, Color.green,
+    Color.lightGray, Color.magenta, 
+    Color.orange, Color.pink, Color.red, 
+    Color.white, Color.yellow 
+  };
+  private Color cColor = newColor();
+  private static final Color newColor() {
+    return colors[
+      (int)(Math.random() * colors.length)
+    ];
+  }
+  void nextColor() {
+    cColor = newColor();
+    repaint();
+  }
+  public void paint(Graphics  g) {
+    g.setColor(cColor);
+    Dimension s = getSize();
+    g.fillRect(0, 0, s.width, s.height);
+  }
+}
+
+class CBoxVector 
+  extends Vector implements Runnable {
+  private Thread t;
+  private int pause;
+  public CBoxVector(int pause) {
+    this.pause = pause;
+    t = new Thread(this);
+  }
+  public void go() { t.start(); }
+  public void run() {
+    while(true) {
+      int i = (int)(Math.random() * size());
+      ((CBox2)elementAt(i)).nextColor();
+      try {
+        t.sleep(pause);
+      } catch(InterruptedException e) {}
+    } 
+  }
+}
+
+public class ColorBoxes2 extends Frame {
+  private CBoxVector[] v;
+  public ColorBoxes2(int pause, int grid) {
+    setTitle("ColorBoxes2");
+    setLayout(new GridLayout(grid, grid));
+    v = new CBoxVector[grid];
+    for(int i = 0; i < grid; i++)
+      v[i] = new CBoxVector(pause);
+    for (int i = 0; i < grid * grid; i++) {
+      v[i % grid].addElement(new CBox2());
+      add((CBox2)v[i % grid].lastElement());
+    }
+    for(int i = 0; i < grid; i++)
+      v[i].go();
+    addWindowListener(new WindowAdapter() {
+      public void windowClosing(WindowEvent e) {
+        System.exit(0);
+      }
+    });
+  }   
+  public static void main(String[] args) {
+    // Shorter default pause than ColorBoxes:
+    int pause = 5;
+    int grid = 8;
+    if(args.length > 0) 
+      pause = Integer.parseInt(args[0]);
+    if(args.length > 1)
+      grid = Integer.parseInt(args[1]);
+    Frame f = new ColorBoxes2(pause, grid);
+    f.setSize(500, 400);
+    f.setVisible(true);  
+  }
+} ///:~
+```
+在ColorBoxes2中，我们创建了CBoxVector的一个数组，并对其初始化，使其容下各个CBoxVector网格。每个网格都知道自己该“睡眠”多长的时间。随后为每个CBoxVector都添加等量的Cbox2对象，而且将每个Vector都告诉给go()，用它来启动自己的线程。
+
+CBox2类似CBox——能用一种随机选择的颜色描绘自己。但那就是CBox2能够做的全部工作。所有涉及线程的处理都已移至CBoxVector进行。
+
+CBoxVector也可以拥有继承的Thread，并有一个类型为Vector的成员对象。这样设计的好处就是addElement()和elementAt()方法可以获得特定的参数以及返回值类型，而不是只能获得常规Object（它们的名字也可以变得更短）。然而，这里采用的设计表面上看需要较少的代码。除此以外，它会自动保留一个Vector的其他所有行为。由于elementAt()需要大量进行“封闭”工作，用到许多括号，所以随着代码主体的扩充，最终仍有可能需要大量代码。
+
+和以前一样，在我们实现Runnable的时候，并没有获得与Thread配套提供的所有功能，所以必须创建一个新的Thread，并将自己传递给它的构建器，以便正式“启动”——start()——一些东西。大家在CBoxVector构建器和go()里都可以体会到这一点。run()方法简单地选择Vector里的一个随机元素编号，并为那个元素调用nextColor()，令其挑选一种新的随机颜色。
+
+运行这个程序时，大家会发现它确实变得更快，响应也更迅速（比如在中断它的时候，它能更快地停下来）。而且随着网格尺寸的壮 大，它也不会经常性地陷于“停顿”状态。因此，线程的处理又多了一项新的考虑因素：必须随时检查自己有没有“太多的线程”（无论对什么程序和运行平台）。若线程太多，必须试着使用上面介绍的技术，对程序中的线程数量进行“平衡”。如果在一个多线程的程序中遇到了性能上的问题，那么现在有许多因素需要检查：
+
+(1) 对sleep，yield()以及／或者wait()的调用足够多吗？
+
+(2) sleep()的调用时间足够长吗？
+
+(3) 运行的线程数是不是太多？
+
+(4) 试过不同的平台和JVM吗？
+
+象这样的一些问题是造成多线程应用程序的编制成为一种“技术活”的原因之一。
+
+
+
 ### 14.6 总结
+何时使用多线程技术，以及何时避免用它，这是我们需要掌握的重要课题。骼它的主要目的是对大量任务进行有序的管理。通过多个任务的混合使用，可以更有效地利用计算机资源，或者对用户来说显得更方便。资源均衡的经典问题是在IO等候期间如何利用CPU。至于用户方面的方便性，最经典的问题就是如何在一个长时间的下载过程中监视并灵敏地反应一个“停止”（stop）按钮的按下。 多线程的主要缺点包括：
+
+(1) 等候使用共享资源时造成程序的运行速度变慢。
+
+(2) 对线程进行管理要求的额外CPU开销。
+
+(3) 复杂程度无意义的加大，比如用独立的线程来更新数组内每个元素的愚蠢主意。
+
+(4) 漫长的等待、浪费精力的资源竞争以及死锁等多线程症状。
+
+线程另一个优点是它们用“轻度”执行切换（100条指令的顺序）取代了“重度”进程场景切换（1000条指令）。由于一个进程内的所有线程共享相同的内存空间，所以“轻度”场景切换只改变程序的执行和本地变量。而在“重度”场景切换时，一个进程的改变要求必须完整地交换内存空间。 线程处理看来好象进入了一个全新的领域，似乎要求我们学习一种全新的程序设计语言——或者至少学习一系列新的语言概念。由于大多数微机操作系统都提供了对线程的支持，所以程序设计语言或者库里也出现了对线程的扩展。不管在什么情况下，涉及线程的程序设计：
+
+(1) 刚开始会让人摸不着头脑，要求改换我们传统的编程思路；
+
+(2) 其他语言对线程的支持看来是类似的。所以一旦掌握了线程的概念，在其他环境也不会有太大的困难。尽管对线程的支持使Java语言的复杂程度多少有些增加，但请不要责怪Java。毕竟，利用线程可以做许多有益的事情。 多个线程可能共享同一个资源（比如一个对象里的内存），这是运用线程时面临的最大的一个麻烦。必须保证多个线程不会同时试图读取和修改那个资源。这要求技巧性地运用synchronized（同步）关键字。它是一个有用的工具，但必须真正掌握它，因为假若操作不当，极易出现死锁。
+
+除此以外，运用线程时还要注意一个非常特殊的问题。由于根据Java的设计，它允许我们根据需要创建任意数量的线程——至少理论上如此（例如，假设为一项工程方面的有限元素分析创建数以百万的线程，这对Java来说并非实际）。然而，我们一般都要控制自己创建的线程数量的上限。因为在某些情况下，大量线程会将场面变得一团糟，所以工作都会几乎陷于停顿。临界点并不象对象那样可以达到几千个，而是在100以下。一般情况下，我们只创建少数几个关键线程，用它们解决某个特定的问题。这时数量的限制问题不大。但在较常规的一些设计中，这一限制确实会使我们感到束手束脚。
+
+大家要注意线程处理中一个不是十分直观的问题。由于采用了线程“调度”机制，所以通过在run()的主循环中插入对sleep()的调用，一般都可以使自己的程序运行得更快一些。这使它对编程技巧的要求非常高，特别是在更长的延迟似乎反而能提高性能的时候。当然，之所以会出现这种情况，是由于在正在运行的线程准备进入“休眠”状态之前，较短的延迟可能造成“sleep()结束”调度机制的中断。这便强迫调度机制将其中止，并于稍后重新启动，以便它能做完自己的事情，再进入休眠状态。必须多想一想，才能意识到事情真正的麻烦程度。
+
+本章遗漏的一件事情是一个动画例子，这是目前程序片最流行的一种应用。然而，Java JDK配套提供了解决这个问题的一整套方案（并可播放声音），大家可到java.sun.com的演示区域下载。此外，我们完全有理由相信未来版本的Java会提供更好的动画支持——尽管目前的Web涌现出了与传统方式完全不同的非Java、非程序化的许多动画方案。如果想系统学习Java动画的工作原理，可参考《Core Java——核心Java》一书，由Cornell&Horstmann编著，Prentice-Hall于1997年出版。若欲更深入地了解线程处理，请参考《Concurrent Programming in Java——Java中的并发编程》，由Doug Lea编著，Addison-Wiseley于1997年出版；或者《Java Threads——Java线程》，Oaks&Wong编著，O'Reilly于1997年出版。
 ### 14.7 练习
+
 ## 第15章 网络编程
+历史上的网络编程都倾向于困难、复杂，而且极易出错。
+
+程序员必须掌握与网络有关的大量细节，有时甚至要对硬件有深刻的认识。一般地，我们需要理解连网协议中不同的“层”（Layer）。而且对于每个连网库，一般都包含了数量众多的函数，分别涉及信息块的连接、打包和拆包；这些块的来回运输；以及握手等等。这是一项令人痛苦的工作。
+
+但是，连网本身的概念并不是很难。我们想获得位于其他地方某台机器上的信息，并把它们移到这儿；或者相反。这与读写文件非常相似，只是文件存在于远程机器上，而且远程机器有权决定如何处理我们请求或者发送的数据。
+
+Java最出色的一个地方就是它的“无痛苦连网”概念。有关连网的基层细节已被尽可能地提取出去，并隐藏在JVM以及Java的本机安装系统里进行控制。我们使用的编程模型是一个文件的模型；事实上，网络连接（一个“套接字”）已被封装到系统对象里，所以可象对其他数据流那样采用同样的方法调用。除此以外，在我们处理另一个连网问题——同时控制多个网络连接——的时候，Java内建的多线程机制也是十分方便的。
+
+本章将用一系列易懂的例子解释Java的连网支持。
+
 ### 15.1 机器的标识
+当然，为了分辨来自别处的一台机器，以及为了保证自己连接的是希望的那台机器，必须有一种机制能独一无二地标识出网络内的每台机器。早期网络只解决了如何在本地网络环境中为机器提供唯一的名字。但Java面向的是整个因特网，这要求用一种机制对来自世界各地的机器进行标识。为达到这个目的，我们采用了IP（互联网地址）的概念。IP以两种形式存在着：
+
+(1) 大家最熟悉的DNS（域名服务）形式。我自己的域名是bruceeckel.com。所以假定我在自己的域内有一台名为Opus的计算机，它的域名就可以是Opus.bruceeckel.com。这正是大家向其他人发送电子函件时采用的名字，而且通常集成到一个万维网（WWW）地址里。
+
+(2) 此外，亦可采用“四点”格式，亦即由点号（.）分隔的四组数字，比如202.98.32.111。 不管哪种情况，IP地址在内部都表达成一个由32个二进制位（bit）构成的数字（注释①），所以IP地址的每一组数字都不能超过255。利用由java.net提供的static InetAddress.getByName()，我们可以让一个特定的Java对象表达上述任何一种形式的数字。结果是类型为InetAddress的一个对象，可用它构成一个“套接字”（Socket），大家在后面会见到这一点。
+
+①：这意味着最多只能得到40亿左右的数字组合，全世界的人很快就会把它用光。但根据目前正在研究的新IP编址方案，它将采用128 bit的数字，这样得到的唯一性IP地址也许在几百年的时间里都不会用完。
+
+作为运用InetAddress.getByName()一个简单的例子，请考虑假设自己有一家拨号连接因特网服务提供者（ISP），那么会发生什么情况。每次拨号连接的时候，都会分配得到一个临时IP地址。但在连接期间，那个IP地址拥有与因特网上其他IP地址一样的有效性。如果有人按照你的IP地址连接你的机器，他们就有可能使用在你机器上运行的Web或者FTP服务器程序。当然这有个前提，对方必须准确地知道你目前分配到的IP。由于每次拨号连接获得的IP都是随机的，怎样才能准确地掌握你的IP呢？ 下面这个程序利用InetAddress.getByName()来产生你的IP地址。为了让它运行起来，事先必须知道计算机的名字。该程序只在Windows 95中进行了测试，但大家可以依次进入自己的“开始”、“设置”、“控制面板”、“网络”，然后进入“标识”卡片。其中，“计算机名称”就是应在命令行输入的内容。
+
+```java
+//: WhoAmI.java
+// Finds out your network address when you're 
+// connected to the Internet.
+package c15;
+import java.net.*;
+
+public class WhoAmI {
+  public static void main(String[] args) 
+      throws Exception {
+    if(args.length != 1) {
+      System.err.println(
+        "Usage: WhoAmI MachineName");
+      System.exit(1);
+    }
+    InetAddress a = 
+      InetAddress.getByName(args[0]);
+    System.out.println(a);
+  }
+} ///:~
+```
+就我自己的情况来说，机器的名字叫作“Colossus”（来自同名电影，“巨人”的意思。我在这台机器上有一个很大的硬盘）。所以一旦连通我的ISP，就象下面这样执行程序：
+
+```
+java whoAmI Colossus
+```
+得到的结果象下面这个样子（当然，这个地址可能每次都是不同的）：
+```
+Colossus/202.98.41.151
+```
+假如我把这个地址告诉一位朋友，他就可以立即登录到我的个人Web服务器，只需指定目标地址 http://202.98.41.151 即可（当然，我此时不能断线）。有些时候，这是向其他人发送信息或者在自己的Web站点正式出台以前进行测试的一种方便手段。
+
+#### 15.1.1 服务器和客户机
+
+
+
 ### 15.2 套接字
 ### 15.3 服务多个客户
 ### 15.4 数据报
