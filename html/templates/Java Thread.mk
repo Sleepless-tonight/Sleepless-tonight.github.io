@@ -90,3 +90,4 @@
 > 优先级低的线程在拿到cpu执行权后也是可以执行，只不过优先级高的线程拿到cpu执行权的概率比较大而已，并不是一定能拿到。
 >
 > 堵塞原因：Thread.sleep(long millis)、Thread.join()、obj.wait()、Synchronized、在I/O上被阻塞、
+>
