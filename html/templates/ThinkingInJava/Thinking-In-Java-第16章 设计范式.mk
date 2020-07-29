@@ -489,6 +489,7 @@ public abstract class Trash {
         try {
           // Get the dynamic constructor method
           // that takes a double argument:
+          // 通过类对象的getConstructor()或getDeclaredConstructor()方法获得构造器（Constructor）对象并调用其newInstance()方法创建对象，适用于无参和有参构造方法。
           Constructor ctor =
             tc.getConstructor(
               new Class[] {double.class});
@@ -545,9 +546,548 @@ new Object[] {new Double(info.data)}
 
 正如大家会看到的那样，这种设计方案最大的优点就是不需要改动代码。无论在什么情况下，它都能正常地使用（假定所有Trash子类都包含了一个构建器，用以获取单个double参数）。
 
+- Trash子类
+
+为了与原型机制相适应，对Trash每个新子类唯一的要求就是在其中包含了一个构建器，指示它获取一个double参数。Java 1.1的“反射”机制可负责剩下的所有工作。 下面是不同类型的Trash，每种类型都有它们自己的文件里，但都属于Trash包的一部分（同样地，为了方便在本章内重复使用）：
+```java
+//: Aluminum.java 
+// The Aluminum class with prototyping
+package c16.trash;
+
+public class Aluminum extends Trash {
+  private static double val = 1.67f;
+  public Aluminum(double wt) { super(wt); }
+  public double value() { return val; }
+  public static void value(double newVal) {
+    val = newVal;
+  }
+} ///:~
+```
+下面是一种新的Trash类型：
+```java
+//: Cardboard.java 
+// The Cardboard class with prototyping
+package c16.trash;
+
+public class Cardboard extends Trash {
+  private static double val = 0.23f;
+  public Cardboard(double wt) { super(wt); }
+  public double value() { return val; }
+  public static void value(double newVal) {
+    val = newVal;
+  }
+} ///:~
+```
+可以看出，除构建器以外，这些类根本没有什么特别的地方。
+
+- 从外部文件中解析出Trash
+
+与Trash对象有关的信息将从一个外部文件中读取。针对Trash的每个方面，文件内列出了所有必要的信息——每行都代表一个方面，采用“垃圾（废品）名称:值”的固定格式。例如：
+
+
+```
+c16.Trash.Glass:54
+c16.Trash.Paper:22
+c16.Trash.Paper:11
+c16.Trash.Glass:17
+c16.Trash.Aluminum:89
+c16.Trash.Paper:88
+c16.Trash.Aluminum:76
+c16.Trash.Cardboard:96
+c16.Trash.Aluminum:25
+c16.Trash.Aluminum:34
+c16.Trash.Glass:11
+c16.Trash.Glass:68
+c16.Trash.Glass:43
+c16.Trash.Aluminum:27
+c16.Trash.Cardboard:44
+c16.Trash.Aluminum:18
+c16.Trash.Paper:91
+c16.Trash.Glass:63
+c16.Trash.Glass:50
+c16.Trash.Glass:80
+c16.Trash.Aluminum:81
+c16.Trash.Cardboard:12
+c16.Trash.Glass:12
+c16.Trash.Glass:54
+c16.Trash.Aluminum:36
+c16.Trash.Aluminum:93
+c16.Trash.Glass:93
+c16.Trash.Paper:80
+c16.Trash.Glass:36
+c16.Trash.Glass:12
+c16.Trash.Glass:60
+c16.Trash.Paper:66
+c16.Trash.Aluminum:36
+c16.Trash.Cardboard:22
+```
+注意在给定类名的时候，类路径必须包含在内，否则就找不到类。
+
+为解析它，每一行内容都会读入，并用字串方法indexOf()来建立“:”的一个索引。首先用字串方法substring()取出垃圾的类型名称，接着用一个静态方法Double.valueOf()取得相应的值，并转换成一个double值。trim()方法则用于删除字串两头的多余空格。
+
+Trash解析器置入单独的文件中，因为本章将不断地用到它。如下所示：
+```java
+//: ParseTrash.java 
+// Open a file and parse its contents into
+// Trash objects, placing each into a Vector
+package c16.trash;
+import java.util.*;
+import java.io.*;
+
+public class ParseTrash {
+  public static void 
+  fillBin(String filename, Fillable bin) {
+    try {
+      BufferedReader data =
+        new BufferedReader(
+          new FileReader(filename));
+      String buf;
+      while((buf = data.readLine())!= null) {
+        String type = buf.substring(0, 
+          buf.indexOf(':')).trim();
+        double weight = Double.valueOf(
+          buf.substring(buf.indexOf(':') + 1)
+          .trim()).doubleValue();
+        bin.addTrash(
+          Trash.factory(
+            new Trash.Info(type, weight)));
+      }
+      data.close();
+    } catch(IOException e) {
+      e.printStackTrace();
+    } catch(Exception e) {
+      e.printStackTrace();
+    }
+  }
+  // Special case to handle Vector:
+  public static void 
+  fillBin(String filename, Vector bin) {
+    fillBin(filename, new FillableVector(bin));
+  }
+} ///:~
+```
+在RecycleA.java中，我们用一个Vector容纳Trash对象。然而，亦可考虑采用其他集合类型。为做到这一点，fillBin()的第一个版本将获取指向一个Fillable的句柄。后者是一个接口，用于支持一个名为addTrash()的方法：
+```java
+//: Fillable.java 
+// Any object that can be filled with Trash
+package c16.trash;
+
+public interface Fillable {
+  void addTrash(Trash t);
+} ///:~
+```
+支持该接口的所有东西都能伴随fillBin使用。当然，Vector并未实现Fillable，所以它不能工作。由于Vector将在大多数例子中应用，所以最好的做法是添加另一个过载的fillBin()方法，令其以一个Vector作为参数。利用一个适配器（Adapter）类，这个Vector可作为一个Fillable对象使用：
+```java
+//: FillableVector.java 
+// Adapter that makes a Vector Fillable
+package c16.trash;
+import java.util.*;
+
+public class FillableVector implements Fillable {
+  private Vector v;
+  public FillableVector(Vector vv) { v = vv; }
+  public void addTrash(Trash t) {
+    v.addElement(t);
+  }
+} ///:~
+```
+可以看到，这个类唯一的任务就是负责将Fillable的addTrash()同Vector的addElement()方法连接起来。利用这个类，已过载的fillBin()方法可在ParseTrash.java中伴随一个Vector使用：
+```
+  public static void 
+  fillBin(String filename, Vector bin) {
+    fillBin(filename, new FillableVector(bin));
+  }
+```
+这种方案适用于任何频繁用到的集合类。除此以外，集合类还可提供它自己的适配器类，并实现Fillable（稍后即可看到，在DynaTrash.java中）。
+
+- 原型机制的重复应用
+现在，大家可以看到采用原型技术的、修订过的RecycleA.java版本了：
+```java
+//: RecycleAP.java 
+// Recycling with RTTI and Prototypes
+package c16.recycleap;
+import c16.trash.*;
+import java.util.*;
+
+public class RecycleAP {
+  public static void main(String[] args) {
+    Vector bin = new Vector();
+    // Fill up the Trash bin:
+    ParseTrash.fillBin("Trash.dat", bin);
+    Vector 
+      glassBin = new Vector(),
+      paperBin = new Vector(),
+      alBin = new Vector();
+    Enumeration sorter = bin.elements();
+    // Sort the Trash:
+    while(sorter.hasMoreElements()) {
+      Object t = sorter.nextElement();
+      // RTTI to show class membership:
+      if(t instanceof Aluminum)
+        alBin.addElement(t);
+      if(t instanceof Paper)
+        paperBin.addElement(t);
+      if(t instanceof Glass)
+        glassBin.addElement(t);
+    }
+    Trash.sumValue(alBin);
+    Trash.sumValue(paperBin);
+    Trash.sumValue(glassBin);
+    Trash.sumValue(bin);
+  }
+} ///:~
+```
+所有Trash对象——以及ParseTrash及支撑类——现在都成为名为c16.trash的一个包的一部分，所以它们可以简单地导入。 无论打开包含了Trash描述信息的数据文件，还是对那个文件进行解析，所有涉及到的操作均已封装到static（静态）方法ParseTrash.fillBin()里。所以它现在已经不是我们设计过程中要注意的一个重点。在本章剩余的部分，大家经常都会看到无论添加的是什么类型的新类，ParseTrash.fillBin()都会持续工作，不会发生改变，这无疑是一种优良的设计方案。
+
+提到对象的创建，这一方案确实已将新类型加入系统所需的变动严格地“本地化”了。但在使用RTTI的过程中，却存在着一个严重的问题，这里已明确地显露出来。程序表面上工作得很好，但却永远侦测到不能“硬纸板”（Cardboard）这种新的废品类型——即使列表里确实有一个硬纸板类型！之所以会出现这种情况，完全是由于使用了RTTI的缘故。RTTI只会查找那些我们告诉它查找的东西。RTTI在这里错误的用法是“系统中的每种类型”都进行了测试，而不是仅测试一种类型或者一个类型子集。正如大家以后会看到的那样，在测试每一种类型时可换用其他方式来运用多形性特征。但假如以这种形式过多地使用RTTI，而且又在自己的系统里添加了一种新类型，很容易就会忘记在程序里作出适当的改动，从而埋下以后难以发现的Bug。因此，在这种情况下避免使用RTTI是很有必要的，这并不仅仅是为了表面好看——也是为了产生更易维护的代码。
+
 ### 16.5 抽象的应用
+走到这一步，接下来该考虑一下设计方案剩下的部分了——在哪里使用类？既然归类到垃圾箱的办法非常不雅且过于暴露，为什么不隔离那个过程，把它隐藏到一个类里呢？这就是著名的“如果必须做不雅的事情，至少应将其本地化到一个类里”规则。看起来就象下面这样：
+
+![image](https://nostyling-1256016577.cos.ap-beijing.myqcloud.com/16-1.gif)
+
+现在，只要一种新类型的Trash加入方法，对TrashSorter对象的初始化就必须变动。可以想象，TrashSorter类看起来应该象下面这个样子：
+```
+class TrashSorter extends Vector {
+void sort(Trash t) { /* ... */ }
+}
+```
+也就是说，TrashSorter是由一系列句柄构成的Vector（系列），而那些句柄指向的又是由Trash句柄构成的Vector；利用addElement()，可以安装新的TrashSorter，如下所示：
+```
+TrashSorter ts = new TrashSorter();
+ts.addElement(new Vector());
+```
+但是现在，sort()却成为一个问题。用静态方式编码的方法如何应付一种新类型加入的事实呢？为解决这个问题，必须从sort()里将类型信息删除，使其需要做的所有事情就是调用一个通用方法，用它照料涉及类型处理的所有细节。这当然是对一个动态绑定方法进行描述的另一种方式。所以sort()会在序列中简单地遍历，并为每个Vector都调用一个动态绑定方法。由于这个方法的任务是收集它感兴趣的垃圾片，所以称之为grab(Trash)。结构现在变成了下面这样：
+![image](https://nostyling-1256016577.cos.ap-beijing.myqcloud.com/16-2.gif)
+
+其中，TrashSorter需要调用每个grab()方法；然后根据当前Vector容纳的是什么类型，会获得一个不同的结果。也就是说，Vector必须留意自己容纳的类型。解决这个问题的传统方法是创建一个基础“Trash bin”（垃圾筒）类，并为希望容纳的每个不同的类型都继承一个新的衍生类。若Java有一个参数化的类型机制，那就也许是最直接的方法。但对于这种机制应该为我们构建的各个类，我们不应该进行麻烦的手工编码，以后的“观察”方式提供了一种更好的编码方式。
+
+OOP设计一条基本的准则是“为状态的变化使用数据成员，为行为的变化使用多性形”。对于容纳Paper（纸张）的Vector，以及容纳Glass（玻璃）的Vector，大家最开始或许会认为分别用于它们的grab()方法肯定会产生不同的行为。但具体如何却完全取决于类型，而不是其他什么东西。可将其解释成一种不同的状态，而且由于Java有一个类可表示类型（Class），所以可用它判断特定的Tbin要容纳什么类型的Trash。
+
+用于Tbin的构建器要求我们为其传递自己选择的一个Class。这样做可告诉Vector它希望容纳的是什么类型。随后，grab()方法用Class BinType和RTTI来检查我们传递给它的Trash对象是否与它希望收集的类型相符。 下面列出完整的解决方案。设定为注释的编号（如1）便于大家对照程序后面列出的说明。
+```java
+//: RecycleB.java
+// Adding more objects to the recycling problem
+package c16.recycleb;
+import c16.trash.*;
+import java.util.*;
+
+// A vector that admits only the right type:
+class Tbin extends Vector {
+  Class binType;
+  Tbin(Class binType) {
+    this.binType = binType;
+  }
+  boolean grab(Trash t) {
+    // Comparing class types:
+    if(t.getClass().equals(binType)) {
+      addElement(t);
+      return true; // Object grabbed
+    }
+    return false; // Object not grabbed
+  }
+}
+
+class TbinList extends Vector { //(*1*)
+  boolean sort(Trash t) {
+    Enumeration e = elements();
+    while(e.hasMoreElements()) {
+      Tbin bin = (Tbin)e.nextElement();
+      if(bin.grab(t)) return true;
+    }
+    return false; // bin not found for t
+  }
+  void sortBin(Tbin bin) { // (*2*)
+    Enumeration e = bin.elements();
+    while(e.hasMoreElements())
+      if(!sort((Trash)e.nextElement()))
+        System.out.println("Bin not found");
+  }
+}
+
+public class RecycleB {
+  static Tbin bin = new Tbin(Trash.class);
+  public static void main(String[] args) {
+    // Fill up the Trash bin:
+    ParseTrash.fillBin("Trash.dat", bin);
+
+    TbinList trashBins = new TbinList();
+    trashBins.addElement(
+      new Tbin(Aluminum.class));
+    trashBins.addElement(
+      new Tbin(Paper.class));
+    trashBins.addElement(
+      new Tbin(Glass.class));
+    // add one line here: (*3*)
+    trashBins.addElement(
+      new Tbin(Cardboard.class));
+
+    trashBins.sortBin(bin); // (*4*)
+
+    Enumeration e = trashBins.elements();
+    while(e.hasMoreElements()) {
+      Tbin b = (Tbin)e.nextElement();
+      Trash.sumValue(b);
+    }
+    Trash.sumValue(bin);
+  }
+} ///:~
+```
+(1) TbinList容纳一系列Tbin句柄，所以在查找与我们传递给它的Trash对象相符的情况时，sort()能通过Tbin继承。
+
+(2) sortBin()允许我们将一个完整的Tbin传递进去，而且它会在Tbin里遍历，挑选出每种Trash，并将其归类到特定的Tbin中。请注意这些代码的通用性：新类型加入时，它本身不需要任何改动。只要新类型加入（或发生其他事件）时大量代码都不需要变化，就表明我们设计的是一个容易扩展的系统。
+
+(3) 现在可以体会添加新类型有多么容易了。为支持添加，只需要改动几行代码。如确实有必要，甚至可以进一步地改进设计，使更多的代码都保持“固定”。
+
+(4) 一个方法调用使bin的内容归类到对应的、特定类型的垃圾筒里。
+
 ### 16.6 多重派遣
+上述设计方案肯定是令人满意的。系统内新类型的加入涉及添加或修改不同的类，但没有必要在系统内对代码作大范围的改动。除此以外，RTTI并不象它在RecycleA.java里那样被不当地使用。然而，我们仍然有可能更深入一步，以最“纯”的角度来看待RTTI， 考虑如何在垃圾分类系统中将它完全消灭。
+
+为达到这个目标，首先必须认识到：对所有与不同类型有特殊关联的活动来说——比如侦测一种垃圾的具体类型，并把它置入适当的垃圾筒里——这些活动都应当通过多形性以及动态绑定加以控制。
+
+以前的例子都是先按类型排序，再对属于某种特殊类型的一系列元素进行操作。现在一旦需要操作特定的类型，就请先停下来想一想。事实上，多形性（动态绑定的方法调用）整个的宗旨就是帮我们管理与不同类型有特殊关联的信息。既然如此，为什么还要自己去检查类型呢？
+
+答案在于大家或许不以为然的一个道理：Java只执行单一派遣。也就是说，假如对多个类型未知的对象执行某项操作，Java只会为那些类型中的一种调用动态绑定机制。这当然不能解决问题，所以最后不得不人工判断某些类型，才能有效地产生自己的动态绑定行为。
+
+为解决这个缺陷，我们需要用到“多重派遣”机制，这意味着需要建立一个配置，使单一方法调用能产生多个动态方法调用，从而在一次处理过程中正确判断出多种类型。为达到这个要求，需要对多个类型结构进行操作：每一次派遣都需要一个类型结构。下面的例子将对两个结构进行操作：现有的Trash系列以及由垃圾筒（Trash Bin）的类型构成的一个系列——不同的垃圾或废品将置入这些筒内。第二个分级结构并非绝对显然的。在这种情况下，我们需要人为地创建它，以执行多重派遣（由于本例只涉及两次派遣，所以称为“双重派遣”）。 
+
+#### 16.6.1 实现双重派遣
+
+记住多形性只能通过方法调用才能表现出来，所以假如想使双重派遣正确进行，必须执行两个方法调用：在每种结构中都用一个来判断其中的类型。在Trash结构中，将使用一个新的方法调用addToBin()，它采用的参数是由TypeBin构成的一个数组。那个方法将在数组中遍历，尝试将自己加入适当的垃圾筒，这里正是双重派遣发生的地方。
+
+![image](https://nostyling-1256016577.cos.ap-beijing.myqcloud.com/16-3.gif)
+
+新建立的分级结构是TypeBin，其中包含了它自己的一个方法，名为add()，而且也应用了多形性。但要注意一个新特点：add()已进行了“过载”处理，可接受不同的垃圾类型作为参数。因此，双重满足机制的一个关键点是它也要涉及到过载。 程序的重新设计也带来了一个问题：现在的基础类Trash必须包含一个addToBin()方法。为解决这个问题，一个最直接的办法是复制所有代码，并修改基础类。然而，假如没有对源码的控制权，那么还有另一个办法可以考虑：将addToBin()方法置入一个接口内部，保持Trash不变，并继承新的、特殊的类型Aluminum，Paper，Glass以及Cardboard。我们在这里准备采取后一个办法。 这个设计方案中用到的大多数类都必须设为public（公用）属性，所以它们放置于自己的类内。下面列出接口代码：
+```
+//: TypedBinMember.java
+// An interface for adding the double dispatching
+// method to the trash hierarchy without
+// modifying the original hierarchy.
+package c16.doubledispatch;
+
+interface TypedBinMember {
+  // The new method:
+  boolean addToBin(TypedBin[] tb);
+} ///:~
+```
+在Aluminum，Paper，Glass以及Cardboard每个特定的子类型内，都会实现接口TypeBinMember的addToBin()方法，但每种情况下使用的代码“似乎”都是完全一样的：
+```java
+//: DDAluminum.java
+// Aluminum for double dispatching
+package c16.doubledispatch;
+import c16.trash.*;
+
+public class DDAluminum extends Aluminum
+    implements TypedBinMember {
+  public DDAluminum(double wt) { super(wt); }
+  public boolean addToBin(TypedBin[] tb) {
+    for(int i = 0; i < tb.length; i++)
+      if(tb[i].add(this))
+        return true;
+    return false;
+  }
+} ///:~
+//: DDPaper.java
+// Paper for double dispatching
+package c16.doubledispatch;
+import c16.trash.*;
+
+public class DDPaper extends Paper
+    implements TypedBinMember {
+  public DDPaper(double wt) { super(wt); }
+  public boolean addToBin(TypedBin[] tb) {
+    for(int i = 0; i < tb.length; i++)
+      if(tb[i].add(this))
+        return true;
+    return false;
+  }
+} ///:~
+//: DDGlass.java
+// Glass for double dispatching
+package c16.doubledispatch;
+import c16.trash.*;
+
+public class DDGlass extends Glass
+    implements TypedBinMember {
+  public DDGlass(double wt) { super(wt); }
+  public boolean addToBin(TypedBin[] tb) {
+    for(int i = 0; i < tb.length; i++)
+      if(tb[i].add(this))
+        return true;
+    return false;
+  }
+} ///:~
+//: DDCardboard.java
+// Cardboard for double dispatching
+package c16.doubledispatch;
+import c16.trash.*;
+
+public class DDCardboard extends Cardboard
+    implements TypedBinMember {
+  public DDCardboard(double wt) { super(wt); }
+  public boolean addToBin(TypedBin[] tb) {
+    for(int i = 0; i < tb.length; i++)
+      if(tb[i].add(this))
+        return true;
+    return false;
+  }
+} ///:~
+```
+每个addToBin()内的代码会为数组中的每个TypeBin对象调用add()。但请注意参数：this。对Trash的每个子类来说，this的类型都是不同的，所以不能认为代码“完全”一样——尽管以后在Java里加入参数化类型机制后便可认为一样。这是双重派遣的第一个部分，因为一旦进入这个方法内部，便可知道到底是Aluminum，Paper，还是其他什么垃圾类型。在对add()的调用过程中，这种信息是通过this的类型传递的。编译器会分析出对add()正确的过载版本的调用。但由于tb[i]会产生指向基础类型TypeBin的一个句柄，所以最终会调用一个不同的方法——具体什么方法取决于当前选择的TypeBin的类型。那就是第二次派遣。
+
+下面是TypeBin的基础类：
+```java
+//: TypedBin.java
+// Vector that knows how to grab the right type
+package c16.doubledispatch;
+import c16.trash.*;
+import java.util.*;
+
+public abstract class TypedBin {
+  Vector v = new Vector();
+  protected boolean addIt(Trash t) {
+    v.addElement(t);
+    return true;
+  }
+  public Enumeration elements() {
+    return v.elements();
+  }
+  public boolean add(DDAluminum a) {
+    return false;
+  }
+  public boolean add(DDPaper a) {
+    return false;
+  }
+  public boolean add(DDGlass a) {
+    return false;
+  }
+  public boolean add(DDCardboard a) {
+    return false;
+  }
+} ///:~
+```
+可以看到，过载的add()方法全都会返回false。如果未在衍生类里对方法进行过载，它就会一直返回false，而且调用者（目前是addToBin()）会认为当前Trash对象尚未成功加入一个集合，所以会继续查找正确的集合。
+
+在TypeBin的每一个子类中，都只有一个过载的方法会被过载——具体取决于准备创建的是什么垃圾筒类型。举个例子来说，CardboardBin会过载add(DDCardboard)。过载的方法会将垃圾对象加入它的集合，并返回true。而CardboardBin中剩余的所有add()方法都会继续返回false，因为它们尚未过载。事实上，假如在这里采用了参数化类型机制，Java代码的自动创建就要方便得多（使用C++的“模板”，我们不必费事地为子类编码，或者将addToBin()方法置入Trash里；Java在这方面尚有待改进）。
+
+由于对这个例子来说，垃圾的类型已经定制并置入一个不同的目录，所以需要用一个不同的垃圾数据文件令其运转起来。下面是一个示范性的DDTrash.dat：
+```
+c16.DoubleDispatch.DDGlass:54
+c16.DoubleDispatch.DDPaper:22
+c16.DoubleDispatch.DDPaper:11
+c16.DoubleDispatch.DDGlass:17
+c16.DoubleDispatch.DDAluminum:89
+c16.DoubleDispatch.DDPaper:88
+c16.DoubleDispatch.DDAluminum:76
+c16.DoubleDispatch.DDCardboard:96
+c16.DoubleDispatch.DDAluminum:25
+c16.DoubleDispatch.DDAluminum:34
+c16.DoubleDispatch.DDGlass:11
+c16.DoubleDispatch.DDGlass:68
+c16.DoubleDispatch.DDGlass:43
+c16.DoubleDispatch.DDAluminum:27
+c16.DoubleDispatch.DDCardboard:44
+c16.DoubleDispatch.DDAluminum:18
+c16.DoubleDispatch.DDPaper:91
+c16.DoubleDispatch.DDGlass:63
+c16.DoubleDispatch.DDGlass:50
+c16.DoubleDispatch.DDGlass:80
+c16.DoubleDispatch.DDAluminum:81
+c16.DoubleDispatch.DDCardboard:12
+c16.DoubleDispatch.DDGlass:12
+c16.DoubleDispatch.DDGlass:54
+c16.DoubleDispatch.DDAluminum:36
+c16.DoubleDispatch.DDAluminum:93
+c16.DoubleDispatch.DDGlass:93
+c16.DoubleDispatch.DDPaper:80
+c16.DoubleDispatch.DDGlass:36
+c16.DoubleDispatch.DDGlass:12
+c16.DoubleDispatch.DDGlass:60
+c16.DoubleDispatch.DDPaper:66
+c16.DoubleDispatch.DDAluminum:36
+c16.DoubleDispatch.DDCardboard:22
+```
+下面列出程序剩余的部分：
+
+```java
+//: DoubleDispatch.java
+// Using multiple dispatching to handle more
+// than one unknown type during a method call.
+package c16.doubledispatch;
+import c16.trash.*;
+import java.util.*;
+
+class AluminumBin extends TypedBin {
+  public boolean add(DDAluminum a) {
+    return addIt(a);
+  }
+}
+
+class PaperBin extends TypedBin {
+  public boolean add(DDPaper a) {
+    return addIt(a);
+  }
+}
+
+class GlassBin extends TypedBin {
+  public boolean add(DDGlass a) {
+    return addIt(a);
+  }
+}
+
+class CardboardBin extends TypedBin {
+  public boolean add(DDCardboard a) {
+    return addIt(a);
+  }
+}
+
+class TrashBinSet {
+  private TypedBin[] binSet = {
+    new AluminumBin(),
+    new PaperBin(),
+    new GlassBin(),
+    new CardboardBin()
+  };
+  public void sortIntoBins(Vector bin) {
+    Enumeration e = bin.elements();
+    while(e.hasMoreElements()) {
+      TypedBinMember t =
+        (TypedBinMember)e.nextElement();
+      if(!t.addToBin(binSet))
+        System.err.println("Couldn't add " + t);
+    }
+  }
+  public TypedBin[] binSet() { return binSet; }
+}
+
+public class DoubleDispatch {
+  public static void main(String[] args) {
+    Vector bin = new Vector();
+    TrashBinSet bins = new TrashBinSet();
+    // ParseTrash still works, without changes:
+    ParseTrash.fillBin("DDTrash.dat", bin);
+    // Sort from the master bin into the
+    // individually-typed bins:
+    bins.sortIntoBins(bin);
+    TypedBin[] tb = bins.binSet();
+    // Perform sumValue for each bin...
+    for(int i = 0; i < tb.length; i++)
+      Trash.sumValue(tb[i].v);
+    // ... and for the master bin
+    Trash.sumValue(bin);
+  }
+} ///:~
+```
+其中，TrashBinSet封装了各种不同类型的TypeBin，同时还有sortIntoBins()方法。所有双重派遣事件都会在那个方法里发生。可以看到，一旦设置好结构，再归类成各种TypeBin的工作就变得十分简单了。除此以外，两个动态方法调用的效率可能也比其他排序方法高一些。
+
+注意这个系统的方便性主要体现在main()中，同时还要注意到任何特定的类型信息在main()中都是完全独立的。只与Trash基础类接口通信的其他所有方法都不会受到Trash类中发生的改变的干扰。
+
+添加新类型需要作出的改动是完全孤立的：我们随同addToBin()方法继承Trash的新类型，然后继承一个新的TypeBin（这实际只是一个副本，可以简单地编辑），最后将一种新类型加入TrashBinSet的集合初化化过程。
+
 ### 16.7 访问器范式
+
+
 ### 16.8 RTTI真的有害吗
 ### 16.9 总结
 ### 16.10 练习
