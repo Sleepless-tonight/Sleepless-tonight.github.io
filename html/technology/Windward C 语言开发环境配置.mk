@@ -21,6 +21,9 @@ pacman-key --init
 pacman -Syu
 
 >更新软件，更新过程中可能要求重新打开终端，另外更新的时候，pacman的软件源可能恢复到默认，需要手动再修改一次。
+gpg: 警告：服务器 ‘gpg-agent’ 比我们的版本更老 （2.2.19-unknown < 2.2.20-unknown）
+gpg: 注意： 过时的服务器可能缺少重要的安全修复。
+gpg: 注意： 使用 “gpgconf --kill all” 来重启他们。
 
 #### 4、安装工具链
 1.  pacman -S mingw-w64-x86_64-cmake mingw-w64-x86_64-extra-cmake-modules
