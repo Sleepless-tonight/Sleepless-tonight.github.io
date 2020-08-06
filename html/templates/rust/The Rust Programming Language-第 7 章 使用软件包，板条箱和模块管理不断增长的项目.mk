@@ -350,13 +350,307 @@ pub fn eat_at_restaurant() {
     let order2 = back_of_house::Appetizer::Salad;
 }
 ```
-Listing 7-10: Designating an enum as public makes all its variants public
+Listing 7-10: Designating an enum as public makes all its variants public   清单7-10：将枚举指定为公共会使其所有变体成为公共
 
-Because we made the Appetizer enum public, we can use the Soup and Salad variants in eat_at_restaurant. Enums aren’t very useful unless their variants are public; it would be annoying to have to annotate all enum variants with pub in every case, so the default for enum variants is to be public. Structs are often useful without their fields being public, so struct fields follow the general rule of everything being private by default unless annotated with pub.
+Because we made the Appetizer enum public, we can use the Soup and Salad variants in eat_at_restaurant. Enums aren’t very useful unless their variants are public; it would be annoying to have to annotate all enum variants with pub in every case, so the default for enum variants is to be public. Structs are often useful without their fields being public, so struct fields follow the general rule of everything being private by default unless annotated with pub.  由于我们将Appetizer枚举公开，因此可以在中使用Soup和Salad 变体eat_at_restaurant。枚举不是很有用，除非它们的变体是公开的。pub在每种情况下都必须对所有枚举变量进行注释会很烦人 ，因此枚举变量的默认设置是公开的。结构通常在没有公开其字段的情况下很有用，因此结构字段遵循一般默认规则，即除非使用注释，否则所有内容均为私有pub。
 
-There’s one more situation involving pub that we haven’t covered, and that is our last module system feature: the use keyword. We’ll cover use by itself first, and then we’ll show how to combine pub and use.
+There’s one more situation involving pub that we haven’t covered, and that is our last module system feature: the use keyword. We’ll cover use by itself first, and then we’ll show how to combine pub and use. pub我们还没有涉及另一种情况，那就是我们的最后一个模块系统功能：use关键字。我们将use首先介绍其本身，然后说明如何结合pub和use。
 
-### 7.4。使用关键字将路径带入范围
+### 7.4。Bringing Paths into Scope with the use Keyword  使用关键字将路径带入范围
+
+>每一个 Rust 文件的内容都是一个"难以发现"的模块。(每一个 Rust 文件 他的内容都默认属于 一个与文件名一样的 模块。)
+>
+>use 关键字能够将模块标识符引入当前作用域：
+>
+>这样就解决了局部模块路径过长的问题。
+>
+>当然，有些情况下存在两个相同的名称，且同样需要导入，我们可以使用 as 关键字为标识符添加别名：
+>
+>use crate::nation::government::govern;
+>
+>use crate::nation::govern as nation_govern;
+>
+>所有的系统库模块都是被默认导入的，
+>
+>使用 use 关键字简化路径就可以方便的使用
+
+It might seem like the paths we’ve written to call functions so far are inconveniently long and repetitive. For example, in Listing 7-7, whether we chose the absolute or relative path to the add_to_waitlist function, every time we wanted to call add_to_waitlist we had to specify front_of_house and hosting too. Fortunately, there’s a way to simplify this process. We can bring a path into a scope once and then call the items in that path as if they’re local items with the use keyword. 到目前为止，似乎我们编写的用于调用函数的路径并不方便且冗长。例如，清单7-7中，我们是否选择了绝对或相对路径的add_to_waitlist功能，我们每次想打电话时add_to_waitlist，我们必须指定front_of_house和 hosting太。幸运的是，有一种方法可以简化此过程。我们可以一次将一个路径引入一个范围，然后使用该use关键字将该路径中的项目视为本地项目。
+
+In Listing 7-11, we bring the crate::front_of_house::hosting module into the scope of the eat_at_restaurant function so we only have to specify hosting::add_to_waitlist to call the add_to_waitlist function in eat_at_restaurant. 在清单7-11中，我们将crate::front_of_house::hosting模块放入eat_at_restaurant函数的范围内，因此我们只需要指定 hosting::add_to_waitlist在中调用add_to_waitlist函数即可 eat_at_restaurant。
+
+Filename: src/lib.rs    文件名：src / lib.rs
+```
+mod front_of_house {
+    pub mod hosting {
+        pub fn add_to_waitlist() {}
+    }
+}
+
+use crate::front_of_house::hosting;
+
+pub fn eat_at_restaurant() {
+    hosting::add_to_waitlist();
+    hosting::add_to_waitlist();
+    hosting::add_to_waitlist();
+}
+```
+Listing 7-11: Bringing a module into scope with use 清单7-11：将模块带入范围 use
+
+Adding use and a path in a scope is similar to creating a symbolic link in the filesystem. By adding use crate::front_of_house::hosting in the crate root, hosting is now a valid name in that scope, just as though the hosting module had been defined in the crate root. Paths brought into scope with use also check privacy, like any other paths. use在作用域中添加和路径类似于在文件系统中创建符号链接。通过添加use crate::front_of_house::hosting板条箱根，hosting现在在该范围内是一个有效名称，就像hosting 模块已在板条箱根中定义一样。与use 其他路径一样，进入作用域的路径也会检查隐私。
+
+You can also bring an item into scope with use and a relative path. Listing 7-12 shows how to specify a relative path to get the same behavior as in Listing 7-11.  您还可以通过use和相对路径将某项纳入范围。清单7-12显示了如何指定相对路径以获得与清单7-11相同的行为。
+
+Filename: src/lib.rs    文件名：src / lib.rs
+```
+mod front_of_house {
+    pub mod hosting {
+        pub fn add_to_waitlist() {}
+    }
+}
+
+use self::front_of_house::hosting;
+
+pub fn eat_at_restaurant() {
+    hosting::add_to_waitlist();
+    hosting::add_to_waitlist();
+    hosting::add_to_waitlist();
+}
+```
+Listing 7-12: Bringing a module into scope with use and a relative path 清单7-12：通过use和相对路径将模块引入作用域
+
+#### Creating Idiomatic use Paths   创建惯用use路径
+In Listing 7-11, you might have wondered why we specified use crate::front_of_house::hosting and then called hosting::add_to_waitlist in eat_at_restaurant rather than specifying the use path all the way out to the add_to_waitlist function to achieve the same result, as in Listing 7-13.  在清单7-11中，您可能想知道为什么我们指定use crate::front_of_house::hosting然后调用hosting::add_to_waitlist， eat_at_restaurant而不是像清单7-13那样use一直指定到add_to_waitlist函数的路径，以获得相同的结果。
+
+Filename: src/lib.rs    文件名：src / lib.rs
+```
+mod front_of_house {
+    pub mod hosting {
+        pub fn add_to_waitlist() {}
+    }
+}
+
+use crate::front_of_house::hosting::add_to_waitlist;
+
+pub fn eat_at_restaurant() {
+    add_to_waitlist();
+    add_to_waitlist();
+    add_to_waitlist();
+}
+```
+Listing 7-13: Bringing the add_to_waitlist function into scope with use, which is unidiomatic   清单7-13：瞻add_to_waitlist功能为与范围use，这是unidiomatic
+
+Although both Listing 7-11 and 7-13 accomplish the same task, Listing 7-11 is the idiomatic way to bring a function into scope with use. Bringing the function’s parent module into scope with use so we have to specify the parent module when calling the function makes it clear that the function isn’t locally defined while still minimizing repetition of the full path. The code in Listing 7-13 is unclear as to where add_to_waitlist is defined. 尽管清单7-11和7-13都完成了相同的任务，但是清单7-11是惯用的将函数带入作用域的方法use。将函数的父模块带入范围内，use因此我们在调用函数时必须指定父模块，以便清楚地知道该函数不是本地定义的，同时仍使完整路径的重复最小化。清单7-13中的代码不清楚在哪里add_to_waitlist定义。
+
+On the other hand, when bringing in structs, enums, and other items with use, it’s idiomatic to specify the full path. Listing 7-14 shows the idiomatic way to bring the standard library’s HashMap struct into the scope of a binary crate.    另一方面，当使用引入结构，枚举和其他项目时use，指定完整路径是惯用的。清单7-14显示了将标准库的HashMap结构引入二进制条板箱范围的惯用方式。
+
+Filename: src/main.rs   文件名：src / main.rs
+```
+se std::collections::HashMap;
+
+fn main() {
+    let mut map = HashMap::new();
+    map.insert(1, 2);
+}
+```
+Listing 7-14: Bringing HashMap into scope in an idiomatic way   清单7-14：HashMap以惯用的方式进入范围
+
+There’s no strong reason behind this idiom: it’s just the convention that has emerged, and folks have gotten used to reading and writing Rust code this way.    这个习惯用语没有充分的理由：这只是惯例的出现，人们已经习惯了以这种方式读取和编写Rust代码。
+
+The exception to this idiom is if we’re bringing two items with the same name into scope with use statements, because Rust doesn’t allow that. Listing 7-15 shows how to bring two Result types into scope that have the same name but different parent modules and how to refer to them.   这个习惯用法的例外是，如果我们将两个具有相同名称的项目放入use语句范围内，因为Rust不允许这样做。清单7-15显示了如何将两个Result具有相同名称但父模块不同的类型引入范围，以及如何引用它们。
+
+Filename: src/lib.rs    文件名：src / lib.rs
+```
+use std::fmt;
+use std::io;
+
+fn function1() -> fmt::Result {
+    // --snip--
+}
+
+fn function2() -> io::Result<()> {
+    // --snip--
+}
+```
+Listing 7-15: Bringing two types with the same name into the same scope requires using their parent modules.    代码清单7-15：将两个具有相同名称的类型带入相同的作用域需要使用它们的父模块
+
+As you can see, using the parent modules distinguishes the two Result types. If instead we specified use std::fmt::Result and use std::io::Result, we’d have two Result types in the same scope and Rust wouldn’t know which one we meant when we used Result.  如您所见，使用父模块可以区分这两种Result类型。如果相反，我们指定use std::fmt::Result和use std::io::Result，我们将Result在同一范围内有两种类型，而Rust在使用时将不知道我们指的是哪一种Result。
+
+#### Providing New Names with the as Keyword    使用as关键字提供新名称
+There’s another solution to the problem of bringing two types of the same name into the same scope with use: after the path, we can specify as and a new local name, or alias, for the type. Listing 7-16 shows another way to write the code in Listing 7-15 by renaming one of the two Result types using as. 还有另一个解决方案，可以通过以下方式将相同名称的两种类型引入同一作用域use：在路径之后，我们可以as为该类型指定一个新的本地名称或别名。清单7-16显示了另一种方式来编写清单7-15中的代码，方法是使用来重命名两种Result类型之一as。
+
+Filename: src/lib.rs    文件名：src / lib.rs
+```
+use std::fmt::Result;
+use std::io::Result as IoResult;
+
+fn function1() -> Result {
+    // --snip--
+}
+
+fn function2() -> IoResult<()> {
+    // --snip--
+}
+```
+Listing 7-16: Renaming a type when it’s brought into scope with the as keyword  清单7-16：使用as关键字将类型带入范围时重命名
+
+In the second use statement, we chose the new name IoResult for the std::io::Result type, which won’t conflict with the Result from std::fmt that we’ve also brought into scope. Listing 7-15 and Listing 7-16 are considered idiomatic, so the choice is up to you!    在第二个use语句中，我们IoResult为 std::io::Result类型选择了新名称，这与 我们也将其引入范围的Resultfrom 不会冲突std::fmt。清单7-15和清单7-16被认为是惯用的，因此选择取决于您！
+
+#### Re-exporting Names with pub use    用以下方式重新导出名称 pub use
+When we bring a name into scope with the use keyword, the name available in the new scope is private. To enable the code that calls our code to refer to that name as if it had been defined in that code’s scope, we can combine pub and use. This technique is called re-exporting because we’re bringing an item into scope but also making that item available for others to bring into their scope.    当我们使用use关键字将名称带入范围时，新范围中可用的名称是私有的。为了使调用我们代码的代码能够引用该名称，就像在该代码的范围内定义了该名称一样，我们可以将pub 和组合在一起use。这项技术称为重新导出，因为我们将某个项目放入范围内，同时也使该项目可供其他人进入其范围内。
+
+Listing 7-17 shows the code in Listing 7-11 with use in the root module changed to pub use. 清单7-17显示了清单7-11中的代码，use其中根模块更改为pub use。
+
+Filename: src/lib.rs    文件名：src / lib.rs
+```
+mod front_of_house {
+    pub mod hosting {
+        pub fn add_to_waitlist() {}
+    }
+}
+
+pub use crate::front_of_house::hosting;
+
+pub fn eat_at_restaurant() {
+    hosting::add_to_waitlist();
+    hosting::add_to_waitlist();
+    hosting::add_to_waitlist();
+}
+```
+Listing 7-17: Making a name available for any code to use from a new scope with pub use 清单7-17：在新作用域中使名称可用于任何代码 pub use
+
+By using pub use, external code can now call the add_to_waitlist function using hosting::add_to_waitlist. If we hadn’t specified pub use, the eat_at_restaurant function could call hosting::add_to_waitlist in its scope, but external code couldn’t take advantage of this new path.  通过使用pub use，外部代码现在可以add_to_waitlist使用调用该函数hosting::add_to_waitlist。如果未指定pub use，则该 eat_at_restaurant函数可以hosting::add_to_waitlist在其作用域内调用，但外部代码无法利用此新路径。
+
+Re-exporting is useful when the internal structure of your code is different from how programmers calling your code would think about the domain. For example, in this restaurant metaphor, the people running the restaurant think about “front of house” and “back of house.” But customers visiting a restaurant probably won’t think about the parts of the restaurant in those terms. With pub use, we can write our code with one structure but expose a different structure. Doing so makes our library well organized for programmers working on the library and programmers calling the library.   当代码的内部结构与调用代码的程序员对域的思考方式不同时，重新导出很有用。例如，在这个餐厅的比喻中，经营餐厅的人会想到“房子的前面”和“房子的后面”。但是光顾这些餐厅的顾客可能不会考虑这些餐厅的组成部分。使用 pub use，我们可以使用一种结构编写代码，但可以公开不同的结构。这样做使我们的库井井有条，适合从事库工作的程序员和调用库的程序员。
+
+#### Using External Packages
+In Chapter 2, we programmed a guessing game project that used an external package called rand to get random numbers. To use rand in our project, we added this line to Cargo.toml:  在第2章中，我们编写了一个猜测游戏项目，该项目使用一个名为的外部软件包rand来获取随机数。要rand在我们的项目中使用，我们将此行添加到Cargo.toml中：
+
+Filename: Cargo.toml    文件名：Cargo.toml
+```
+[dependencies]
+rand = "0.5.5"
+```
+Adding rand as a dependency in Cargo.toml tells Cargo to download the rand package and any dependencies from crates.io and make rand available to our project.  rand在Cargo.toml中添加依赖项后，Cargo会rand从crates.io下载 软件包和任何依赖项，并将其rand提供给我们的项目。
+
+Then, to bring rand definitions into the scope of our package, we added a use line starting with the name of the crate, rand, and listed the items we wanted to bring into scope. Recall that in the “Generating a Random Number” section in Chapter 2, we brought the Rng trait into scope and called the rand::thread_rng function:   然后，为了将rand定义带入包的范围，我们添加了一个use以板条箱名称开头的 行rand，并列出了我们希望带入范围的项目。回想一下，在第2章的“生成随机数”部分中，我们将Rng特征引入了范围并称为rand::thread_rng函数：
+```
+use rand::Rng;
+
+fn main() {
+    let secret_number = rand::thread_rng().gen_range(1, 101);
+}
+```
+Members of the Rust community have made many packages available at crates.io, and pulling any of them into your package involves these same steps: listing them in your package’s Cargo.toml file and using use to bring items from their crates into scope.    Rust社区的成员已经在crates.io上提供了许多软件包 ，将它们中的任何一个放入到软件包中都涉及这些相同的步骤：将它们列出在软件包的Cargo.toml文件中，然后use将其包装中的物品带入范围。
+
+Note that the standard library (std) is also a crate that’s external to our package. Because the standard library is shipped with the Rust language, we don’t need to change Cargo.toml to include std. But we do need to refer to it with use to bring items from there into our package’s scope. For example, with HashMap we would use this line:    请注意，标准库（std）也是我们包外部的板条箱。由于标准库随附Rust语言，因此我们不需要将Cargo.toml更改为include std。但是我们确实需要引用它，use以将其中的项目带入我们的包的范围。例如，HashMap我们将使用以下行：
+```
+use std::collections::HashMap;
+```
+This is an absolute path starting with std, the name of the standard library crate. 这是一个以开头的绝对路径std，即标准库箱的名称。
+
+#### Using Nested Paths to Clean Up Large use Lists 使用嵌套路径清理大use列表
+If we’re using multiple items defined in the same crate or same module, listing each item on its own line can take up a lot of vertical space in our files. For example, these two use statements we had in the Guessing Game in Listing 2-4 bring items from std into scope:   如果我们使用在同一个板条箱或同一个模块中定义的多个项目，则在每行中列出每个项目会占用我们文件中的大量垂直空间。例如，use清单2-4中的Guessing Game中的以下两个语句将项目从std以下范围引入：
+
+Filename: src/main.rs   文件名：src / main.rs
+```
+// --snip--
+use std::cmp::Ordering;
+use std::io;
+// --snip--
+```
+Instead, we can use nested paths to bring the same items into scope in one line. We do this by specifying the common part of the path, followed by two colons, and then curly brackets around a list of the parts of the paths that differ, as shown in Listing 7-18.   相反，我们可以使用嵌套路径将同一项目合并到一行中。为此，我们先指定路径的公共部分，然后指定两个冒号，然后在路径不同部分的列表周围使用花括号，如清单7-18所示。
+
+Filename: src/main.rs   文件名：src / main.rs
+```
+// --snip--
+use std::{cmp::Ordering, io};
+// --snip--
+```
+
+Listing 7-18: Specifying a nested path to bring multiple items with the same prefix into scope  清单7-18：指定嵌套路径以将具有相同前缀的多个项目带入范围
+
+In bigger programs, bringing many items into scope from the same crate or module using nested paths can reduce the number of separate use statements needed by a lot!   在较大的程序中，使用嵌套路径从同一板条箱或模块中将许多项目纳入范围可以减少use很多所需的独立语句！
+
+We can use a nested path at any level in a path, which is useful when combining two use statements that share a subpath. For example, Listing 7-19 shows two use statements: one that brings std::io into scope and one that brings std::io::Write into scope.  我们可以在路径的任何级别上使用嵌套路径，这在组合两个use共享子路径的语句时非常有用。例如，清单7-19显示了两个 use语句：一个std::io进入范围，另一个 std::io::Write进入范围。
+
+Filename: src/lib.rs    文件名：src / lib.rs
+```
+use std::io;
+use std::io::Write;
+```
+Listing 7-19: Two use statements where one is a subpath of the other    清单7-19：两个use语句，其中一个是另一个的子路径
+
+The common part of these two paths is std::io, and that’s the complete first path. To merge these two paths into one use statement, we can use self in the nested path, as shown in Listing 7-20.   这两个路径的共同部分是std::io，这就是完整的第一个路径。要将这两个路径合并为一条use语句，我们可以使用self嵌套路径，如清单7-20所示。
+
+Filename: src/lib.rs    文件名：src / lib.rs
+```
+use std::io::{self, Write};
+```
+Listing 7-20: Combining the paths in Listing 7-19 into one use statement    清单7-20：将清单7-19中的路径合并为一条use语句
+
+This line brings std::io and std::io::Write into scope. 此行带来了std::io和std::io::Write成的范围。
+
+#### The Glob Operator  全局运算符
+If we want to bring all public items defined in a path into scope, we can specify that path followed by *, the glob operator:   如果要将路径中定义的所有公共项目都纳入范围，可以指定该路径，后跟*，glob运算符：
+```
+use std::collections::*;
+```
+
+This use statement brings all public items defined in std::collections into the current scope. Be careful when using the glob operator! Glob can make it harder to tell what names are in scope and where a name used in your program was defined.  该use语句将定义的所有公共项目std::collections带入当前范围。使用glob运算符时要小心！Glob使得更难分辨作用域中的名称以及程序中使用的名称的定义位置。
+
+The glob operator is often used when testing to bring everything under test into the tests module; we’ll talk about that in the “How to Write Tests” section in Chapter 11. The glob operator is also sometimes used as part of the prelude pattern: see the standard library documentation for more information on that pattern.   测试时通常使用glob运算符将要测试的所有内容带入tests模块；我们将在第11章的“如何编写测试”部分中讨论这一点。glob运算符有时也用作前奏模式的一部分： 有关该模式的更多信息，请参见标准库文档。
+
+### 7.5。Separating Modules into Different Files 将模块分成不同的文件
+So far, all the examples in this chapter defined multiple modules in one file. When modules get large, you might want to move their definitions to a separate file to make the code easier to navigate. 到目前为止，本章中的所有示例都在一个文件中定义了多个模块。当模块变大时，您可能希望将其定义移动到单独的文件中，以使代码更易于浏览。
+
+For example, let’s start from the code in Listing 7-17 and move the front_of_house module to its own file src/front_of_house.rs by changing the crate root file so it contains the code shown in Listing 7-21. In this case, the crate root file is src/lib.rs, but this procedure also works with binary crates whose crate root file is src/main.rs.  例如，让我们从清单7-17中的代码开始，通过更改板条箱根文件将 front_of_house模块移至其自己的文件src / front_of_house.rs，使其包含清单7-21中所示的代码。在这种情况下，板条箱根文件是src / lib.rs，但是此过程也适用于板条箱根文件是src / main.rs的二进制板条箱。
+
+Filename: src/lib.rs    文件名：src / lib.rs
+```
+mod front_of_house;
+
+pub use crate::front_of_house::hosting;
+
+pub fn eat_at_restaurant() {
+    hosting::add_to_waitlist();
+    hosting::add_to_waitlist();
+    hosting::add_to_waitlist();
+}
+```
+Listing 7-21: Declaring the front_of_house module whose body will be in src/front_of_house.rs   清单7-21：front_of_house在src / front_of_house.rs中声明其主体的模块
+
+And src/front_of_house.rs gets the definitions from the body of the front_of_house module, as shown in Listing 7-22.    和SRC / front_of_house.rs得到从身体的定义 front_of_house模块，如清单7-22英寸
+
+Filename: src/front_of_house.rs 文件名：src / front_of_house.rs
+```
+pub mod hosting {
+    pub fn add_to_waitlist() {}
+}
+```
+Listing 7-22: Definitions inside the front_of_house module in src/front_of_house.rs 清单7-22：src / front_of_house.rs中front_of_house 模块内部的定义
+
+Using a semicolon after mod front_of_house rather than using a block tells Rust to load the contents of the module from another file with the same name as the module. To continue with our example and extract the hosting module to its own file as well, we change src/front_of_house.rs to contain only the declaration of the hosting module:  在分号之后mod front_of_house而不是在分号之后使用分号告诉Rust从另一个与模块同名的文件中加载模块的内容。为了继续我们的示例并将hosting模块提取到其自己的文件中，我们将src / front_of_house.rs更改为仅包含hosting模块的声明：
+
+Filename: src/front_of_house.rs 文件名：src / front_of_house.rs
+```
+pub mod hosting;
+```
+Then we create a src/front_of_house directory and a file src/front_of_house/hosting.rs to contain the definitions made in the hosting module:   然后，我们创建一个src / front_of_house目录和一个文件 src / front_of_house / hosting.rs，以包含在hosting模块中所做的定义 ：
+
+Filename: src/front_of_house/hosting.rs 文件名：src / front_of_house / hosting.rs
+```
+pub fn add_to_waitlist() {}
+```
+
+The module tree remains the same, and the function calls in eat_at_restaurant will work without any modification, even though the definitions live in different files. This technique lets you move modules to new files as they grow in size.  模块树保持不变，eat_at_restaurant 即使定义存在于不同的文件中，调用的函数也无需任何修改即可工作。这种技术使您可以随着模块大小的增加而将其移动到新文件中。
+
+Note that the pub use crate::front_of_house::hosting statement in src/lib.rs also hasn’t changed, nor does use have any impact on what files are compiled as part of the crate. The mod keyword declares modules, and Rust looks in a file with the same name as the module for the code that goes into that module.    请注意，src / lib.rs中的pub use crate::front_of_house::hosting语句 也没有更改，也不会影响作为板条箱一部分编译的文件。该关键字声明模块和锈看起来具有相同的名称作为该进入该模块的代码模块的文件。usemod
+
+#### Summary    摘要
+Rust lets you split a package into multiple crates and a crate into modules so you can refer to items defined in one module from another module. You can do this by specifying absolute or relative paths. These paths can be brought into scope with a use statement so you can use a shorter path for multiple uses of the item in that scope. Module code is private by default, but you can make definitions public by adding the pub keyword.  Rust使您可以将一个包分成多个包装箱，然后将一个包装箱分成多个模块，以便可以从另一个模块引用一个模块中定义的项目。您可以通过指定绝对或相对路径来做到这一点。可以使用一条use语句将这些路径纳入范围，因此您可以在该范围内为该项目的多次使用使用较短的路径。默认情况下，模块代码是私有的，但是您可以通过添加pub关键字来使定义公开。
+
+In the next chapter, we’ll look at some collection data structures in the standard library that you can use in your neatly organized code.  在下一章中，我们将研究标准库中的一些集合数据结构，您可以在整洁的代码中使用它们。
 
 
-### 7.5。将模块分成不同的文件
+
+
