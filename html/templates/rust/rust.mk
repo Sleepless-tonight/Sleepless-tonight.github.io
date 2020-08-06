@@ -1,4 +1,9 @@
 # Rust编程语言
+
+1. 标签：Rust、基础、
+2. 时间：2020年8月6日6:25:00
+3. 连接：http://www.nostyling.cn/html/templates/Thinking-In-Java.mk
+
 ## 前言
 ## 介绍
 ## 第 1章 入门
@@ -97,7 +102,7 @@ Keeping a crate’s functionality in its own scope clarifies whether particular 
 ### 11.1。如何编写测试
 ### 11.2。控制测试的运行方式
 ### 11.3。测试组织
-## 第 12章  I / O项目：构建命令行程序
+## 第 12章  I_O项目：构建命令行程序
 ### 12.1。接受命令行参数
 ### 12.2。读取文件
 ### 12.3。重构以提高模块化和错误处理
@@ -107,7 +112,7 @@ Keeping a crate’s functionality in its own scope clarifies whether particular 
 ## 第 13章 功能语言功能：迭代器和闭包
 ### 13.1。闭包：可以捕获其环境的匿名函数
 ### 13.2。使用迭代器处理一系列项目
-### 13.3。改善我们的I / O项目
+### 13.3。改善我们的I_O项目
 ### 13.4。比较性能：循环与迭代器
 ## 第 14章 有关Cargo和Crates.io的更多信息
 ### 14.1。使用发布配置文件自定义构建
