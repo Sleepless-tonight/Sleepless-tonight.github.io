@@ -19,21 +19,21 @@ To create a new, empty vector, we can call the Vec::new function, as shown in Li
 ```
    let v: Vec<i32> = Vec::new();
 ```
-Listing 8-1: Creating a new, empty vector to hold values of type i32
+Listing 8-1: Creating a new, empty vector to hold values of type i32    清单8-1：创建一个新的空向量来保存类型的值 i32
 
-Note that we added a type annotation here. Because we aren’t inserting any values into this vector, Rust doesn’t know what kind of elements we intend to store. This is an important point. Vectors are implemented using generics; we’ll cover how to use generics with your own types in Chapter 10. For now, know that the Vec<T> type provided by the standard library can hold any type, and when a specific vector holds a specific type, the type is specified within angle brackets. In Listing 8-1, we’ve told Rust that the Vec<T> in v will hold elements of the i32 type.
+Note that we added a type annotation here. Because we aren’t inserting any values into this vector, Rust doesn’t know what kind of elements we intend to store. This is an important point. Vectors are implemented using generics; we’ll cover how to use generics with your own types in Chapter 10. For now, know that the Vec<T> type provided by the standard library can hold any type, and when a specific vector holds a specific type, the type is specified within angle brackets. In Listing 8-1, we’ve told Rust that the Vec<T> in v will hold elements of the i32 type.   请注意，我们在此处添加了类型注释。因为我们没有在此向量中插入任何值，所以Rust不知道我们打算存储哪种元素。这是重要的一点。向量是使用泛型实现的；我们将在第10章中介绍如何将泛型与您自己的类型一起使用。现在，您知道Vec<T>标准库提供的类型可以容纳任何类型，并且当特定向量具有特定类型时，该类型将在尖括号中指定。在清单8-1中，我们告诉Rust，Vec<T>in v将容纳该i32类型的元素。
 
-In more realistic code, Rust can often infer the type of value you want to store once you insert values, so you rarely need to do this type annotation. It’s more common to create a Vec<T> that has initial values, and Rust provides the vec! macro for convenience. The macro will create a new vector that holds the values you give it. Listing 8-2 creates a new Vec<i32> that holds the values 1, 2, and 3. The integer type is i32 because that’s the default integer type, as we discussed in the “Data Types” section of Chapter 3.
+In more realistic code, Rust can often infer the type of value you want to store once you insert values, so you rarely need to do this type annotation. It’s more common to create a Vec<T> that has initial values, and Rust provides the vec! macro for convenience. The macro will create a new vector that holds the values you give it. Listing 8-2 creates a new Vec<i32> that holds the values 1, 2, and 3. The integer type is i32 because that’s the default integer type, as we discussed in the “Data Types” section of Chapter 3.   在更实际的代码中，Rust通常可以在插入值后就推断出要存储的值的类型，因此您几乎不需要执行此类型注释。创建Vec<T>具有初始值的更为常见，Rust vec!为方便起见提供了该宏。宏将创建一个新向量，其中包含您提供的值。清单8-2创建一个新的Vec<i32>保存价值1，2和3。整数类型是i32因为这是默认的整数类型，正如我们在第3章的“数据类型”一节中讨论的那样。
 ```
  let v = vec![1, 2, 3];
 ```
-Listing 8-2: Creating a new vector containing values
+Listing 8-2: Creating a new vector containing values    清单8-2：创建一个包含值的新向量
 
-Because we’ve given initial i32 values, Rust can infer that the type of v is Vec<i32>, and the type annotation isn’t necessary. Next, we’ll look at how to modify a vector.
+Because we’ve given initial i32 values, Rust can infer that the type of v is Vec<i32>, and the type annotation isn’t necessary. Next, we’ll look at how to modify a vector. 因为我们已经给定了初始i32值，所以Rust可以推断出的类型v 为Vec<i32>，并且不需要类型注释。接下来，我们将研究如何修改向量。
 
-Updating a Vector
+#### Updating a Vector
 
-To create a vector and then add elements to it, we can use the push method, as shown in Listing 8-3.
+To create a vector and then add elements to it, we can use the push method, as shown in Listing 8-3.    要创建一个向量，然后向其中添加元素，我们可以使用push方法，如清单8-3所示。
 ```
     let mut v = Vec::new();
 
