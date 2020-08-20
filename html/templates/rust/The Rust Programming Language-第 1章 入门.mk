@@ -20,9 +20,20 @@ Cargo是Rust的构建系统和包管理器。大多数Rustacean使用此工具�
 1. 构建代码，
 2. 下载代码所依赖的库以及构建这些库。（我们称库为您的代码需要依赖项。）
 
+请在终端中输入以下内容，检查是否已安装Cargo：
+```
+$ cargo --version
+```
+
 #### 用 Cargo 创建项目
 
+```
+$ cargo new hello_cargo
+$ cd hello_cargo
+```
+第一个命令创建一个名为hello_cargo的新目录。我们已将项目命名为hello_cargo，并且Cargo在同名目录中创建其文件。
 
+进入hello_cargo目录并列出文件。您会看到Cargo为我们生成了两个文件和一个目录：一个Cargo.toml文件和一个其中带有main.rs文件的 src目录。
 
 
 

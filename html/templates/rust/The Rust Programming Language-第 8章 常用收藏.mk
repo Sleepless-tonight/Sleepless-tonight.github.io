@@ -184,48 +184,53 @@ Now that we’ve discussed some of the most common ways to use vectors, be sure 
 
 
 ### 8.2。Storing UTF-8 Encoded Text with Strings 使用字符串存储UTF-8编码文本
-We talked about strings in Chapter 4, but we’ll look at them in more depth now. New Rustaceans commonly get stuck on strings for a combination of three reasons: Rust’s propensity for exposing possible errors, strings being a more complicated data structure than many programmers give them credit for, and UTF-8. These factors combine in a way that can seem difficult when you’re coming from other programming languages.
+We talked about strings in Chapter 4, but we’ll look at them in more depth now. New Rustaceans commonly get stuck on strings for a combination of three reasons: Rust’s propensity for exposing possible errors, strings being a more complicated data structure than many programmers give them credit for, and UTF-8. These factors combine in a way that can seem difficult when you’re coming from other programming languages. 我们在第4章中讨论过字符串，但是现在我们将更深入地研究它们。新的Rustaceans通常由于以下三个原因而卡在字符串上：Rust暴露可能的错误的倾向，字符串是比许多程序员认为的更复杂的数据结构以及UTF-8。当您来自其他编程语言时，这些因素的组合似乎很难。
 
-It’s useful to discuss strings in the context of collections because strings are implemented as a collection of bytes, plus some methods to provide useful functionality when those bytes are interpreted as text. In this section, we’ll talk about the operations on String that every collection type has, such as creating, updating, and reading. We’ll also discuss the ways in which String is different from the other collections, namely how indexing into a String is complicated by the differences between how people and computers interpret String data.
+It’s useful to discuss strings in the context of collections because strings are implemented as a collection of bytes, plus some methods to provide useful functionality when those bytes are interpreted as text. In this section, we’ll talk about the operations on String that every collection type has, such as creating, updating, and reading. We’ll also discuss the ways in which String is different from the other collections, namely how indexing into a String is complicated by the differences between how people and computers interpret String data. 在集合的上下文中讨论字符串很有用，因为字符串是作为字节的集合实现的，另外还有一些在这些字节被解释为文本时提供有用功能的方法。在本节中，我们将讨论String每种集合类型所具有的操作，例如创建，更新和读取。我们还将讨论与String 其他集合不同的方式，即String，由于人和计算机解释String数据的方式不同，如何索引到a 中变得复杂 。
 
-What Is a String?
-We’ll first define what we mean by the term string. Rust has only one string type in the core language, which is the string slice str that is usually seen in its borrowed form &str. In Chapter 4, we talked about string slices, which are references to some UTF-8 encoded string data stored elsewhere. String literals, for example, are stored in the program’s binary and are therefore string slices.
+#### What Is a String?  什么是字符串？
+We’ll first define what we mean by the term string. Rust has only one string type in the core language, which is the string slice str that is usually seen in its borrowed form &str. In Chapter 4, we talked about string slices, which are references to some UTF-8 encoded string data stored elsewhere. String literals, for example, are stored in the program’s binary and are therefore string slices.   我们将首先定义术语字符串的含义。Rust在核心语言中只有一种字符串类型str，即通常以借用形式看到的字符串切片&str。在第4章中，我们讨论了字符串切片，这是对存储在其他位置的一些UTF-8编码的字符串数据的引用。例如，字符串文字存储在程序的二进制文件中，因此是字符串切片。
 
-The String type, which is provided by Rust’s standard library rather than coded into the core language, is a growable, mutable, owned, UTF-8 encoded string type. When Rustaceans refer to “strings” in Rust, they usually mean the String and the string slice &str types, not just one of those types. Although this section is largely about String, both types are used heavily in Rust’s standard library, and both String and string slices are UTF-8 encoded.
+The String type, which is provided by Rust’s standard library rather than coded into the core language, is a growable, mutable, owned, UTF-8 encoded string type. When Rustaceans refer to “strings” in Rust, they usually mean the String and the string slice &str types, not just one of those types. Although this section is largely about String, both types are used heavily in Rust’s standard library, and both String and string slices are UTF-8 encoded.    这种String类型是Rust的标准库提供的，而不是编码到核心语言中的，是一种可增长，可变，拥有的，UTF-8编码的字符串类型。当Rustaceans在Rust中引用“字符串”时，它们通常指 String和切片&str类型，而不仅仅是这些类型之一。尽管本节主要涉及String，但在Rust的标准库中都大量使用了这两种类型，并且这两种类型String和字符串切片均采用UTF-8编码。
 
-Rust’s standard library also includes a number of other string types, such as OsString, OsStr, CString, and CStr. Library crates can provide even more options for storing string data. See how those names all end in String or Str? They refer to owned and borrowed variants, just like the String and str types you’ve seen previously. These string types can store text in different encodings or be represented in memory in a different way, for example. We won’t discuss these other string types in this chapter; see their API documentation for more about how to use them and when each is appropriate.
+Rust’s standard library also includes a number of other string types, such as OsString, OsStr, CString, and CStr. Library crates can provide even more options for storing string data. See how those names all end in String or Str? They refer to owned and borrowed variants, just like the String and str types you’ve seen previously. These string types can store text in different encodings or be represented in memory in a different way, for example. We won’t discuss these other string types in this chapter; see their API documentation for more about how to use them and when each is appropriate.   锈病的标准库还包括一些其他字符串类型，如 OsString，OsStr，CString，和CStr。图书馆包装箱可以提供更多的选项来存储字符串数据。看看这些名称全都以String 或结尾Str吗？它们是指拥有和借用的变体，就像您之前看到的String和 str类型一样。例如，这些字符串类型可以用不同的编码存储文本，或者以不同的方式在内存中表示。在本章中，我们不会讨论其他字符串类型。有关如何使用它们以及何时使用它们的更多信息，请参见其API文档。
 
-Creating a New String
-Many of the same operations available with Vec<T> are available with String as well, starting with the new function to create a string, shown in Listing 8-11.
+#### Creating a New String
+Many of the same operations available with Vec<T> are available with String as well, starting with the new function to create a string, shown in Listing 8-11.  Vec<T>也可以使用许多与之相同的操作String ，从new创建字符串的函数开始，如清单8-11所示。
 
-
+```
     let mut s = String::new();
-Listing 8-11: Creating a new, empty String
+```
 
-This line creates a new empty string called s, which we can then load data into. Often, we’ll have some initial data that we want to start the string with. For that, we use the to_string method, which is available on any type that implements the Display trait, as string literals do. Listing 8-12 shows two examples.
+Listing 8-11: Creating a new, empty String  清单8-11：创建一个新的空 String
 
+This line creates a new empty string called s, which we can then load data into. Often, we’ll have some initial data that we want to start the string with. For that, we use the to_string method, which is available on any type that implements the Display trait, as string literals do. Listing 8-12 shows two examples.    这行会创建一个名为的新空字符串s，然后我们可以将数据加载到其中。通常，我们会使用一些初始数据作为字符串的开头。为此，我们使用该to_string方法，该方法可在实现该Display特征的任何类型上使用，就像字符串文字一样。清单8-12显示了两个示例。
 
+```
     let data = "initial contents";
 
     let s = data.to_string();
 
     // the method also works on a literal directly:
     let s = "initial contents".to_string();
-Listing 8-12: Using the to_string method to create a String from a string literal
+```
+Listing 8-12: Using the to_string method to create a String from a string literal   清单8-12：使用该to_string方法String从字符串文字创建一个
 
-This code creates a string containing initial contents.
+This code creates a string containing initial contents. 此代码创建一个包含的字符串initial contents。
 
-We can also use the function String::from to create a String from a string literal. The code in Listing 8-13 is equivalent to the code from Listing 8-12 that uses to_string.
+We can also use the function String::from to create a String from a string literal. The code in Listing 8-13 is equivalent to the code from Listing 8-12 that uses to_string.   我们还可以使用该函数String::from根据String字符串文字创建一个。清单8-13中的代码与清单8-12中使用的代码等效to_string。
 
+```
+let s = String::from("initial contents");
+```
+    
+Listing 8-13: Using the String::from function to create a String from a string literal  清单8-13：使用该String::from函数String从字符串文字创建一个
 
-    let s = String::from("initial contents");
-Listing 8-13: Using the String::from function to create a String from a string literal
+Because strings are used for so many things, we can use many different generic APIs for strings, providing us with a lot of options. Some of them can seem redundant, but they all have their place! In this case, String::from and to_string do the same thing, so which you choose is a matter of style.  因为字符串用于很多事情，所以我们可以对字符串使用许多不同的通用API，从而为我们提供了很多选择。其中一些似乎多余，但它们都有自己的位置！在这种情况下，String::from和 to_string做同样的事情，所以，你选择的是一个风格问题。
 
-Because strings are used for so many things, we can use many different generic APIs for strings, providing us with a lot of options. Some of them can seem redundant, but they all have their place! In this case, String::from and to_string do the same thing, so which you choose is a matter of style.
+Remember that strings are UTF-8 encoded, so we can include any properly encoded data in them, as shown in Listing 8-14. 请记住，字符串是UTF-8编码的，因此我们可以在其中包含任何正确编码的数据，如清单8-14所示。
 
-Remember that strings are UTF-8 encoded, so we can include any properly encoded data in them, as shown in Listing 8-14.
-
-
+```
     let hello = String::from("السلام عليكم");
     let hello = String::from("Dobrý den");
     let hello = String::from("Hello");
@@ -237,57 +242,64 @@ Remember that strings are UTF-8 encoded, so we can include any properly encoded 
     let hello = String::from("Olá");
     let hello = String::from("Здравствуйте");
     let hello = String::from("Hola");
-Listing 8-14: Storing greetings in different languages in strings
+```
+Listing 8-14: Storing greetings in different languages in strings   清单8-14：将不同语言的问候语存储在字符串中
 
-All of these are valid String values.
+All of these are valid String values.   所有这些都是有效值String。
 
-Updating a String
-A String can grow in size and its contents can change, just like the contents of a Vec<T>, if you push more data into it. In addition, you can conveniently use the + operator or the format! macro to concatenate String values.
+#### Updating a String
+A String can grow in size and its contents can change, just like the contents of a Vec<T>, if you push more data into it. In addition, you can conveniently use the + operator or the format! macro to concatenate String values.   如果您将更多数据推入其中，则A的String大小可能会增加，其内容也会发生变化，就像a的内容一样Vec<T>。此外，您可以方便地使用+运算符或format!宏来连接String值。
 
-Appending to a String with push_str and push
-We can grow a String by using the push_str method to append a string slice, as shown in Listing 8-15.
+Appending to a String with push_str and push    用push_str和附加到字符串push
 
+We can grow a String by using the push_str method to append a string slice, as shown in Listing 8-15.   我们可以String使用push_str方法添加一个字符串切片来增加a ，如清单8-15所示。
 
+```
     let mut s = String::from("foo");
     s.push_str("bar");
-Listing 8-15: Appending a string slice to a String using the push_str method
+```
+Listing 8-15: Appending a string slice to a String using the push_str method    清单8-15：String 使用push_str方法将字符串切片附加到
 
-After these two lines, s will contain foobar. The push_str method takes a string slice because we don’t necessarily want to take ownership of the parameter. For example, the code in Listing 8-16 shows that it would be unfortunate if we weren’t able to use s2 after appending its contents to s1.
+After these two lines, s will contain foobar. The push_str method takes a string slice because we don’t necessarily want to take ownership of the parameter. For example, the code in Listing 8-16 shows that it would be unfortunate if we weren’t able to use s2 after appending its contents to s1.  在这两行之后，s将包含foobar。该push_str方法采用字符串切片，因为我们不一定要获取参数的所有权。例如，清单8-16中的代码显示，如果s2将其内容附加到之后无法使用，那将是不幸的s1。
 
 
     let mut s1 = String::from("foo");
     let s2 = "bar";
     s1.push_str(s2);
     println!("s2 is {}", s2);
-Listing 8-16: Using a string slice after appending its contents to a String
+Listing 8-16: Using a string slice after appending its contents to a String 清单8-16：将字符串切片的内容附加到 String
 
-If the push_str method took ownership of s2, we wouldn’t be able to print its value on the last line. However, this code works as we’d expect!
+If the push_str method took ownership of s2, we wouldn’t be able to print its value on the last line. However, this code works as we’d expect!  如果该push_str方法拥有的所有权s2，我们将无法在最后一行打印其值。但是，此代码可以按我们期望的那样工作！
 
-The push method takes a single character as a parameter and adds it to the String. Listing 8-17 shows code that adds the letter l to a String using the push method.
+The push method takes a single character as a parameter and adds it to the String. Listing 8-17 shows code that adds the letter l to a String using the push method.    该push方法将单个字符作为参数并将其添加到中 String。清单8-17显示了使用方法将字母l添加到a的代码。Stringpush
 
-
+```
     let mut s = String::from("lo");
     s.push('l');
-Listing 8-17: Adding one character to a String value using push
+```
+Listing 8-17: Adding one character to a String value using push 清单8-17：String使用以下命令向值添加一个字符push
 
-As a result of this code, s will contain lol.
+As a result of this code, s will contain lol.   由于此代码，s将包含lol。
 
-Concatenation with the + Operator or the format! Macro
-Often, you’ll want to combine two existing strings. One way is to use the + operator, as shown in Listing 8-18.
+Concatenation with the + Operator or the format! Macro  与+运算符或format!宏的串联
 
+Often, you’ll want to combine two existing strings. One way is to use the + operator, as shown in Listing 8-18. 通常，您需要合并两个现有的字符串。一种方法是使用+ 运算符，如清单8-18所示。
 
+```
     let s1 = String::from("Hello, ");
     let s2 = String::from("world!");
     let s3 = s1 + &s2; // note s1 has been moved here and can no longer be used
-Listing 8-18: Using the + operator to combine two String values into a new String value
+```
+Listing 8-18: Using the + operator to combine two String values into a new String value 清单8-18：使用+运算符将两个 String值合并为一个新String值
 
-The string s3 will contain Hello, world! as a result of this code. The reason s1 is no longer valid after the addition and the reason we used a reference to s2 has to do with the signature of the method that gets called when we use the + operator. The + operator uses the add method, whose signature looks something like this:
+The string s3 will contain Hello, world! as a result of this code. The reason s1 is no longer valid after the addition and the reason we used a reference to s2 has to do with the signature of the method that gets called when we use the + operator. The + operator uses the add method, whose signature looks something like this:  该代码s3将包含该字符串Hello, world!。加s1完后该原因不再有效，而我们引用的原因s2与使用+运算符时调用的方法的签名有关。该+运营商使用的add方法，其签名看起来是这样的：
 
-
+```
 fn add(self, s: &str) -> String {
-This isn’t the exact signature that’s in the standard library: in the standard library, add is defined using generics. Here, we’re looking at the signature of add with concrete types substituted for the generic ones, which is what happens when we call this method with String values. We’ll discuss generics in Chapter 10. This signature gives us the clues we need to understand the tricky bits of the + operator.
+```
+This isn’t the exact signature that’s in the standard library: in the standard library, add is defined using generics. Here, we’re looking at the signature of add with concrete types substituted for the generic ones, which is what happens when we call this method with String values. We’ll discuss generics in Chapter 10. This signature gives us the clues we need to understand the tricky bits of the + operator.    这不是标准库中的确切签名：在标准库中，add是使用泛型定义的。在这里，我们正在看add用具体类型代替泛型类型的签名，这是当我们用String值调用此方法时发生的情况。我们将在第10章中讨论泛型。此签名为我们提供了了解+运算符的棘手位所需的线索。
 
-First, s2 has an &, meaning that we’re adding a reference of the second string to the first string because of the s parameter in the add function: we can only add a &str to a String; we can’t add two String values together. But wait—the type of &s2 is &String, not &str, as specified in the second parameter to add. So why does Listing 8-18 compile?
+First, s2 has an &, meaning that we’re adding a reference of the second string to the first string because of the s parameter in the add function: we can only add a &str to a String; we can’t add two String values together. But wait—the type of &s2 is &String, not &str, as specified in the second parameter to add. So why does Listing 8-18 compile?   首先，s2有一个&，表示由于函数中的参数，我们正在将第二个字符串的引用添加到第一个字符串：我们只能将a添加到；我们不能将两个值加在一起。但等待中的类型是，不，如在第二个参数指定。那么为什么清单8-18会编译？sadd&strStringString&s2&String&stradd
 
 The reason we’re able to use &s2 in the call to add is that the compiler can coerce the &String argument into a &str. When we call the add method, Rust uses a deref coercion, which here turns &s2 into &s2[..]. We’ll discuss deref coercion in more depth in Chapter 15. Because add does not take ownership of the s parameter, s2 will still be a valid String after this operation.
 
