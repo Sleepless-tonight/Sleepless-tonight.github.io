@@ -1,4 +1,4 @@
-
+## 文件管理：
 
 
 ![image](https://nostyling-1256016577.cos.ap-beijing.myqcloud.com/640%20%281%29.webp)
@@ -7,7 +7,7 @@
 
 ![image](https://nostyling-1256016577.cos.ap-beijing.myqcloud.com/640.webp)
 
-
+```
 文件管理：
 图片、音频、视频、pdf、网页、文本
 1、目录标签化、
@@ -35,3 +35,4 @@
 23、信息检索和推荐、相关性
 24、中文通用百科知识图谱（CN-DBpedia）
 25、ImageNet
+```

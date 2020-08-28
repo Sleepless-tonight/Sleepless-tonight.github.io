@@ -373,6 +373,8 @@ There’s one more situation involving pub that we haven’t covered, and that i
 >所有的系统库模块都是被默认导入的，
 >
 >使用 use 关键字简化路径就可以方便的使用
+>
+>我们可以一次将一个路径引入一个范围，然后使用该use关键字将该路径中的项目视为本地项目。
 
 It might seem like the paths we’ve written to call functions so far are inconveniently long and repetitive. For example, in Listing 7-7, whether we chose the absolute or relative path to the add_to_waitlist function, every time we wanted to call add_to_waitlist we had to specify front_of_house and hosting too. Fortunately, there’s a way to simplify this process. We can bring a path into a scope once and then call the items in that path as if they’re local items with the use keyword. 到目前为止，似乎我们编写的用于调用函数的路径并不方便且冗长。例如，清单7-7中，我们是否选择了绝对或相对路径的add_to_waitlist功能，我们每次想打电话时add_to_waitlist，我们必须指定front_of_house和 hosting太。幸运的是，有一种方法可以简化此过程。我们可以一次将一个路径引入一个范围，然后使用该use关键字将该路径中的项目视为本地项目。
 
