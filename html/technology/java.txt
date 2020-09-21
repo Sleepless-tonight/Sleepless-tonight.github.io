@@ -69,3 +69,32 @@
 
 
 
+SELLER		卖家
+BUYER		买家
+OTHER		其它
+BOX			箱子
+
+PAY				支付
+SEND_GOODS		发货
+CONFIRM_GOODS	收货
+RETURN_GOODS	退货
+FEEDBACK		反馈
+CHECK			审核
+
+WAIT		等待
+PENDING		待确认
+PART		部分
+
+OPEN		打开
+FINISHED	成功
+CLOSED		关闭
+CONFIRM 	确认
+AGREE		同意
+REFUSE		拒绝
+SUCCESS		成功
+CANCEL		取消
+FORBID      禁止
+ban         禁止
+
+DAMAGED		残损
+EXPIRED		过期
