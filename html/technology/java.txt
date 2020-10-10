@@ -51,7 +51,22 @@
 9、运行期类型鉴定
     为理解RTTI在Java里如何工作，首先必须了解类型信息在运行期是如何表示的。
 
+10、Logger
+    大家不要再在方法里写：System.out.println("查询到的储位列表数据：" + list);
+    这个很耗费系统性能，且不易维护。
+    可以用如下方式代替：
 
+    1）、可以在类里声明一个 Logger 对象：
+    		Logger logger = LoggerFactory.getLogger(WmsStorageController.class);
+
+    2）、在需要控制台进行输出处：
+    		logger.info("查询到的储位列表数据1: {}",list);
+    		logger.error("查询到的储位列表数据2: {}" , list);
+    		logger.debug("查询到的储位列表数据3: {}",list);
+    info、error、debug 表示不同的日志输出等级
+    <!-- 级别依次为【从高到低】：FATAL > ERROR > WARN > INFO > DEBUG > TRACE  -->
+
+    这样我们就可以通过 logback-spring 、application.yml 配置文件来统一设定维护输出信息
 
 语言基础：
     1、Java语言基础、jvm、多线程编程、网络编程
@@ -98,3 +113,17 @@ ban         禁止
 
 DAMAGED		残损
 EXPIRED		过期
+
+
+
+
+
+
+
+
+
+
+
+
+Developer Reference Documentation
+

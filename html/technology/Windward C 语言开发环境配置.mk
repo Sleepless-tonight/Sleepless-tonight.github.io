@@ -221,18 +221,46 @@ cargo run
 
 
 
+pacman命令
+```
+pacman -Sy 更新软件包数据
+pacman -Syu 更新所有
+pacman -Ss xx 查询软件xx的信息
+pacman -S xx 安装软件xx
+pacman -R package_name 删除软件package_name
+```
 
+### 解决msys2“无法升级 mingw64 (无效或已损坏的数据库 (PGP 签名))”密钥失效问题
 
+最近在使用msys2的时候，发现无法使用pacman -Syu进行更新，会出现如下提示：
+```
+错误：msys: 来自 "David Macek <david.macek.0@gmail.com>" 的签名是勉强信任的
+错误：无法升级 msys (无效或已损坏的数据库 (PGP 签名))
+错误：未能成功同步所有数据库
 
+```
+原因是密钥无法信赖(rely on)msys2-keyring密钥服务器，如果不及时更新msys2-keyring，就会出现上面的错误提示。msys2官方提供了一个msys2-keyring-r21.b39fb11-1-any.pkg.tar.xz的软件包来修复。
 
+下载安装该软件包之前，无法通过验证：
+```
+# pacman-key --verify msys2-keyring-r21.b39fb11-1-any.pkg.tar.xz{.sig,}
+```
 
-
-
-
-
-
-
-
+解决方法：
+1. 下载 msys2-keyring-r21.b39fb11-1-any.pkg.tar.xz 软件包
+```
+# curl -O http://repo.msys2.org/msys/x86_64/msys2-keyring-r21.b39fb11-1-any.pkg.tar.xz
+# curl -O http://repo.msys2.org/msys/x86_64/msys2-keyring-r21.b39fb11-1-any.pkg.tar.xz.sig
+```
+2. 验证签名是否建立完好
+```
+# pacman-key --verify msys2-keyring-r21.b39fb11-1-any.pkg.tar.xz{.sig,}
+```
+3. 安装 msys2-keyring-r21.b39fb11-1-any.pkg.tar.xz 包
+```
+# pacman -U --config <(echo) msys2-keyring-r21.b39fb11-1-any.pkg.tar.xz
+```
+4. 然后就可以使用pacman -Syu进行更新
 
 
 
