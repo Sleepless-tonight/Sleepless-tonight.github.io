@@ -195,6 +195,62 @@ fmt.Println（"hello, world"）
 ```
 使用 fmt.Print("hello, world\n") 可以得到相同的结果。
 
+Print 和 Println 这两个函数也支持使用变量，如：fmt.Println(arr)。如果没有特别指定，它们会以默认的打印格式将变量 arr 输出到控制台。
+
+单纯地打印一个字符串或变量甚至可以使用预定义的方法来实现，如：print、println：print("ABC")、println("ABC")、println(i)（带一个变量 i）。
+
+这些函数只可以用于调试阶段，在部署程序的时候务必将它们替换成 fmt 中的相关函数。
+
+当被调用函数的代码执行到结束符 } 或返回语句时就会返回，然后程序继续执行调用该函数之后的代码。
+
+程序正常退出的代码为 0 即 Program exited with code 0；如果程序因为异常而被终止，则会返回非零值，如：1。这个数值可以用来测试是否成功执行一个程序。
+
+#### 4.2.3 注释
+示例 4.2 hello_world2.go
+```
+package main
+
+import "fmt" // Package implementing formatted I/O.
+
+func main() {
+   fmt.Printf("Καλημέρα κόσμε; or こんにちは 世界\n")
+}
+```
+上面这个例子通过打印 Καλημέρα κόσμε; or こんにちは 世界 展示了如何在 Go 中使用国际化字符，以及如何使用注释。
+
+注释不会被编译，但可以通过 godoc 来使用（第 3.6 节）。
+
+单行注释是最常见的注释形式，你可以在任何地方使用以 // 开头的单行注释。多行注释也叫块注释，均已以 /* 开头，并以 */ 结尾，且不可以嵌套使用，多行注释一般用于包的文档描述或注释成块的代码片段。
+
+每一个包应该有相关注释，在 package 语句之前的块注释将被默认认为是这个包的文档说明，其中应该提供一些相关信息并对整体功能做简要的介绍。一个包可以分散在多个文件中，但是只需要在其中一个进行注释说明即可。当开发人员需要了解包的一些情况时，自然会用 godoc 来显示包的文档说明，在首行的简要注释之后可以用成段的注释来进行更详细的说明，而不必拥挤在一起。另外，在多段注释之间应以空行分隔加以区分。
+
+示例：
+```
+// Package superman implements methods for saving the world.
+//
+// Experience has shown that a small number of procedures can prove
+// helpful when attempting to save the world.
+package superman
+```
+几乎所有全局作用域的类型、常量、变量、函数和被导出的对象都应该有一个合理的注释。如果这种注释（称为文档注释）出现在函数前面，例如函数 Abcd，则要以 "Abcd..." 作为开头。
+
+示例：
+```
+// enterOrbit causes Superman to fly into low Earth orbit, a position
+// that presents several possibilities for planet salvation.
+func enterOrbit() error {
+   ...
+}
+```
+
+godoc 工具（第 3.6 节）会收集这些注释并产生一个技术文档。
+
+#### 4.2.4 类型
+变量（或常量）包含数据，这些数据可以有不同的数据类型，简称类型。使用 var 声明的变量的值会自动初始化为该类型的零值。类型定义了某个变量的值的集合与可对其进行操作的集合。
+
+类型可以是基本类型，如：int、float、bool、string；结构化的（复合的），如：struct、array、slice、map、channel；只描述类型的行为的，如：interface。
+
+
 ### 4.3 常量
 
 ### 4.4 变量
