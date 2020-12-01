@@ -5,6 +5,13 @@
 连接：http://www.nostyling.cn/html/technology/English study.txt
 备注：我决定将自己当一个弱逼的人工智能，付出时间和艰辛解决英语问题。
 
+    title：打卡格式
+    time：2020年2月25日16:33:29
+    content：
+        about       关于
+
+
+
     title：打卡第一天
     time：2019年2月15日16:36:40
     content：
@@ -148,6 +155,10 @@
         afternoon   下午
 
 
+    title：第四次
+    time：2020年10月30日19点51分
+    content：
+        
 
 
 
