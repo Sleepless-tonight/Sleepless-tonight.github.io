@@ -121,10 +121,15 @@ value <<= 4;
 
 只有两个位都是1,结果才是1,此时可以使用 & 运算符选择整数变量的一个部分,甚至可以选择其中的一个位。首先定义一个值,它一般称为掩码,用于选择需要的位。在掩码中,希望保持不变的位置上包含1,希望舍弃的位置上包含0。接着对这个掩码与要从中选择位的值执行按位与操作。下面看一个例子。下面的语句定义了掩码:
 ```
+// 00000000000000000000000000000001
 unsigned int male=0x1;// Mask selecting first (rightmost) bit 
+// 00000000000000000000000000000010
 unsigned int french= 0x2;// Mask selecting second bit
+// 00000000000000000000000000000100
 unsigned int german= 0x4;// Mask selecting third bit
+// 00000000000000000000000000001000
 unsigned int italian =0x8;// Mask selecting fourth bit/
+// 00000000000000000000000000001010
 unsigned int payBracket = 0x10;// Mask selecting fifth bit
 ```
 
