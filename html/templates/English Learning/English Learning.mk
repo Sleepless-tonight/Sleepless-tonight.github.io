@@ -1,8 +1,8 @@
-标题：English study
+标题：English Learning
 
 标签：英语学习
 时间：2019年2月15日16:35:13
-连接：http://www.nostyling.cn/html/technology/English study.txt
+连接：http://www.nostyling.cn/html/technology/English Learning.txt
 备注：我决定将自己当一个弱逼的人工智能，付出时间和艰辛解决英语问题。
 
     title：打卡格式
