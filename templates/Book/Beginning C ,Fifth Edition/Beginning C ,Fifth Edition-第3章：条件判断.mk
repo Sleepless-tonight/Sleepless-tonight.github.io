@@ -133,9 +133,20 @@ unsigned int italian =0x8;// Mask selecting fourth bit/
 // 00000000000000000000000000001010
 unsigned int payBracket = 0x10;// Mask selecting fifth bit
 ```
+在每条语句中, 1位表示该条件是true。这些二进制掩码都选择一个位,所以可以定义一个 unsigned int 变量 personal_data 来存储一个人的 5 项信息。如果第一位是 1,这个人就是男性,如果是 0,这个人就是女性。如果第二位是 1,这个人就说法语,如果是 0 这个人就不说法语,数据值右边的 5 位都是这样。
+因此,可以给一个说德语的人测试变量 personal_data ,如下面的语句所示:
+```
+if (personal_data & german)
+/* Do something because they speak German */
+```
+如果 personal_data 对应掩码 german 的位是1,表达式personalData & german的值就不是0(true),否则就是0。
+> 任何非零数值在转换为 bool 类型时,都得到 true。这表示,可以把算术表达式的结果赋予 bool 变量,如果它是非零值,就存储 true ,否则就存储 false.
 
-
-
+> 掩码 german 其它位均为0，会将 personal_data 除 第三位 之外的值均为 0，
+> 
+> 当 personal_data 第三位的值是 1 时，personal_data & german 表达式的结果是 00100，否则的结果 00000
+> 
+> 因为 非 0 的数转化为 bool 时 会得到 true ，说以，只要 当 personal_data 第三位的值是 1 时 与掩码 00100 进行与运算，则可得到 true 变量，以此确定 personal_data 的第三位的值。
 
 
 
