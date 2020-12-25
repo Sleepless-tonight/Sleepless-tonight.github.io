@@ -20,3 +20,10 @@
 - 计算机学科基础知识和主流编程语言相关内容的总结：https://github.com/xuelangZF/CS_Offer
 - 免费的编程中文书籍索引：https://github.com/justjavac/free-programming-books-zh_CN
 
+
+1. x86架构操作系统内核的实现 http://wiki.0xffffff.org/posts/hurlex-1.html
+
+2. 虚拟内存探究，深入理解进程地址空间 http://blog.coderhuo.tech/2017/10/19/Virtual_Memory_summary/
+
+
+3. 南京大学 计算机科学与技术系 计算机系统基础 课程实验 2019 https://nju-projectn.github.io/ics-pa-gitbook/ics2019/

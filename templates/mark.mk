@@ -23,12 +23,6 @@
 
 9. Radare2是一款开放源代码的逆向工程平台，它的强大超越你的想象，包括反汇编、分析数据、打补丁、比较数据、搜索、替换、虚拟化等等，同时具备超强的脚本加载能力，并且可以运行在几乎所有主流的平台（GNU/Linux, .Windows *BSD, iOS, OSX, Solaris…）上。
 
-10. x86架构操作系统内核的实现 http://wiki.0xffffff.org/posts/hurlex-1.html
-
-11. 虚拟内存探究，深入理解进程地址空间 http://blog.coderhuo.tech/2017/10/19/Virtual_Memory_summary/
-
-
-12. 南京大学 计算机科学与技术系 计算机系统基础 课程实验 2019 https://nju-projectn.github.io/ics-pa-gitbook/ics2019/
 
 13. 使用Excelsior JET编译java程序为.exe程序
 14. Axure RP是一款专业的快速原型设计工具。Axure（发音：Ack-sure）
@@ -37,5 +31,7 @@
 17. 功能强大的开源电子书工具 Calibre
 18. 约束传播与搜索 constraint propagation and search
 19. C4-PlantUML
+
+20. Spring-Analysis v0.0.18 已经发布，这是一个围绕 springframework 进行源码分析的项目。此版本新增级补充分析:
 
 
