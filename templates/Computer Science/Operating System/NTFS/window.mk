@@ -6,9 +6,8 @@ HKEY_CURRENT_USER\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Co
 HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\FeatureUsage\AppSwitched
 ```
 
-注册表开启启动项
-```
-HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run
+chkdsk d: /r
 
-HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Run
-```
+OSK.EXE 屏幕键盘
+“osk.exe”
+在命令提示符窗口输入"explorer.exe"启动桌面,成功进入SYSTEM账户桌面后按下“微软键+R"打开运行框,点击其中的“浏览" ,在打开的图形化窗口即可进行文件查找、浏览等操作
