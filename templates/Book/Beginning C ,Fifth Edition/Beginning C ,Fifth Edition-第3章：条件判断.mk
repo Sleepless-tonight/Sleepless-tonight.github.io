@@ -147,6 +147,31 @@ if (personal_data & german)
 > 当 personal_data 第三位的值是 1 时，personal_data & german 表达式的结果是 00100，否则的结果 00000
 > 
 > 因为 非 0 的数转化为 bool 时 会得到 true ，说以，只要 当 personal_data 第三位的值是 1 时 与掩码 00100 进行与运算，则可得到 true 变量，以此确定 personal_data 的第三位的值。
+>
+> 总结一下：一个指定位为1其它位均为0的掩码与另一个数据进行 与 运算，则可以确定另一个数据指定位的值是否为 1。
 
+另一个需要理解的操作是如何设置各个位。此时可以使用按位 或(OR) 运算符。按位或运算符与测试位的掩码一起使用,就可以设置变量中的各个位。如果要设置变量 personal_data,记录某个说法语的人,就可以使用下面的语句:
+```
+ personal_data |= french;
+```
+上面的语句与如下语句等效：
+```
+personal_data = personal_data | french;
+```
 
+> 掩码 french 第二位为 1，其它位均为0，
+>
+> personal_data 与 掩码 french 进行 或(OR) 运算时：personal_data 的其它位为 1 时，与 0 或运算后结果也是 1，personal_data 的其它位为 0 时，与 0 或运算后结果也是 0，personal_data 第二位 与 1 进行或运算时会被设置为1。
+> 
+> 总结一下： 指定位数据与 0 进行或运算时会保持原值，与 1 进行或运算时会被设置为1，也就是完成了指定位数据赋值。
 
+personal_data 中从右数的第二位设置为1,其他位都不变。利用运算符的工作方式,可以在一条语句中设置多个位:
+上面的语句与如下语句等效：
+```
+personal_data = personal_data | french | german | male;
+```
+非（~）运算
+
+非运算即取反运算，在二进制中1变0,0变1
+~110101
+=001010
