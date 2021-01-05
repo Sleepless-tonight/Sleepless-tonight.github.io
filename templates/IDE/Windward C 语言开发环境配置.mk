@@ -16,7 +16,7 @@ MSYS2官方网站：http://www.msys2.org/
 pacman -Sy 刷新软件包数据即可。
 
 执行    
-pacman-key --init
+pacman -Sy
 
 pacman -Syu
 

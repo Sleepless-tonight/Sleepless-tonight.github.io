@@ -27,6 +27,12 @@ host triple的部份，输入「x86_64-pc-windows-gnu」，也就是我们的Rus
 
 然后回到选单，选择第一项，开始用我们刚才的设定来安装Rust。
 
+### 配置代理：
+国内有些地区访问Rustup的服务器不太顺畅，可以配置中科大的Rustup镜像：设置环境变量
+```
+RUSTUP_DIST_SERVER=http://mirrors.ustc.edu.cn/rust-static
+RUSTUP_UPDATE_ROOT=http://mirrors.ustc.edu.cn/rust-static/rustup
+```
 ### 更新与卸载
 更新所有 Rust，运行：
 ```
