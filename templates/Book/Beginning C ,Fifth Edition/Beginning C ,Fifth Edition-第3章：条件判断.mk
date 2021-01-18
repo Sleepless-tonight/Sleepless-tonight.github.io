@@ -92,8 +92,34 @@ if (your weight ==my weight)
 
 
 #### 3.2.2 goto 语句
+```
+int main(void){
+
+    bool a = true;
+    double x = 10.25;
+    double less = 0.0;
+    less = floor(x);
+    label: ;
+    --less;
+    printf("test %.2f \n", less);
 
 
+    goto label;
+
+
+
+    --less;
+    printf("test %.2f \n", less);
+    --less;
+    less = (less--);
+    printf("test %.2f \n", less);
+
+    printf("Hello\n world!");
+    printf("Hello\t world!");
+    return 0;
+}
+
+```
 ### 3.3 按位运算符
 在进入本章的大型示例之前,还要先学习一组运算符,它们看起来类似于前面介绍的逻辑运算符,但实际上与逻辑运算符完全不同。这些运算符称为按位运算符,因为它们操作的是整数值中的位。按位运算符有6个,如表3-5所示。
 
@@ -182,4 +208,62 @@ personal_data &= ~male;
 ```
 这是可行的,因为~male将表示男性的位设置为0,其他位仍设置为1。因此,对应于男性的位设置为0, 0与任何值的与操作都是0,其他位保持不变。如果另一个位是1,则1&1仍是1。如果另一个位是0,则0&1仍是0.使用位的例子记录了个人数据的特定项。如果要使用Windows应用程序编程接口(API)编写PC程序,就会经常使用各个位来记录各种Windows参数的状态,在这种情况下,按位运算符非常有用。
 
+```
+int main(void){
+    unsigned int original = 0xABC;
+    unsigned int result = 0;
+    unsigned int mask = 0xF;    // Rightmost four bits 最右边的四位
+    printf("\n original = %X", original);
+
+    // insert first digit in result
+    result |= original & mask;  // Put right 4 bits from original in result 将结果从原位置右移4位
+    // Get second digit 得到第二位数
+    original >>= 4;             // shift original right four positions 移动原始的右四个位置
+    result <<= 4;               // Make room for next digit 给下一位腾出位置
+    result |= original & mask;  // Put right 4 bits from original in result 将结果从原来的4位右移
+
+    // Get third digit 得到第二位数
+    original >>= 4;             // Shift oriqinal right four positions  向右移动原来的四个位置
+    result <<= 4;               // Make room for next digit 给下一位腾出位置
+    result |= original & mask;  // Put right 4 bits from original in result 返回结果的右4位
+    printf("\t result = %X\n", result);
+    return 0;
+}
+```
+
+这个程序使用了前面探讨的掩码概念。original中最右边的十六进制数是通过表达式original & mask将original和mask的值执行按位与操作而获得的。这会把其他十六进制数设置为0,因为mask的值的二进制形式为:
+```
+0000 0000 0000 1111
+```
+可以看出, original中只有右边的4位没有改变。这4位都是1,在执行按位与操作的结果中,这4位仍是1,其他位都是0,这是因为0与任何值执行按位与操作,结果都是0,选择了右边的4位后,用下面的语句存储结果:
+```
+result |= original & mask;  // Put right 4 bits from original in result 
+```
+result的内容与右边表达式生成的十六进制数进行或操作。为了获得original中的第二位,需要把它移动到第一个数字所在的位置。为此将original向右移动4位:
+```
+original >>= 4;  
+```
+第一个数字被移出,且被舍弃。为了给original的下一个数字腾出空间,下面的语句将result的内容向左移动4位:
+```
+result <<= 4;  
+```
+现在要在result中插入original中的第二个数字,而当前这个数字在第一个数字的位置上,使用下面的语句:
+```
+result |= original & mask;  // Put right 4 bits from original in result  
+```
+要得到第三个数字,重复上述过程。显然,可以对任意多个数字重复这个过程。
+
+### 3.4 设计程序
+
+
+#### 3.4.1 问题
+
+#### 3.4.2 分析
+
+#### 3.4.3 解决方案
+
+
+### 3.5 小节
+
+### 3.6 联系
 
