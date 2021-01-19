@@ -16,7 +16,7 @@ MSYS2官方网站：http://www.msys2.org/
 pacman -Sy 刷新软件包数据即可。
 
 执行    
-pacman -Sy
+pacman-key --init
 
 pacman -Syu
 
@@ -37,6 +37,7 @@ gpg: 注意： 使用 “gpgconf --kill all” 来重启他们。
 
 运行：    
 pacman -S mingw-w64-x86_64-gtk3
+pacman -S mingw-w64-x86_64-gtk4
 
 
 步骤5（可选）：安装构建工具
