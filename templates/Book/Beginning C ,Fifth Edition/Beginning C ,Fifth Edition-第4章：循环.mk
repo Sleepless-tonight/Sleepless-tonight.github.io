@@ -67,6 +67,34 @@ count -= 1;
 
 
 ### 4.6 再论 for 循环
+```C
+#include "stdio.h"
+int main(void){
+    unsigned long long int sum = 0LL;
+    unsigned int count = 0;
+    printf("\nEnter the number of integers you want to sum:");
+    scanf("%u", &count);
+    for (int i = 1; i <= count; ++i) {
+        sum += i;
+    }
+    printf("\nTotal of the first %u numbers is %llu\n", count, sum);
+    return 0;
+}
+```
+#### 4.6.1 修改 for 循环变量
+上面的程序完全可以写为下面这样，结果完全一样：
+```
+#include "stdio.h"
+int main(void){
+    unsigned long long int sum = 0LL;
+    unsigned int count = 0;
+    printf("\nEnter the number of integers you want to sum:");
+    scanf("%u", &count);
+    for (int i = 1; i <= count; sum += i++) ;
+    printf("\nTotal of the first %u numbers is %llu\n", count, sum);
+    return 0;
+}
+```
 
 
 

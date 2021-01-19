@@ -23,6 +23,8 @@ host triple的部份，输入「x86_64-pc-windows-gnu」，也就是我们的Rus
 
 接着输入Rust的版本，建议使用「stable」，如果有nightly需求的话就用「nightly」吧！
 
+default
+
 接着设定是否要修改「PATH」环境变数，输入「y」。
 
 然后回到选单，选择第一项，开始用我们刚才的设定来安装Rust。
