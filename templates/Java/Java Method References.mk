@@ -28,11 +28,46 @@ public class Person {
     }}
 ```
 假设您的社交网络应用程序的成员包含在一个数组中，并且您想按年龄对数组进行排序。您可以使用以下代码（在示例中找到本节中描述的代码摘录 MethodReferencesTest）：
+```
+Person[] rosterAsArray = roster.toArray(new Person[roster.size()]);
 
+class PersonAgeComparator implements Comparator<Person> {
+    public int compare(Person a, Person b) {
+        return a.getBirthday().compareTo(b.getBirthday());
+    }
+}
+        
+Arrays.sort(rosterAsArray, new PersonAgeComparator());
+```
+此调用的方法签名sort如下：
+```
+static <T> void sort(T[] a, Comparator<? super T> c)
+```
+请注意，该接口Comparator是功能接口。因此，您可以使用lambda表达式，而不是定义并创建一个实现Comparator以下内容的类的新实例：
+```
+Arrays.sort(rosterAsArray,
+    (Person a, Person b) -> {
+        return a.getBirthday().compareTo(b.getBirthday());
+    }
+);
+```
+但是，这种比较两个Person实例的出生日期的方法已经存在Person.compareByAge。您可以在lambda表达式的主体中调用此方法：
+```
+Arrays.sort(rosterAsArray,
+    (a, b) -> Person.compareByAge(a, b)
+);
+```
+由于此lambda表达式调用现有方法，因此可以使用方法引用代替lambda表达式：
+```
+Arrays.sort(rosterAsArray, Person::compareByAge);
+```
+方法引用Person::compareByAge在语义上与lambda表达式相同(a, b) -> Person.compareByAge(a, b)。每个都有以下特征：
+- 它的形式参数列表是从复制Comparator<Person>.compare，这是(Person, Person)。
+- 它的主体调用该方法Person.compareByAge。
 
-
-
+---
 有四种方法参考：
+
 类 | 列
 ---|---
 引用静态方法 | ContainingClass::staticMethodName
