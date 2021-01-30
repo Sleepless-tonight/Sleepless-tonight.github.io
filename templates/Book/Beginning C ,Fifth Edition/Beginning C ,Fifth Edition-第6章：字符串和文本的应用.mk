@@ -169,12 +169,16 @@ P1
 ```
 P2
 ```
+这里使用的预处理器指令(它们是以#开头的代码行)采用与if语句相同的执行方式。第13章将详细介绍预处理器指令。
 
+要使用string.h中的可选函数,必须在string.h的include语句之前,在源文件中定义 __STDC_LIB_EXT1__ 符号,来表示值1,如下所示: #define  __STDC_LIB_EXT1__ 1// Make optional versions of functions available
+```
+ #define  __STDC_LIB_EXT1__ 1// Make optional versions of functions available
+ #include <string.h>
+```
+如果没有把这个符号定义为1,就只能使用字符串处理函数的标准集合。为什么需要这个精巧的机制,才能使用可选函数?原因是它不会中断推出C11标准之前编写的旧代码。显然,旧代码可能使用了一个或多个新函数名。尤其是,许多程序员以前都实现了自己的、更安全的字符串处理函数,这样就很容易与C11库产生名称冲突。出现这种冲突时,把  __STDC_LIB_EXT1__  定义为0,禁止使用可选函数,旧代码就可以用C11编译器编译了。
 
-
-
-
-
+#### 6.3.2 确定字符串的长度
 
 
 
