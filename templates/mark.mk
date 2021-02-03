@@ -42,3 +42,7 @@
 
 24.WorldWind Java：
 NASA开发的用于桌面Java的3D虚拟地球API。提供具有高分辨率地形的地理环境，用于以3D和2D可视化地理或地理位置信息。开发人员可以自定义地球的地形和图像。提供一组形状，以显示和与地理数据进行交互并表示一系列几何对象。
+
+
+25.OpenZFS：
+OpenZFS（原名 ZFS）是 Linux、FreeBSD 与 macOS 平台上的文件系统。
