@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        .header{
+            background-color: grey;
+            color: white;
+            padding: 15px;
+        }
+
+        .footer {
+            /*position 属性规定应用于元素的定位方法的类型。*/
+            position: fixed;
+            /*bottom 属性规定元素的底部边缘 该属性定义了定位元素下外边距边界与其包含块下边界之间的偏移。*/
+            bottom: 0;
+            background-color: grey;
+            color: white;
+            padding: 15px;
+        }
+
+        .column {
+            float: left;
+            padding: 15px;
+        }
+
+        .clearfix::after {
+            content: "";
+            clear: both;
+            display: table;
+        }
+
+        .menu {
+            width: 10%;
+        }
+
+        .content {
+            width: 75%;
+        }
+
+        .menu ul {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .menu li {
+            padding: 8px;
+            margin-bottom: 8px;
+            background-color: #33b5e5;
+            color: #ffffff;
+        }
+
+        .menu li:hover {
+            background-color: #0099cc;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>Shanghai</h1>
+</div>
+
+<div class="clearfix">
+    <div class="menu">
+        <ul>
+            <li>The Flight</li>
+            <li>The City</li>
+            <li>The Island</li>
+            <li>The Food</li>
+        </ul>
+    </div>
+
+    <div class="content">
+
+    </div>
+</div>
+
+<div class="footer">
+    <p>Footer Text*********************************</p>
+</div>
+
+</body>
+</html>
