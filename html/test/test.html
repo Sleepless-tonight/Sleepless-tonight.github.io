@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>test</title>
+    <style>
+        * {
+            /*margin 简写属性在一个声明中设置所有外边距属性。该属性可以有 1 到 4 个值。*/
+            margin: 0;
+            /*padding 简写属性在一个声明中设置所有内边距属性。*/
+            padding: 0;
+            /*list-style-type:none 可以设置列表元素的 marker（比如圆点、符号、或者自定义计数器样式*/
+        }
+        body,
+        html {
+            font-size: 14px;
+            font-family: 'Microsoft Yahei', '微软雅黑', 'Simsun', '宋体', 'Arial', sans-serif;
+        }
+        img {
+            /*设置 4 个边框的样式*/
+            border: 0;
+        }
+        a {
+            color: #000;
+            /*这个属性允许对文本设置某种效果，如加下划线。如果后代元素没有自己的装饰，祖先元素上设置的装饰会“延伸”到后代元素中。不要求用户代理支持 blink。*/
+            text-decoration: none;
+            /*outline （轮廓）是绘制于元素周围的一条线，位于边框边缘的外围，可起到突出元素的作用。*/
+            outline: none;
+        }
+        ol,
+        ul,
+        li {
+            /*该属性是一个简写属性，涵盖了所有其他列表样式属性。由于它应用到所有 display 为 list-item 的元素，所以在普通的 HTML 和 XHTML 中只能用于 li 元素，不过实际上它可以应用到任何元素，并由 list-item 元素继承。*/
+            list-style: none;/* 移除列表前小标志。一个导航栏并不需要列表标记*/
+        }
+        .head-nav {
+            /*设置段落的高度和宽度：*/
+            width: 170px;
+            height: 100%;
+            background: #f1f1f1;
+        }
+        .head-nav-con {
+            width: 1200px;
+            height: 100%;
+            margin: auto;
+        }
+        .head-nav-con ul li {
+            width: 170px;
+            /*float属性：定义元素在哪个方向浮动*/
+            /*float: left;*/
+            /*设置文字大小*/
+            font-size: 20px;
+            /*文字对其方式*/
+            text-align: center;  /*字体居中*/
+        }
+        /* 鼠标悬停时改变链接颜色 */
+        .head-nav-con ul li:hover {
+            background-color: #555;
+            color: white;
+        }
+        .head-nav-con ul a {
+            /*display 属性规定是否/如何显示元素。大多数元素的默认 display 值为 block 或 inline。 块级元素总是从新行开始，并占据可用的全部宽度（尽可能向左和向右伸展）。内联元素不从新行开始，仅占用所需的宽度。*/
+            display: block; /* 显示元素块的链接，使整块区域可点击*/
+            text-decoration: none;  /*取消字体下划线    */
+            text-align: center;
+            line-height: 60px;
+            color: #000;
+        }
+        /* 鼠标悬停时改变链接颜色 */
+        .head-nav-con ul a:hover {
+            color: white;
+        }
+
+        .head-nav-con .drop-down {
+            /*position 属性规定应用于元素的定位方法的类型。*/
+            /*position: relative; 的元素相对于其正常位置进行定位。
+            设置相对定位的元素的 top、right、bottom 和 left 属性将导致其偏离其正常位置进行调整。不会对其余内容进行调整来适应元素留下的任何空间。*/
+            position: relative;
+        }
+        .head-nav-con .drop-down-content {
+            padding: 0;
+            display: none;
+            /*position: absolute; 的元素相对于最近的定位祖先元素进行定位（而不是相对于视口定位，如 fixed）*/
+            position: absolute;
+            z-index: 1;
+            background: #f1f1f1;
+            right: -170px;
+            top: 0;
+        }
+        .head-nav-con .drop-down-content li:hover > a {
+            background-color: #555;
+        }
+        .head-nav-con .drop-down:hover .drop-down-content {
+            display: block;
+        }
+
+
+
+        .head-nav-con .drop-down-2 {
+            position: relative;
+        }
+        .head-nav-con .drop-down-content-2 {
+            padding: 0;
+            display: none;
+            position: absolute;
+            z-index: 1;
+            background: #f1f1f1;
+            right: -170px;
+            top: 0;
+        }
+        .head-nav-con .drop-down-content-2 > li {
+            float: none;
+            background: #f1f1f1;
+        }
+        .head-nav-con .drop-down-content-2 li:hover a {
+            background-color: #555;
+        }
+        .head-nav-con .drop-down-2:hover .drop-down-content-2 {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+<div class="main">
+    <!--头部-->
+    <div class="header">
+        <div class="head-nav">
+            <div class="head-nav-con clearFloat">
+                <ul>
+                    <li><a href="#">首页</a></li>
+                    <li><a href="#">一级菜单</a></li>
+                    <li class="drop-down"><a href="#">二级菜单</a>
+                        <ul class="drop-down-content">
+                            <li><a href="#">二级菜单</a></li>
+                            <li><a href="#">二级菜单</a></li>
+                            <li><a href="#">二级菜单</a></li>
+                            <li><a href="#">二级菜单</a></li>
+                        </ul>
+                    </li>
+                    <li class="drop-down"><a href="#">二级菜单</a>
+                        <ul class="drop-down-content">
+                            <li class="drop-down-2"><a href="#">三级菜单</a>
+                                <ul class="drop-down-content-2">
+                                    <li><a href="#">三级菜单</a></li>
+                                    <li><a href="#">三级菜单</a></li>
+                                    <li><a href="#">三级菜单</a></li>
+                                </ul>
+                            </li>
+                            <li class="drop-down-2"><a href="#">三级菜单</a>
+                                <ul class="drop-down-content-2">
+                                    <li><a href="#">三级菜单</a></li>
+                                    <li><a href="#">三级菜单</a></li>
+                                    <li><a href="#">三级菜单</a></li>
+                                </ul>
+                            </li>
+                            <li class=""><a href="#">二级菜单</a></li>
+                            <li class=""><a href="#">二级菜单</a></li>
+                            <li class=""><a href="#">二级菜单</a></li>
+                            <li class=""><a href="#">二级菜单</a></li>
+                            <li class="drop-down-2"><a href="#">三级菜单</a>
+                                <ul class="drop-down-content-2">
+                                    <li><a href="#">二级菜单</a></li>
+                                    <li><a href="#">二级菜单</a></li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                    <li><a href="#">一级菜单</a></li>
+                    <li><a href="#">一级菜单</a></li>
+                    <li><a href="#">一级菜单</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

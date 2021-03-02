@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>menu</title>
+
+    <meta charset="UTF-8" >
+    <style type="text/css">
+        .menu {
+            z-index: 2;
+            display: inline-block;
+            /*阴影*/
+            box-shadow: 0 5px 15px #d8d8d8;
+            background-color: #f1f1f1;
+
+        }
+        .menu-item {
+            width: 100px;
+            /*position 属性规定应用于元素的定位方法的类型。*/
+            /*position: relative; 的元素相对于其正常位置进行定位。
+            设置相对定位的元素的 top、right、bottom 和 left 属性将导致其偏离其正常位置进行调整。不会对其余内容进行调整来适应元素留下的任何空间。*/
+            position: relative;
+            padding: 5px 10px 5px 50px;
+            /*设置下边框的样式：*/
+            border-bottom: 1px solid #e5f0f6;
+        }
+        .menu-item:hover{
+            background: #eefbff;
+        }
+
+        .item-child {
+            position: absolute;
+        }
+
+        .menu-item .item-child{
+            top: 0;
+            /*calc() 函数执行用作属性值的计算。*/
+            left: calc(100% + 3px);
+            /*visibility 属性规定元素是否可见。*/
+            visibility: hidden;
+            /*设置 div 元素的不透明级别：*/
+            opacity: 0;
+            /*阴影*/
+            box-shadow: 0 5px 15px #d8d8d8;
+            /*过度效果*/
+            transition: visibility 0.5s ease,
+            opacity 0.5s ease;
+        }
+        .menu-item:hover > .item-child{
+            visibility: visible;
+            opacity: 1;
+        }
+        /*:active 选择器用于选择活动链接。*/
+        /*当您在一个链接上点击时，它就会成为活动的（激活的）。*/
+        /*css3特有的选择器，A>B 表示选择A元素的所有子B元素。*/
+        /*与A B的区别在于，A B选择所有后代元素，而A>B只选择一代。*/
+        /*.menu-item > .item-child:active {!* 这种方式无法触发点击事件，最好改为js处理消失 *!*/
+        /*    display: none;*/
+        /*}*/
+        /*:after 选择器在被选元素的内容后面插入内容。*/
+        /*:before 选择器在被选元素的内容前面插入内容。*/
+        a::after {
+            content: '...';
+            right: 10px;
+            position: absolute;
+        }
+        /*:only-child 选择器匹配属于父元素中唯一子元素的元素。*/
+        a:only-child::after {
+            content: '';
+        }
+        a {
+            /*这个属性允许对文本设置某种效果，如加下划线。如果后代元素没有自己的装饰，祖先元素上设置的装饰会“延伸”到后代元素中。不要求用户代理支持 blink。*/
+            text-decoration: none;
+            /*outline （轮廓）是绘制于元素周围的一条线，位于边框边缘的外围，可起到突出元素的作用。*/
+            outline: none;
+        }
+        #header {
+            background-color: black;
+            color: white;
+            text-align: center;
+            height: 10%;
+            display: -webkit-flex;
+            -webkit-justify-content: center;
+            -webkit-align-items: center;
+        }
+        #section {
+            z-index: -1;
+            position: fixed;
+            left: -0%;
+            right: 0%;
+            top: 15%;
+            bottom: 5%;
+            margin-left: 120px; /*属性设置元素的左外边距*/
+            /*height: calc(100% );*/
+            /*width: 75%;*/
+        }
+        #footer {
+            /*position 属性规定应用于元素的定位方法的类型。*/
+            position: fixed;
+            /*bottom 属性规定元素的底部边缘 该属性定义了定位元素下外边距边界与其包含块下边界之间的偏移。*/
+            bottom: 0;
+            background-color: black;
+            color: white;
+            clear: both;
+            text-align: center;
+            width: 100%;
+            height: 5%;
+            display: -webkit-flex;
+            -webkit-justify-content: center;
+            -webkit-align-items: center;
+        }
+
+        #footer_url {
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+<div id="header">
+    <h1>现代主义的真诚感动和后现代主义的冷漠戏谑之间正弦摆动</h1>
+</div>
+<div class="wrap">
+    <div class="menu">
+        <div class="menu-item">
+            <a>title-1</a>
+            <div class="item-child"> <!-- 一级嵌套 -->
+                <div class="menu-item">
+                    <a>title-1-1</a>
+                </div>
+                <div class="menu-item">
+                    <a>title-1-2</a>
+                </div>
+                <div class="menu-item">
+                    <a>title-1-3</a>
+                    <div class="item-child"> <!-- 二级嵌套 -->
+                        <div class="menu-item">
+                            <a href="javascript:load_home('../html/分区表.html');">title-1-3-1</a>
+                        </div>
+                        <div class="menu-item">
+                            <a>title-1-3-2</a>
+                        </div>
+                        <div class="menu-item">
+                            <a>title-1-3-3</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="menu-item">
+            <a>title-2</a>
+            <div class="item-child">
+                <div class="menu-item">
+                    <a>title-2-1</a>
+                </div>
+                <div class="menu-item">
+                    <a>title-2-2</a>
+                </div>
+                <div class="menu-item">
+                    <a>title-2-3</a>
+                </div>
+                <div class="menu-item">
+                    <a>title-2-4</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="section">
+</div>
+<div id="footer">
+    <a id="footer_url" href="http://www.nostyling.cn/">http://www.nostyling.cn</a>
+</div>
+</body>
+<script>
+    /**
+     * section 加载指定页面
+     * @param url
+     */
+    function load_home(url) {
+        document.getElementById("section").innerHTML = '<object type="text/html" data="' +
+            url +
+            '" width="100%" height="100%"></object>';
+    }
+</script>
+</html>

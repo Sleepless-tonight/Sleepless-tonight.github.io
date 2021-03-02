@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        #header {
+            background-color: black;
+            color: white;
+            text-align: center;
+            height: 10%;
+            display: -webkit-flex;
+            -webkit-justify-content: center;
+            -webkit-align-items: center;
+        }
+        #footer {
+            /*position 属性规定应用于元素的定位方法的类型。*/
+            position: fixed;
+            /*bottom 属性规定元素的底部边缘 该属性定义了定位元素下外边距边界与其包含块下边界之间的偏移。*/
+            bottom: 0;
+            /*right 属性规定元素的右边缘。该属性定义了定位元素右外边距边界与其包含块右边界之间的偏移。*/
+            /*right: 100%;*/
+            width: 100%;
+            height: 5%;
+            background-color: black;
+            color: white;
+            clear: both;
+            text-align: center;
+            display: -webkit-flex;
+            -webkit-justify-content: center;
+            -webkit-align-items: center;
+        }
+
+        #footer a {
+            position: fixed;
+            color: white;
+        }
+
+        ul {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            width: 200px;
+            background-color: #f1f1f1;
+        }
+
+        li a {
+            display: block;
+            color: #000;
+            padding: 8px 16px;
+            text-decoration: none;
+        }
+
+        /* Change the link color on hover */
+        li a:hover {
+            background-color: #555;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+<div id="header">
+    <h1>现代主义的真诚感动和后现代主义的冷漠戏谑之间正弦摆动</h1>
+</div>
+<ul>
+    <li><a href="#home">Home</a></li>
+    <li><a href="#news">News</a></li>
+    <li><a href="#contact">Contact</a></li>
+    <li><a href="#about">About</a></li>
+</ul>
+<div id="footer">
+    <a id="footer_url" href="http://www.nostyling.cn/">www.nostyling.cn</a>
+</div>
+</body>
+</html>
