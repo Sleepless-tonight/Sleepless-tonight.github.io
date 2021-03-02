@@ -13,8 +13,8 @@ MSYS2官方网站：http://www.msys2.org/
 #### 3、配置更新
 
 执行     
-pacman -Sy 刷新软件包数据即可。
-
+pacman -Sy
+刷新软件包数据即可。
 执行    
 pacman-key --init
 
