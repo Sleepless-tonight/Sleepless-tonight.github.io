@@ -25,3 +25,4 @@ int number = 5;
 
 可以存储地址的变量称为指针(pointers),存储在指针中的地址通常是另一个变量,如图7-1所示。指针 pnumber 含有另一个变量 number 的地址,变量 number 是一个值为 99 的整数变量。存储在 pnumber 中的地址是 number 第一个字节的地址。“指针”这个词也用于表示一个地址,例如"strcat_s()函数返回一个指针"。
 
+![image](https://nostyling-1256016577.cos.ap-beijing.myqcloud.com/2021-03-09_135546.png)
