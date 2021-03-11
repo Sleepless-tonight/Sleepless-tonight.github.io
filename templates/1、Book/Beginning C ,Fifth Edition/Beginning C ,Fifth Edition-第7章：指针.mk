@@ -42,6 +42,29 @@ pnumber 变量的类型是 int *,它可以存储任意 int 类型变量的地址
 ```
 int* pnumber;
 ```
+这条语句的作用与上一条语句完全相同,可以使用任意一个,但最好始终使用其中的一个。
+
+这条语句创建了 pnumber 变量,但没有初始化它。未初始化的指针是非常危险的,比未初始化的普通变量危险得多,所以应总是在声明指针时对它进行初始化。重写刚才的声明,初始化 pnumber ,使它不指向任何对象:
+
+```
+int *pnumber = NULL;
+```
+NULL 是在标准库中定义的一个常量,对于指针它表示 0,NULL 是一个不指向任何内存位置的值。这表示,使用不指向任何对象的指针,不会意外覆盖内存。NULL 在头文件<stddef.h>. <stdib.h>、 <stdio.h>、<string.h>、<time.h>、<wchar.h>和<locale.h>中定义,只要编译器不能识别NULL,就应在源文件中包含<stddef.h>头文件。
+
+如果用已声明的变量地址初始化pointer变量,可以使用寻址运算符&,例如:
+
+```
+int number = 99;
+int *pnumber = &number;
+```
+
+pnumber 的初值是 number 变量的地址。注意, number 的声明必须在 pnumber 的声明之前。否则,代码就不能编译。编译器需要先分配好空间,才能使用 number 的地址初始化 pnumber 变量。
+
+指针的声明没有什么特别之处。可以用相同的语句声明一般的变量和指针,例如:
+
+```
+int number,*pnumber,pve;
+```
 
 
 
